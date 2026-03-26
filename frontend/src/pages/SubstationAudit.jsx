@@ -1,0 +1,237 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Zap,
+  Plus,
+  Edit2,
+  Trash2,
+  FileText,
+  ChevronRight,
+  BarChart3,
+  Activity,
+  ArrowLeft,
+  Database
+} from 'lucide-react';
+import api from '../services/api';
+
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
+
+const IndustrialChart = ({ data }) => {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={data}
+        margin={{ top: 40, right: 30, left: 0, bottom: 0 }}
+        barGap={8}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
+        <XAxis 
+          dataKey="name" 
+          axisLine={false} 
+          tickLine={false} 
+          tick={{ fill: '#747686', fontSize: 10, fontWeight: 700 }}
+          dy={10}
+        />
+        <YAxis hide />
+        
+        {/* Previous Period Bar */}
+        <Bar 
+          dataKey="anterior" 
+          fill="#c4c5d7" 
+          radius={[4, 4, 0, 0]} 
+          barSize={20}
+          opacity={0.4}
+          animationDuration={1500}
+        />
+        
+        {/* Current Period Bar */}
+        <Bar 
+          dataKey="consumo" 
+          fill="#0d3fd1" 
+          radius={[6, 6, 0, 0]} 
+          barSize={32}
+          animationBegin={300}
+          animationDuration={1200}
+          isAnimationActive={true}
+        >
+          <LabelList 
+            dataKey="consumo" 
+            position="top" 
+            style={{ 
+              fill: '#0f1c2c', 
+              fontSize: '10px', 
+              fontWeight: 900, 
+              fontFamily: 'Inter, sans-serif' 
+            }}
+            formatter={(val) => `${val} kWh`}
+            offset={12}
+          />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
+
+export default function SubstationAudit() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [subestacao, setSubestacao] = useState(null);
+  const [pts, setPts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPt, setSelectedPt] = useState(null);
+
+  // Data inspired by the mockup
+  const consumptionData = [
+    { name: 'Jan', consumo: 4200, anterior: 3100 },
+    { name: 'Fev', consumo: 3800, anterior: 2900 },
+    { name: 'Mar', consumo: 5100, anterior: 4200 },
+    { name: 'Abr', consumo: 4600, anterior: 3800 },
+    { name: 'Mai', consumo: 5900, anterior: 4900 },
+    { name: 'Jun', consumo: 5500, anterior: 5100 },
+  ];
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [subRes, ptsRes] = await Promise.all([
+          api.get(`/subestacoes/${id}`),
+          api.get(`/pts?subestacaoId=${id}`)
+        ]);
+        setSubestacao(subRes.data);
+        setPts(ptsRes.data || []);
+        if (ptsRes.data?.length > 0) setSelectedPt(ptsRes.data[0]);
+      } catch (error) {
+        console.error('Erro ao buscar dados de auditoria', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-[#0d3fd1] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-120px)] animate-in fade-in duration-500">
+      {/* Header Area */}
+      <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl border border-[#c4c5d7]/20 shadow-sm">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/subestacoes')} className="p-2 hover:bg-[#eff4ff] rounded-lg transition-all text-[#444655]">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h2 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Auditando: {subestacao?.nome}</h2>
+            <p className="text-[10px] font-bold text-[#747686] uppercase tracking-[0.2em]">{subestacao?.codigo} • MBT Energia</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate(`/subestacoes/${id}/pts/novo`)}
+            className="flex items-center gap-2 bg-[#0d3fd1] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+          >
+            <Plus className="w-4 h-4" />
+            Novo PT
+          </button>
+          <button className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all">
+            <Edit2 className="w-4 h-4" />
+            Editar PT
+          </button>
+          <button className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-red-500 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all">
+            <Trash2 className="w-4 h-4" />
+            Eliminar PT
+          </button>
+          <button className="flex items-center gap-2 bg-[#243141] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1a2533] transition-all" onClick={() => navigate(`/ficha-tecnica/${selectedPt?.id_pt}`)}>
+            <FileText className="w-4 h-4" />
+            Detalhes PT
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 gap-6 overflow-hidden">
+        {/* Sidebar - PT List */}
+        <div className="w-80 flex flex-col bg-white rounded-3xl border border-[#c4c5d7]/20 overflow-hidden shadow-sm">
+          <div className="p-4 bg-[#0d3fd1] text-white">
+            <h3 className="text-[10px] font-black uppercase tracking-widest">PTS auditados: {subestacao?.nome}</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {pts.length === 0 ? (
+              <div className="p-8 text-center text-[10px] font-bold text-[#747686] uppercase opacity-40">
+                Nenhum PT registado nesta subestação
+              </div>
+            ) : pts.map((pt, index) => (
+              <button
+                key={pt.id_pt}
+                onClick={() => setSelectedPt(pt)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl text-left transition-all ${selectedPt?.id_pt === pt.id_pt ? 'bg-[#eff4ff] border border-[#0d3fd1]/20 shadow-sm' : 'hover:bg-[#f8faff]'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-[#0d3fd1] opacity-40">{index + 1} -</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">ID: {pt.id_pt}</span>
+                    <span className="text-[9px] font-bold text-[#747686]">{pt.localizacao}</span>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 transition-transform ${selectedPt?.id_pt === pt.id_pt ? 'text-[#0d3fd1] translate-x-1' : 'text-[#c4c5d7]'}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content - Report Chart */}
+        <div className="flex-1 bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm p-8 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[#f8faff] rounded-lg">
+                <BarChart3 className="w-6 h-6 text-[#0d3fd1]" />
+              </div>
+              <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">RELATÓRIOS DE CONSUMO</h3>
+            </div>
+            <div className="flex items-center gap-4 text-[10px] font-black text-[#747686] uppercase tracking-[0.1em]">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#0d3fd1] rounded-sm"></div> Consumo Atual</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#c4c5d7] rounded-sm opacity-60"></div> Período Anterior</div>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-[350px]">
+            <IndustrialChart data={consumptionData} />
+          </div>
+
+          <div className="mt-12 pt-8 border-t border-[#c4c5d7]/10 grid grid-cols-3 gap-6">
+            <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Carga Máxima de Rede</span>
+              <span className="text-2xl font-black text-[#0f1c2c]">10.5 <span className="text-xs text-[#0d3fd1] font-bold uppercase ml-1">MVA</span></span>
+            </div>
+            <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Fator de Operação</span>
+              <span className="text-2xl font-black text-[#0f1c2c]">0.96 <span className="text-xs text-[#00e47c] font-bold uppercase ml-1">EFICIENTE</span></span>
+            </div>
+            <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Perdas Técnicas</span>
+              <span className="text-2xl font-black text-[#0f1c2c]">1.8 <span className="text-xs text-red-500 font-bold uppercase ml-1">%</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function History(props) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
+  )
+}

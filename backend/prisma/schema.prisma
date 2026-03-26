@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Subestacao {
+  id                 Int             @id @default(autoincrement())
+  codigo             String          @unique @db.VarChar(50)
+  nome               String          @db.VarChar(200)
+  localizacao        String          @db.Text
+  gps                String?         // In Prisma, we often handle POINT as a string or custom type, using String for simplicity here or Json
+  morada             String?         @db.Text
+  municipio          String?         @db.Text
+  provincia          String?         @db.Text
+  pais               String          @default("Angola") @db.VarChar(100)
+  tensao_alimentacao String?         @db.VarChar(50)
+  potencia_total_kva Float?          
+  concessionaria     String?         @db.VarChar(200)
+  zona               String?         @db.VarChar(100)
+  tipo               String?         @db.VarChar(100)
+  proprietario       String?         @db.VarChar(200)
+  operador           String?         @db.VarChar(200)
+  ano_construcao     DateTime?       @db.Date
+  entrada_operacao   DateTime?       @db.Date
+  estado             String          @default("Ativa") @db.VarChar(50)
+  criado_em          DateTime        @default(now())
+  atualizado_em      DateTime        @updatedAt
+  pts                Identificacao[]
+
+  @@map("subestacao")
+}
+
+model Utilizador {
+  id             Int             @id @default(autoincrement())
+  nome           String          @db.VarChar(200)
+  email          String          @unique @db.VarChar(255)
+  password_hash  String          @db.VarChar(255)
+  role           String          @default("auditor") @db.VarChar(50)
+  telefone       String?         @db.VarChar(30)
+  localizacao    String?         @db.Text
+  gps            String?         
+  municipio      String?         @db.VarChar(150)
+  provincia      String?         @db.VarChar(150)
+  ativo          Boolean         @default(true)
+  ultimo_acesso  DateTime?
+  criado_em      DateTime        @default(now())
+  atualizado_em  DateTime        @updatedAt
+  pts_responsaveis Identificacao[] @relation("Responsavel")
+  inspecoes      Inspecao[]
+
+  @@map("utilizador")
+}
+
+model Identificacao {
+  id                  Int             @id @default(autoincrement())
+  id_pt               String          @unique @db.VarChar(50)
+  id_subestacao       Int
+  subestacao          Subestacao      @relation(fields: [id_subestacao], references: [id])
+  id_responsavel      Int?
+  responsavel         Utilizador?     @relation("Responsavel", fields: [id_responsavel], references: [id])
+  localizacao         String          @db.Text
+  gps                 String?
+  morada              String?         @db.Text
+  municipio           String?         @db.VarChar(150)
+  provincia           String?         @db.VarChar(150)
+  tipo_instalacao     String          @db.VarChar(100)
+  nivel_tensao        String          @db.VarChar(50)
+  potencia_kva        Float
+  ano_instalacao      Int             @db.SmallInt
+  fabricante          String?         @db.VarChar(150)
+  num_transformadores Int             @default(1) @db.SmallInt
+  regime_exploracao   String?         @db.VarChar(100)
+  estado_operacional  String          @default("Operacional") @db.VarChar(50)
+  criado_em           DateTime        @default(now())
+  atualizado_em       DateTime        @updatedAt
+  inspecoes           Inspecao[]
+  conformidade        Conformidade?
+  transformadores     Transformador[]
+  media_tensao        MediaTensao?
+  baixa_tensao        BaixaTensao?
+  seguranca           Seguranca?
+  infraestrutura      Infraestrutura?
+  monitorizacao       Monitorizacao?
+  manutencao          Manutencao?
+  riscos              Risco[]
+
+  @@map("identificacao")
+}
+
+model Inspecao {
+  id               Int            @id @default(autoincrement())
+  id_pt            String         @db.VarChar(50)
+  pt               Identificacao  @relation(fields: [id_pt], references: [id_pt])
+  id_auditor       Int
+  auditor          Utilizador     @relation(fields: [id_auditor], references: [id])
+  data_inspecao    DateTime       @default(now()) @db.Date
+  tipo             String         @default("Preventiva") @db.VarChar(50)
+  resultado        String?        @db.VarChar(50)
+  nivel_urgencia   String?        @db.VarChar(20)
+  observacoes      String?        @db.Text
+  proxima_inspecao DateTime?      @db.Date
+  criado_em        DateTime       @default(now())
+  atualizado_em    DateTime       @updatedAt
+  
+  conformidade     Conformidade[]
+  transformadores  Transformador[]
+  media_tensao     MediaTensao[]
+  baixa_tensao     BaixaTensao[]
+  seguranca        Seguranca[]
+  infraestrutura   Infraestrutura[]
+  monitorizacao    Monitorizacao[]
+  manutencao       Manutencao[]
+  riscos           Risco[]
+
+  @@map("inspecao")
+}
+
+model Conformidade {
+  id                   Int           @id @default(autoincrement())
+  id_pt                String        @unique @db.VarChar(50)
+  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao          Int?
+  inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  licenciamento        Boolean       @default(false)
+  projeto_aprovado     Boolean       @default(false)
+  diagramas_unifilares Boolean       @default(false)
+  plano_manutencao     Boolean       @default(false)
+  registos_inspecao    Boolean       @default(false)
+  normas_iec           Boolean       @default(false)
+  normas_ieee          Boolean       @default(false)
+  normas_locais        Boolean       @default(false)
+  observacoes          String?       @db.Text
+  criado_em            DateTime      @default(now())
+  atualizado_em        DateTime      @updatedAt
+
+  @@map("conformidade")
+}
+
+model Transformador {
+  id                     Int           @id @default(autoincrement())
+  id_pt                  String        @db.VarChar(50)
+  pt                     Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao            Int?
+  inspecao               Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  num_transformador      Int           @default(1) @db.SmallInt
+  potencia_kva           Float
+  tensao_primaria        Float
+  tensao_secundaria     Float
+  tipo_isolamento        String        @db.VarChar(100)
+  classe_termica         String?       @db.VarChar(20)
+  estado_oleo            String?       @db.VarChar(50)
+  fugas                  Boolean       @default(false)
+  estado_buchas          String?       @db.VarChar(100)
+  temperatura_operacao   Float?
+  resistencia_isolamento Float?
+  ttr                   Float?
+  dga                   String?       @db.Text
+  observacoes            String?       @db.Text
+  criado_em              DateTime      @default(now())
+  atualizado_em          DateTime      @updatedAt
+
+  @@unique([id_pt, num_transformador])
+  @@map("transformador")
+}
+
+model MediaTensao {
+  id                    Int           @id @default(autoincrement())
+  id_pt                 String        @unique @db.VarChar(50)
+  pt                    Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao           Int?
+  inspecao              Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  tipo_celas            String?       @db.VarChar(150)
+  estado_disjuntores    String?       @db.VarChar(100)
+  estado_seccionadores  String?       @db.VarChar(100)
+  reles_protecao        String?       @db.VarChar(150)
+  coordenacao_protecoes Boolean       @default(false)
+  aterramento_mt        Boolean       @default(false)
+  observacoes           String?       @db.Text
+  criado_em             DateTime      @default(now())
+  atualizado_em         DateTime      @updatedAt
+
+  @@map("media_tensao")
+}
+
+model BaixaTensao {
+  id                   Int           @id @default(autoincrement())
+  id_pt                String        @unique @db.VarChar(50)
+  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao          Int?
+  inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  estado_qgbt          String?       @db.VarChar(100)
+  barramentos          String?       @db.VarChar(100)
+  disjuntores          String?       @db.VarChar(100)
+  balanceamento_cargas Boolean       @default(false)
+  corrente_fase_a      Float?
+  corrente_fase_b      Float?
+  corrente_fase_c      Float?
+  tensao               Float?
+  fator_potencia       Float?
+  observacoes          String?       @db.Text
+  criado_em            DateTime      @default(now())
+  atualizado_em        DateTime      @updatedAt
+
+  @@map("baixa_tensao")
+}
+
+model Seguranca {
+  id                   Int           @id @default(autoincrement())
+  id_pt                String        @unique @db.VarChar(50)
+  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao          Int?
+  inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  resistencia_terra    Float?
+  protecao_raios       Boolean       @default(false)
+  spd                  Boolean       @default(false)
+  sinalizacao          Boolean       @default(false)
+  combate_incendio     Boolean       @default(false)
+  distancias_seguranca Boolean       @default(false)
+  observacoes          String?       @db.Text
+  criado_em            DateTime      @default(now())
+  atualizado_em        DateTime      @updatedAt
+
+  @@map("seguranca")
+}
+
+model Infraestrutura {
+  id              Int           @id @default(autoincrement())
+  id_pt           String        @unique @db.VarChar(50)
+  pt              Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao     Int?
+  inspecao        Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  estado_cabine   String?       @db.VarChar(100)
+  ventilacao      Boolean       @default(false)
+  drenagem        Boolean       @default(false)
+  iluminacao      Boolean       @default(false)
+  controlo_acesso Boolean       @default(false)
+  observacoes     String?       @db.Text
+  criado_em       DateTime      @default(now())
+  atualizado_em   DateTime      @updatedAt
+
+  @@map("infraestrutura")
+}
+
+model Monitorizacao {
+  id                   Int           @id @default(autoincrement())
+  id_pt                String        @unique @db.VarChar(50)
+  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao          Int?
+  inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  scada                Boolean       @default(false)
+  sensores_temperatura Boolean       @default(false)
+  sensores_corrente    Boolean       @default(false)
+  sensores_vibracao    Boolean       @default(false)
+  registo_eventos      Boolean       @default(false)
+  comunicacao          String?       @db.VarChar(150)
+  observacoes          String?       @db.Text
+  criado_em            DateTime      @default(now())
+  atualizado_em        DateTime      @updatedAt
+
+  @@map("monitorizacao")
+}
+
+model Manutencao {
+  id               Int           @id @default(autoincrement())
+  id_pt            String        @unique @db.VarChar(50)
+  pt               Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao      Int?
+  inspecao         Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  historico_falhas String?       @db.Text
+  mtbf             Float?
+  mttr             Float?
+  plano_preventivo Boolean       @default(false)
+  plano_preditivo  Boolean       @default(false)
+  sobressalentes   Boolean       @default(false)
+  observacoes      String?       @db.Text
+  criado_em        DateTime      @default(now())
+  atualizado_em    DateTime      @updatedAt
+
+  @@map("manutencao")
+}
+
+model Risco {
+  id                    Int           @id @default(autoincrement())
+  id_pt                 String        @db.VarChar(50)
+  pt                    Identificacao @relation(fields: [id_pt], references: [id_pt])
+  id_inspecao           Int?
+  inspecao              Inspecao?     @relation(fields: [id_inspecao], references: [id])
+  sobrecarga            Boolean       @default(false)
+  desequilibrio_fases   Boolean       @default(false)
+  falhas_isolamento     Boolean       @default(false)
+  redundancia           Boolean       @default(false)
+  acesso_nao_controlado Boolean       @default(false)
+  acesso_remoto         Boolean       @default(false)
+  segmentacao_ot_it     Boolean       @default(false)
+  logs_siem             Boolean       @default(false)
+  nivel_risco_geral     String?       @db.VarChar(20)
+  observacoes           String?       @db.Text
+  criado_em             DateTime      @default(now())
+  atualizado_em         DateTime      @updatedAt
+
+  @@map("risco")
+}
