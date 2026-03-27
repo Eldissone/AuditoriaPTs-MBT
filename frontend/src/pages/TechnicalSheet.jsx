@@ -24,9 +24,10 @@ export default function TechnicalSheet() {
     async function fetchData() {
       try {
         setLoading(true);
+        if (!id_pt) throw new Error('ID do PT não fornecido');
         const [ptRes, insRes] = await Promise.all([
-          api.get(`/pts/${id_pt || 'PT-DEFAULT'}`),
-          api.get('/inspecoes', { params: { id_pt: id_pt || 'PT-DEFAULT' } })
+          api.get(`/pts/${id_pt}`),
+          api.get('/inspecoes', { params: { id_pt } })
         ]);
         setPt(ptRes.data);
         setInspections(insRes.data);
@@ -75,15 +76,15 @@ export default function TechnicalSheet() {
     let base = 90;
     if (pt.estado === 'Sob Carga') base = 75;
     if (pt.estado === 'Crítico') base = 40;
-    
+
     // Adjust based on if there's an overdue inspection
-    const latest = [...inspections].sort((a,b) => new Date(b.data_inspecao) - new Date(a.data_inspecao))[0];
+    const latest = [...inspections].sort((a, b) => new Date(b.data_inspecao) - new Date(a.data_inspecao))[0];
     if (latest && latest.proxima_inspecao) {
       if (new Date(latest.proxima_inspecao) < new Date()) {
         base -= 15;
       }
     }
-    
+
     return Math.max(10, Math.min(100, base));
   };
 
@@ -110,9 +111,11 @@ export default function TechnicalSheet() {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">{pt?.id_pt || 'ID DESCONHECIDO'}</h2>
-              <span className="bg-[#5fff9b]/10 text-[#005229] px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm">OPERACIONAL</span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm ${pt?.estado_operacional === 'Inativo' ? 'bg-red-100 text-red-800' : 'bg-[#5fff9b]/10 text-[#005229]'}`}>
+                {pt?.estado_operacional || 'DESCONHECIDO'}
+              </span>
             </div>
-            <p className="text-sm text-[#747686] font-medium uppercase tracking-tight">{pt?.subestacao?.nome || 'Subestação Central Viana'}</p>
+            <p className="text-sm text-[#747686] font-medium uppercase tracking-tight">{pt?.subestacao?.nome || 'Localização Não Definida'}</p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -147,7 +150,7 @@ export default function TechnicalSheet() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Capacidade Nominal</p>
-                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.potencia_kva || '630'} kVA</p>
+                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.potencia_kva || '---'} kVA</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -156,7 +159,7 @@ export default function TechnicalSheet() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Nível de Tensão</p>
-                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.nivel_tensao || '15/0.4'} kV</p>
+                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.nivel_tensao || '---'} kV</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -165,7 +168,7 @@ export default function TechnicalSheet() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Ano de Instalação</p>
-                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.ano_instalacao || '2018'}</p>
+                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.ano_instalacao || '---'}</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -174,7 +177,7 @@ export default function TechnicalSheet() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Coordenadas GPS</p>
-                  <p className="text-xs font-mono font-bold text-[#0f1c2c] uppercase">{pt?.gps || '-8.9432, 13.2456'}</p>
+                  <p className="text-xs font-mono font-bold text-[#0f1c2c] uppercase">{pt?.gps || 'NÃO DISPONÍVEL'}</p>
                 </div>
               </div>
             </div>
@@ -241,8 +244,8 @@ export default function TechnicalSheet() {
               <div className="p-4 bg-white/5 border border-white/5 rounded-xl">
                 <p className="text-[10px] font-bold text-white/60 mb-2 uppercase tracking-wide">Desempenho Térmico</p>
                 <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full transition-all duration-1000 ease-out" 
+                  <div
+                    className="h-full transition-all duration-1000 ease-out"
                     style={{ width: `${performance}%`, backgroundColor: performanceColor }}
                   ></div>
                 </div>
@@ -260,14 +263,21 @@ export default function TechnicalSheet() {
               Atividade Recente
             </h3>
             <div className="space-y-6">
-              {[1, 2, 3].map((j) => (
-                <div key={j} className="relative pl-6 pb-6 last:pb-0 border-l border-[#c4c5d7]/20">
+              {inspections.slice(0, 3).map((audit) => (
+                <div key={audit.id} className="relative pl-6 pb-6 last:pb-0 border-l border-[#c4c5d7]/20">
                   <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-[#0d3fd1] ring-4 ring-[#0d3fd1]/10"></div>
-                  <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest mb-1">MAR 1{j}, 2026</p>
-                  <p className="text-xs font-bold text-[#0f1c2c] tracking-tight mb-1 uppercase">Atualização de Cadastro</p>
-                  <p className="text-[10px] text-[#444655] font-medium leading-relaxed opacity-70">O utilizador Maria Silva atualizou as coordenadas GPS desta unidade via terminal móvel.</p>
+                  <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest mb-1">
+                    {new Date(audit.data_inspecao).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs font-bold text-[#0f1c2c] tracking-tight mb-1 uppercase">Auditoria {audit.tipo}</p>
+                  <p className="text-[10px] text-[#444655] font-medium leading-relaxed opacity-70">
+                    {audit.observacoes || 'Sem observações detalhadas nesta auditoria.'}
+                  </p>
                 </div>
               ))}
+              {inspections.length === 0 && (
+                <div className="text-[10px] text-[#747686] font-bold uppercase py-4 opacity-40">Sem atividade registada</div>
+              )}
             </div>
           </div>
         </div>

@@ -39,7 +39,17 @@ export default function NewPT() {
       num_transformador: '',
       regime_exploracao: '',
       imagem_url: '',
-      id_subestacao: Number(subestacaoId)
+      id_subestacao: Number(subestacaoId),
+      municipio: '',
+      provincia: 'Luanda', // Default as per project scope
+      distrito_comuna: '',
+      bairro: '',
+      conta_contrato: '',
+      instalacao: '',
+      equipamento: '',
+      parceiro_negocios: '',
+      categoria_tarifa: '',
+      txt_categoria_tarifa: ''
     },
     conformidade: {
       licenciamento: false,
@@ -67,12 +77,12 @@ export default function NewPT() {
       estado_buchas: 'Bom'
     },
     seguranca: {
-      Resistencia_Terra: '',
-      Protecao_Raios: false,
-      SPD: false,
-      Sinalizacao: false,
-      Combate_Incendio: false,
-      Distancias_Seguranca: false
+      resistencia_terra: '',
+      protecao_raios: false,
+      spd: false,
+      sinalizacao: false,
+      combate_incendio: false,
+      distancias_seguranca: false
     },
     manutencao: {
       ultima_limpeza: '',
@@ -80,23 +90,23 @@ export default function NewPT() {
       inspecao_termografica: ''
     },
     media_tensao: {
-      Tipo_Celas: '',
-      Estado_Disjuntores: '',
-      Estado_Seccionadores: '',
-      Reles_Protecao: '',
-      Coordenacao_Protecoes: '',
-      Aterramento_MT: ''
+      tipo_celas: '',
+      estado_disjuntores: '',
+      estado_seccionadores: '',
+      reles_protecao: '',
+      coordenacao_protecoes: false,
+      aterramento_mt: false
     },
     baixa_tensao: {
-      Estado_QGBT: '',
-      Barramentos: '',
-      Disjuntores: '',
-      Balanceamento_Cargas: '',
-      Corrente_Fase_A: '',
-      Corrente_Fase_B: '',
-      Corrente_Fase_C: '',
-      Tensao: '',
-      Fator_Potenca: ''
+      estado_qgbt: '',
+      barramentos: '',
+      disjuntores: '',
+      balanceamento_cargas: false,
+      corrente_fase_a: 0,
+      corrente_fase_b: 0,
+      corrente_fase_c: 0,
+      tensao: 400,
+      fator_potencia: 0.95
     },
     infraestrutura: {
       estado_cabine: 'Bom',
@@ -106,25 +116,21 @@ export default function NewPT() {
       controlo_acesso: true
     },
     monitorizacao: {
-      SCADA: '',
-      Comunicacoes: '',
-      Estado_Modem: '',
-      Protocolo: '',
-      Sensores_Ativos: {
-        Temperatura: false,
-        Humidade: false,
-        Inundacao: false
-      }
+      scada: false,
+      comunicacao: '',
+      estado_modem: '',
+      protocolo: '',
+      sensores_temperatura: false,
+      sensores_corrente: false,
+      sensores_vibracao: false
     },
     risco: {
-      nivel: '',
-      Fatores: {
-        Incendio: false,
-        Inundacao: false,
-        Acesso_Nao_Autorizado: false,
-        Sobrecarga: false
-      },
-      Recomendacoes: ''
+      nivel_risco_geral: '',
+      sobrecarga: false,
+      desequilibrio_fases: false,
+      falhas_isolamento: false,
+      redundancia: false,
+      recomendacoes: ''
     }
   });
 
@@ -134,19 +140,36 @@ export default function NewPT() {
         try {
           const response = await api.get(`/pts/${id}`);
           const pt = response.data;
+          
+          const sanitize = (obj) => {
+            if (obj === null) return '';
+            if (typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(sanitize);
+            const newObj = {};
+            for (const key in obj) {
+              newObj[key] = sanitize(obj[key]);
+            }
+            return newObj;
+          };
+
+          const sPt = sanitize(pt);
+
           setFormData(prev => ({
             ...prev,
-            ...pt,
-            conformidade: { ...prev.conformidade, ...(pt.conformidade || {}) },
-            transformador: { ...prev.transformador, ...(pt.transformador || {}) },
-            seguranca: { ...prev.seguranca, ...(pt.seguranca || {}) },
-            manutencao: { ...prev.manutencao, ...(pt.manutencao || {}) },
-            media_tensao: { ...prev.media_tensao, ...(pt.media_tensao || {}) },
-            baixa_tensao: { ...prev.baixa_tensao, ...(pt.baixa_tensao || {}) },
-            infraestrutura: { ...prev.infraestrutura, ...(pt.infraestrutura || {}) },
-            monitorizacao: { ...prev.monitorizacao, ...(pt.monitorizacao || {}) },
-            risco: { ...prev.risco, ...(pt.risco || {}) },
-            identificacao: { ...prev.identificacao, ...(pt.identificacao || {}) }
+            identificacao: { 
+              ...prev.identificacao, 
+              ...sPt,
+              ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : '' 
+            },
+            conformidade: { ...prev.conformidade, ...(sPt.conformidade || {}) },
+            transformador: { ...prev.transformador, ...(sPt.transformadores?.[0] || {}) },
+            seguranca: { ...prev.seguranca, ...(sPt.seguranca || {}) },
+            manutencao: { ...prev.manutencao, ...(sPt.manutencao || {}) },
+            media_tensao: { ...prev.media_tensao, ...(sPt.media_tensao || {}) },
+            baixa_tensao: { ...prev.baixa_tensao, ...(sPt.baixa_tensao || {}) },
+            infraestrutura: { ...prev.infraestrutura, ...(sPt.infraestrutura || {}) },
+            monitorizacao: { ...prev.monitorizacao, ...(sPt.monitorizacao || {}) },
+            risco: { ...prev.risco, ...(sPt.riscos?.[0] || {}) }
           }));
         } catch (error) {
           alert('Erro ao carregar dados do PT.');
@@ -273,6 +296,42 @@ export default function NewPT() {
                   <div className="space-y-2 lg:col-span-1">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Localização (Rua/Bairro)</label>
                     <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.localizacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, localizacao: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município (Obrigatório)</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.municipio} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, municipio: e.target.value } })} required />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Comuna</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.distrito_comuna} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, distrito_comuna: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Bairro</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.bairro} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, bairro: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Conta de Contrato</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.conta_contrato} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, conta_contrato: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Instalação</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.instalacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, instalacao: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Equipamento</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.equipamento} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, equipamento: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Parceiro de Negócios</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.parceiro_negocios} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, parceiro_negocios: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Categoria de Tarifa</label>
+                    <input type="text" placeholder="Ex: AT_TI" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.categoria_tarifa} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, categoria_tarifa: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Extenso Cat. Tarifa</label>
+                    <input type="text" placeholder="Ex: Indústria" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.txt_categoria_tarifa} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, txt_categoria_tarifa: e.target.value } })} />
                   </div>
                   <div className="space-y-2 lg:col-span-1">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Coordenadas GPS (Lat, Long)</label>
@@ -447,19 +506,19 @@ export default function NewPT() {
                     <input
                       type="text"
                       className="w-full max-w-sm bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
-                      value={formData.seguranca.Resistencia_Terra}
-                      onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, Resistencia_Terra: e.target.value } })}
+                      value={formData.seguranca.resistencia_terra}
+                      onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, resistencia_terra: e.target.value } })}
                       placeholder="Ex: 2.5 Ohms"
                     />
                   </div>
 
                   <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {[
-                      { key: 'Protecao_Raios', label: 'Proteção contra Raios (IP)' },
-                      { key: 'SPD', label: 'Descarregadores de Sobretensão (SPD)' },
-                      { key: 'Sinalizacao', label: 'Sinalização de Segurança' },
-                      { key: 'Combate_Incendio', label: 'Equipamentos Combate Incêndio' },
-                      { key: 'Distancias_Seguranca', label: 'Distâncias de Segurança Verificadas' }
+                      { key: 'protecao_raios', label: 'Proteção contra Raios (IP)' },
+                      { key: 'spd', label: 'Descarregadores de Sobretensão (SPD)' },
+                      { key: 'sinalizacao', label: 'Sinalização de Segurança' },
+                      { key: 'combate_incendio', label: 'Equipamentos Combate Incêndio' },
+                      { key: 'distancias_seguranca', label: 'Distâncias de Segurança Verificadas' }
                     ].map((item) => (
                       <label key={item.key} className="flex items-center justify-between p-4 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:bg-[#eff4ff] transition-all">
                         <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest">{item.label}</span>
@@ -495,12 +554,12 @@ export default function NewPT() {
               {activeTab === 4 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
                   {[
-                    { key: 'Tipo_Celas', label: 'Tipo de Celas', placeholder: 'Ex: SF6 / Ar' },
-                    { key: 'Estado_Disjuntores', label: 'Estado dos Disjuntores', placeholder: 'Ex: Operacional' },
-                    { key: 'Estado_Seccionadores', label: 'Estado dos Seccionadores', placeholder: 'Ex: Bom' },
-                    { key: 'Reles_Protecao', label: 'Relés de Proteção', placeholder: 'Ex: Digital' },
-                    { key: 'Coordenacao_Protecoes', label: 'Coordenação de Proteções', placeholder: 'Ex: Verificada' },
-                    { key: 'Aterramento_MT', label: 'Aterramento de Média Tensão', placeholder: 'Ex: Conforme' }
+                    { key: 'tipo_celas', label: 'Tipo de Celas', placeholder: 'Ex: SF6 / Ar' },
+                    { key: 'estado_disjuntores', label: 'Estado dos Disjuntores', placeholder: 'Ex: Operacional' },
+                    { key: 'estado_seccionadores', label: 'Estado dos Seccionadores', placeholder: 'Ex: Bom' },
+                    { key: 'reles_protecao', label: 'Relés de Proteção', placeholder: 'Ex: Digital' },
+                    { key: 'coordenacao_protecoes', label: 'Coordenação de Proteções', placeholder: 'Ex: Verificada' },
+                    { key: 'aterramento_mt', label: 'Aterramento de Média Tensão', placeholder: 'Ex: Conforme' }
                   ].map((item) => (
                     <div key={item.key} className="space-y-2">
                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
@@ -519,15 +578,15 @@ export default function NewPT() {
               {activeTab === 5 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-right-4 duration-300">
                   {[
-                    { key: 'Estado_QGBT', label: 'Estado do QGBT', col: 'md:col-span-1' },
-                    { key: 'Barramentos', label: 'Estado dos Barramentos', col: 'md:col-span-1' },
-                    { key: 'Disjuntores', label: 'Estado dos Disjuntores', col: 'md:col-span-1' },
-                    { key: 'Balanceamento_Cargas', label: 'Balanceamento de Cargas', col: 'md:col-span-1' },
-                    { key: 'Tensao', label: 'Tensão (V)', col: 'md:col-span-1' },
-                    { key: 'Fator_Potenca', label: 'Fator de Potência', col: 'md:col-span-1' },
-                    { key: 'Corrente_Fase_A', label: 'Corrente Fase A (A)', col: 'md:col-span-1' },
-                    { key: 'Corrente_Fase_B', label: 'Corrente Fase B (A)', col: 'md:col-span-1' },
-                    { key: 'Corrente_Fase_C', label: 'Corrente Fase C (A)', col: 'md:col-span-1' }
+                    { key: 'estado_qgbt', label: 'Estado do QGBT', col: 'md:col-span-1' },
+                    { key: 'barramentos', label: 'Estado dos Barramentos', col: 'md:col-span-1' },
+                    { key: 'disjuntores', label: 'Estado dos Disjuntores', col: 'md:col-span-1' },
+                    { key: 'balanceamento_cargas', label: 'Balanceamento de Cargas', col: 'md:col-span-1' },
+                    { key: 'tensao', label: 'Tensão (V)', col: 'md:col-span-1' },
+                    { key: 'fator_potencia', label: 'Fator de Potência', col: 'md:col-span-1' },
+                    { key: 'corrente_fase_a', label: 'Corrente Fase A (A)', col: 'md:col-span-1' },
+                    { key: 'corrente_fase_b', label: 'Corrente Fase B (A)', col: 'md:col-span-1' },
+                    { key: 'corrente_fase_c', label: 'Corrente Fase C (A)', col: 'md:col-span-1' }
                   ].map((item) => (
                     <div key={item.key} className={`space-y-2 ${item.col}`}>
                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
@@ -584,12 +643,12 @@ export default function NewPT() {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Risco Global</label>
                       <select
-                        className={`w-full border-2 rounded-2xl py-5 px-8 text-sm font-black transition-all ${formData.risco.nivel === 'Crítico' ? 'bg-red-50 border-red-500 text-red-700' :
-                          formData.risco.nivel === 'Alto' ? 'bg-orange-50 border-orange-500 text-orange-700' :
+                        className={`w-full border-2 rounded-2xl py-5 px-8 text-sm font-black transition-all ${formData.risco.nivel_risco_geral === 'Crítico' ? 'bg-red-50 border-red-500 text-red-700' :
+                          formData.risco.nivel_risco_geral === 'Alto' ? 'bg-orange-50 border-orange-500 text-orange-700' :
                             'bg-[#f8faff] border-[#c4c5d7]/30 text-[#0f1c2c]'
                           }`}
-                        value={formData.risco.nivel}
-                        onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, nivel: e.target.value } })}
+                        value={formData.risco.nivel_risco_geral}
+                        onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, nivel_risco_geral: e.target.value } })}
                       >
                         <option value="">-- Avalie o Risco --</option>
                         <option value="Baixo">Baixo (Normal)</option>
@@ -602,21 +661,23 @@ export default function NewPT() {
                     <div className="p-8 bg-[#f8faff] rounded-3xl border border-[#c4c5d7]/10">
                       <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-6 block">Fatores de Risco Detetados</span>
                       <div className="grid grid-cols-1 gap-4">
-                        {['Incendio', 'Inundacao', 'Acesso_Nao_Autorizado', 'Sobrecarga'].map((fator) => (
-                          <label key={fator} className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:border-red-500/30 transition-all group">
-                            <span className="text-[10px] font-bold text-[#747686] uppercase group-hover:text-[#0f1c2c] transition-colors">{fator.replace(/_/g, ' ')}</span>
+                        {[
+                          { key: 'sobrecarga', label: 'Sobrecarga' },
+                          { key: 'desequilibrio_fases', label: 'Desequilíbrio de Fases' },
+                          { key: 'falhas_isolamento', label: 'Falhas de Isolamento' },
+                          { key: 'redundancia', label: 'Falta de Redundância' }
+                        ].map((fator) => (
+                          <label key={fator.key} className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:border-red-500/30 transition-all group">
+                            <span className="text-[10px] font-bold text-[#747686] uppercase group-hover:text-[#0f1c2c] transition-colors">{fator.label}</span>
                             <input
                               type="checkbox"
                               className="w-5 h-5 rounded border-[#c4c5d7] text-red-600 focus:ring-red-600"
-                              checked={formData.risco.Fatores[fator]}
+                              checked={formData.risco[fator.key]}
                               onChange={(e) => setFormData({
                                 ...formData,
                                 risco: {
                                   ...formData.risco,
-                                  Fatores: {
-                                    ...formData.risco.Fatores,
-                                    [fator]: e.target.checked
-                                  }
+                                  [fator.key]: e.target.checked
                                 }
                               })}
                             />
@@ -632,7 +693,7 @@ export default function NewPT() {
                       className="w-full h-[320px] bg-[#f8faff] border border-[#c4c5d7]/30 rounded-3xl p-8 text-sm font-medium text-[#0f1c2c] focus:border-[#0d3fd1] focus:ring-1 focus:ring-[#0d3fd1] transition-all resize-none"
                       placeholder="Descreva as medidas corretivas necessárias..."
                       value={formData.risco.Recomendacoes}
-                      onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, Recomendacoes: e.target.value } })}
+                      onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, recomendacoes: e.target.value } })}
                     />
                   </div>
                 </div>
@@ -657,8 +718,8 @@ export default function NewPT() {
                           <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
                           <select
                             className="w-full bg-[#16293d] border border-[#0d3fd1]/20 rounded-xl py-4 px-6 text-sm font-bold text-white focus:border-[#00e47c] focus:ring-1 focus:ring-[#00e47c] transition-all cursor-pointer"
-                            value={formData.monitorizacao[item.key] || ''}
-                            onChange={(e) => setFormData({ ...formData, monitorizacao: { ...formData.monitorizacao, [item.key]: e.target.value } })}
+                            value={formData.monitorizacao[item.key.toLowerCase()] || ''}
+                            onChange={(e) => setFormData({ ...formData, monitorizacao: { ...formData.monitorizacao, [item.key.toLowerCase()]: e.target.value } })}
                           >
                             <option value="">-- Selecione --</option>
                             {item.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -670,21 +731,22 @@ export default function NewPT() {
                     <div className="mt-10 pt-10 border-t border-[#0d3fd1]/10">
                       <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest mb-6 block">Sensores IoT Instalados</span>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {['Temperatura', 'Humidade', 'Inundacao'].map((sensor) => (
-                          <label key={sensor} className="flex items-center justify-between p-4 bg-[#16293d] border border-[#0d3fd1]/10 rounded-xl cursor-pointer hover:border-[#00e47c]/50 transition-all group">
-                            <span className="text-[10px] font-bold text-[#c4c5d7] uppercase group-hover:text-white transition-colors">{sensor}</span>
+                        {[
+                          { key: 'sensores_temperatura', label: 'Temperatura' },
+                          { key: 'sensores_corrente', label: 'Corrente' },
+                          { key: 'sensores_vibracao', label: 'Vibração' }
+                        ].map((sensor) => (
+                          <label key={sensor.key} className="flex items-center justify-between p-4 bg-[#16293d] border border-[#0d3fd1]/10 rounded-xl cursor-pointer hover:border-[#00e47c]/50 transition-all group">
+                            <span className="text-[10px] font-bold text-[#c4c5d7] uppercase group-hover:text-white transition-colors">{sensor.label}</span>
                             <input
                               type="checkbox"
                               className="w-5 h-5 rounded border-[#0d3fd1]/30 text-[#00e47c] focus:ring-[#00e47c]"
-                              checked={formData.monitorizacao.Sensores_Ativos[sensor]}
+                              checked={formData.monitorizacao[sensor.key]}
                               onChange={(e) => setFormData({
                                 ...formData,
                                 monitorizacao: {
                                   ...formData.monitorizacao,
-                                  Sensores_Ativos: {
-                                    ...formData.monitorizacao.Sensores_Ativos,
-                                    [sensor]: e.target.checked
-                                  }
+                                  [sensor.key]: e.target.checked
                                 }
                               })}
                             />

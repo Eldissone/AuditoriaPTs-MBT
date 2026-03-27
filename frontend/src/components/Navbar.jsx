@@ -105,6 +105,14 @@ export default function Navbar() {
             <div className="w-7 h-7 rounded-md bg-white/5 flex items-center justify-center border border-[#5fff9b]/20 hover:border-[#5fff9b]/60 transition-all">
               <User className="text-white w-3.5 h-3.5" />
             </div>
+
+            <button
+              onClick={signOut}
+              className="ml-4 p-2.5 text-white/40 hover:text-[#ff4d4d] hover:bg-red-500/10 rounded-lg transition-all"
+              title="Encerrar Sessão"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -170,13 +178,7 @@ export default function Navbar() {
           )}
         </div>
 
-        <button
-          onClick={signOut}
-          className="ml-4 p-2.5 text-white/40 hover:text-[#ff4d4d] hover:bg-red-500/10 rounded-lg transition-all"
-          title="Encerrar Sessão"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+
       </div>
 
       {/* Mobile Menu */}

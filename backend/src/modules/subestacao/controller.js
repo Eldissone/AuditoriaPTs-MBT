@@ -3,7 +3,7 @@ const service = require('./service');
 class SubestacaoController {
   async index(req, res) {
     try {
-      const result = await service.listAll();
+      const result = await service.listAll(req.query);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -15,7 +15,8 @@ class SubestacaoController {
       const result = await service.getDetails(req.params.id);
       res.json(result);
     } catch (error) {
-      res.status(404).json({ error: error.message });
+      const status = error.message === 'ID inválido.' ? 400 : 404;
+      res.status(status).json({ error: error.message });
     }
   }
 

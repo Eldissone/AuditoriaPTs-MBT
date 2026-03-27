@@ -1,12 +1,15 @@
 const repository = require('./repository');
 
 class SubestacaoService {
-  async listAll() {
-    return repository.getAll();
+  async listAll(filters = {}) {
+    return repository.getAll(filters);
   }
 
   async getDetails(id) {
-    const sub = await repository.getById(Number(id));
+    const numericId = Number(id);
+    if (isNaN(numericId)) throw new Error('ID inválido.');
+    
+    const sub = await repository.getById(numericId);
     if (!sub) throw new Error('Subestação não encontrada.');
     return sub;
   }

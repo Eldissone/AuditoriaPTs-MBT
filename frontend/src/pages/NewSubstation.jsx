@@ -35,6 +35,14 @@ export default function NewSubstation() {
     ano_construcao: '',
     entrada_operacao: '',
     estado: 'Ativa',
+    conta_contrato: '',
+    instalacao: '',
+    equipamento: '',
+    parceiro_negocios: '',
+    categoria_tarifa: '',
+    txt_categoria_tarifa: '',
+    distrito_comuna: '',
+    bairro: '',
 
     // 2 & 4. Media/Baixa Tensão (Características Elétricas)
     media_tensao: {
@@ -119,20 +127,34 @@ export default function NewSubstation() {
           const response = await api.get(`/subestacoes/${id}`);
           const sub = response.data;
           
+          // Função recursiva para transformar null em ''
+          const sanitize = (obj) => {
+            if (obj === null) return '';
+            if (typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(sanitize);
+            const newObj = {};
+            for (const key in obj) {
+              newObj[key] = sanitize(obj[key]);
+            }
+            return newObj;
+          };
+
+          const sSub = sanitize(sub);
+
           // Mapeia os dados mantendo a estrutura padrão para campos inexistentes
           setFormData(prev => ({
             ...prev,
-            ...sub,
-            ano_construcao: sub.ano_construcao ? sub.ano_construcao.split('T')[0] : '',
-            entrada_operacao: sub.entrada_operacao ? sub.entrada_operacao.split('T')[0] : '',
-            media_tensao: { ...prev.media_tensao, ...(sub.media_tensao || {}) },
-            baixa_tensao: { ...prev.baixa_tensao, ...(sub.baixa_tensao || {}) },
-            seguranca: { ...prev.seguranca, ...(sub.seguranca || {}) },
-            infraestrutura: { ...prev.infraestrutura, ...(sub.infraestrutura || {}) },
-            monitorizacao: { ...prev.monitorizacao, ...(sub.monitorizacao || {}) },
-            manutencao: { ...prev.manutencao, ...(sub.manutencao || {}) },
-            risco: { ...prev.risco, ...(sub.risco || {}) },
-            transformadores: sub.transformadores || prev.transformadores
+            ...sSub,
+            ano_construcao: sSub.ano_construcao ? sSub.ano_construcao.split('T')[0] : '',
+            entrada_operacao: sSub.entrada_operacao ? sSub.entrada_operacao.split('T')[0] : '',
+            media_tensao: { ...prev.media_tensao, ...(sSub.media_tensao || {}) },
+            baixa_tensao: { ...prev.baixa_tensao, ...(sSub.baixa_tensao || {}) },
+            seguranca: { ...prev.seguranca, ...(sSub.seguranca || {}) },
+            infraestrutura: { ...prev.infraestrutura, ...(sSub.infraestrutura || {}) },
+            monitorizacao: { ...prev.monitorizacao, ...(sSub.monitorizacao || {}) },
+            manutencao: { ...prev.manutencao, ...(sSub.manutencao || {}) },
+            risco: { ...prev.risco, ...(sSub.risco || {}) },
+            transformadores: sSub.transformadores || prev.transformadores
           }));
         } catch (error) {
           alert('Erro ao carregar dados da subestação.');
@@ -267,7 +289,43 @@ export default function NewSubstation() {
                     <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.localizacao} onChange={(e) => setFormData({ ...formData, localizacao: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo</label>
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município (Obrigatório)</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.municipio} onChange={(e) => setFormData({ ...formData, municipio: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Comuna</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.distrito_comuna} onChange={(e) => setFormData({ ...formData, distrito_comuna: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Bairro</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Conta de Contrato</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.conta_contrato} onChange={(e) => setFormData({ ...formData, conta_contrato: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Instalação</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.instalacao} onChange={(e) => setFormData({ ...formData, instalacao: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Equipamento</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.equipamento} onChange={(e) => setFormData({ ...formData, equipamento: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px) font-black text-[#747686] uppercase tracking-widest ml-1">Parceiro de Negócios</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.parceiro_negocios} onChange={(e) => setFormData({ ...formData, parceiro_negocios: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Categoria de Tarifa</label>
+                    <input type="text" placeholder="Ex: AT_TI" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.categoria_tarifa} onChange={(e) => setFormData({ ...formData, categoria_tarifa: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Extenso Categoria Tarifa</label>
+                    <input type="text" placeholder="Ex: Indústria" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.txt_categoria_tarifa} onChange={(e) => setFormData({ ...formData, txt_categoria_tarifa: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Unidade</label>
                     <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}>
                       <option value="">Selecione...</option>
                       <option value="Elevadora">Elevadora</option>

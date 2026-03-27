@@ -89,15 +89,17 @@ export default function SubstationAudit() {
   const [loading, setLoading] = useState(true);
   const [selectedPt, setSelectedPt] = useState(null);
 
-  // Data inspired by the mockup
-  const consumptionData = [
-    { name: 'Jan', consumo: 4200, anterior: 3100 },
-    { name: 'Fev', consumo: 3800, anterior: 2900 },
-    { name: 'Mar', consumo: 5100, anterior: 4200 },
-    { name: 'Abr', consumo: 4600, anterior: 3800 },
-    { name: 'Mai', consumo: 5900, anterior: 4900 },
-    { name: 'Jun', consumo: 5500, anterior: 5100 },
-  ];
+  // Calculate dynamic data based on current PTs
+  const consumptionData = pts.length > 0 
+    ? pts.slice(0, 6).map(p => ({
+        name: p.id_pt,
+        consumo: p.potencia_kva,
+        anterior: p.potencia_kva * 0.85 // Simulating comparison for now
+      }))
+    : [];
+
+  const totalPower = pts.reduce((acc, p) => acc + (p.potencia_kva || 0), 0);
+  const avgEfficiency = 95; // Industry standard baseline
 
   useEffect(() => {
     async function fetchData() {
@@ -117,6 +119,20 @@ export default function SubstationAudit() {
     }
     fetchData();
   }, [id]);
+
+  async function handleDeletePt(idPt) {
+    if (!idPt) return;
+    if (window.confirm(`Tem a certeza que deseja eliminar o PT com ID: ${idPt}?`)) {
+      try {
+        await api.delete(`/pts/${idPt}`);
+        setPts(pts.filter(p => p.id_pt !== idPt));
+        if (selectedPt?.id_pt === idPt) setSelectedPt(pts[0] || null);
+        alert('PT eliminado com sucesso.');
+      } catch (error) {
+        alert('Erro ao eliminar PT: ' + (error.response?.data?.error || error.message));
+      }
+    }
+  }
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center">
@@ -146,15 +162,27 @@ export default function SubstationAudit() {
             <Plus className="w-4 h-4" />
             Novo PT
           </button>
-          <button className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all">
+          <button 
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all disabled:opacity-30"
+            onClick={() => selectedPt && navigate(`/subestacoes/${id}/pts/editar/${selectedPt.id_pt}`)}
+            disabled={!selectedPt}
+          >
             <Edit2 className="w-4 h-4" />
             Editar PT
           </button>
-          <button className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-red-500 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all">
+          <button 
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-red-500 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all disabled:opacity-30"
+            onClick={() => selectedPt && handleDeletePt(selectedPt.id_pt)}
+            disabled={!selectedPt}
+          >
             <Trash2 className="w-4 h-4" />
             Eliminar PT
           </button>
-          <button className="flex items-center gap-2 bg-[#243141] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1a2533] transition-all" onClick={() => navigate(`/ficha-tecnica/${selectedPt?.id_pt}`)}>
+          <button 
+            className="flex items-center gap-2 bg-[#243141] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1a2533] transition-all disabled:opacity-30" 
+            onClick={() => selectedPt && navigate(`/ficha-tecnica/${selectedPt?.id_pt}`)}
+            disabled={!selectedPt}
+          >
             <FileText className="w-4 h-4" />
             Detalhes PT
           </button>
@@ -198,11 +226,11 @@ export default function SubstationAudit() {
               <div className="p-2 bg-[#f8faff] rounded-lg">
                 <BarChart3 className="w-6 h-6 text-[#0d3fd1]" />
               </div>
-              <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">RELATÓRIOS DE CONSUMO</h3>
+              <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Potência por PT (Asset Map)</h3>
             </div>
             <div className="flex items-center gap-4 text-[10px] font-black text-[#747686] uppercase tracking-[0.1em]">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#0d3fd1] rounded-sm"></div> Consumo Atual</div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#c4c5d7] rounded-sm opacity-60"></div> Período Anterior</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#0d3fd1] rounded-sm"></div> Ativo Atual (kVA)</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#c4c5d7] rounded-sm opacity-60"></div> Referência</div>
             </div>
           </div>
 
@@ -212,16 +240,16 @@ export default function SubstationAudit() {
 
           <div className="mt-12 pt-8 border-t border-[#c4c5d7]/10 grid grid-cols-3 gap-6">
             <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
-              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Carga Máxima de Rede</span>
-              <span className="text-2xl font-black text-[#0f1c2c]">10.5 <span className="text-xs text-[#0d3fd1] font-bold uppercase ml-1">MVA</span></span>
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Potência Total Instalada</span>
+              <span className="text-2xl font-black text-[#0f1c2c]">{totalPower.toLocaleString()} <span className="text-xs text-[#0d3fd1] font-bold uppercase ml-1">kVA</span></span>
             </div>
             <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
               <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Fator de Operação</span>
-              <span className="text-2xl font-black text-[#0f1c2c]">0.96 <span className="text-xs text-[#00e47c] font-bold uppercase ml-1">EFICIENTE</span></span>
+              <span className="text-2xl font-black text-[#0f1c2c]">{avgEfficiency}% <span className="text-xs text-[#00e47c] font-bold uppercase ml-1">ESTÁVEL</span></span>
             </div>
             <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
-              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Perdas Técnicas</span>
-              <span className="text-2xl font-black text-[#0f1c2c]">1.8 <span className="text-xs text-red-500 font-bold uppercase ml-1">%</span></span>
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Total de PTs</span>
+              <span className="text-2xl font-black text-[#0f1c2c]">{pts.length} <span className="text-xs text-[#747686] font-bold uppercase ml-1">UNIDADES</span></span>
             </div>
           </div>
         </div>

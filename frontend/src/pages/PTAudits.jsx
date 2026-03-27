@@ -55,6 +55,13 @@ export default function PTAudits() {
       sinalizacao: false,
       combate_incendio: false,
       distancias_seguranca: false
+    },
+    risco: {
+      nivel_risco_geral: 'Baixo',
+      sobrecarga: false,
+      desequilibrio_fases: false,
+      falhas_isolamento: false,
+      redundancia: false
     }
   });
 
@@ -80,13 +87,8 @@ export default function PTAudits() {
       // Formating data for nested Prisma create/update
       const payload = {
         ...formData,
-        id_pt: formData.id_pt,
-        tipo: formData.tipo,
-        // For updates, we might need a different structure depending on backend
-        // but for now we follow the same pattern if it's a "set" operation or if backend handles it
-        conformidade: selectedAuditId ? formData.conformidade : { create: formData.conformidade },
-        transformadores: selectedAuditId ? [formData.transformador] : { create: [{ ...formData.transformador, id_pt: formData.id_pt }] },
-        seguranca: selectedAuditId ? formData.seguranca : { create: { ...formData.seguranca, id_pt: formData.id_pt } }
+        transformadores: [formData.transformador], // Repository expects array
+        riscos: [formData.risco]
       };
 
       if (selectedAuditId) {
