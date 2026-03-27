@@ -59,7 +59,8 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
           return {
             parceiro_negocios: findVal(['Parceiro de negócios', 'Parceiro Negocios', 'Parceiro']),
             conta_contrato: findVal(['Conta de contrato', 'Conta Contrato', 'Conta']),
-            nome: findVal(['Nome Proprietário', 'Nome Proprietario', 'Subestação', 'Subestacao', 'Nome']),
+            nome: findVal(['Município', 'Municipio']), // Cada município é uma subestação
+            proprietario: findVal(['Nome Proprietário', 'Nome Proprietario', 'Nome', 'Subestação', 'Subestacao']), // O proprietário é o PT
             instalacao: findVal(['Instalação', 'Instalacao']),
             equipamento: findVal(['Equipamento']),
             categoria_tarifa: findVal(['Categoria de tarifa', 'Categoria Tarifa', 'Cat Tarifa', 'Cod Tarifa']),

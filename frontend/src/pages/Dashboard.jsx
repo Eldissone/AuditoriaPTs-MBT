@@ -163,7 +163,7 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { title: 'Subestações', value: stats.subestacoes, icon: Layers, color: '#0d3fd1', label: filters.id_subestacao ? 'Selecionada' : 'Monitorizadas' },
+    { title: 'Subestações', value: stats.locais, icon: Layers, color: '#0d3fd1', label: filters.id_subestacao || 'Subestações' },
     { title: 'Postos (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
     { title: 'Auditorias', value: stats.auditorias, icon: Activity, color: '#243141', label: 'Ciclo Ativo' },
     { title: 'Locais', value: stats.locais, icon: MapIcon, color: '#ff4d4d', label: 'Distritos/Mun.' }

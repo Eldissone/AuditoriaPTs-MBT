@@ -14,12 +14,12 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Cell,
   LabelList
@@ -34,43 +34,43 @@ const IndustrialChart = ({ data }) => {
         barGap={8}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f4" vertical={false} />
-        <XAxis 
-          dataKey="name" 
-          axisLine={false} 
-          tickLine={false} 
+        <XAxis
+          dataKey="name"
+          axisLine={false}
+          tickLine={false}
           tick={{ fill: '#747686', fontSize: 10, fontWeight: 700 }}
           dy={10}
         />
         <YAxis hide />
-        
+
         {/* Previous Period Bar */}
-        <Bar 
-          dataKey="anterior" 
-          fill="#c4c5d7" 
-          radius={[4, 4, 0, 0]} 
+        <Bar
+          dataKey="anterior"
+          fill="#c4c5d7"
+          radius={[4, 4, 0, 0]}
           barSize={20}
           opacity={0.4}
           animationDuration={1500}
         />
-        
+
         {/* Current Period Bar */}
-        <Bar 
-          dataKey="consumo" 
-          fill="#0d3fd1" 
-          radius={[6, 6, 0, 0]} 
+        <Bar
+          dataKey="consumo"
+          fill="#0d3fd1"
+          radius={[6, 6, 0, 0]}
           barSize={32}
           animationBegin={300}
           animationDuration={1200}
           isAnimationActive={true}
         >
-          <LabelList 
-            dataKey="consumo" 
-            position="top" 
-            style={{ 
-              fill: '#0f1c2c', 
-              fontSize: '10px', 
-              fontWeight: 900, 
-              fontFamily: 'Inter, sans-serif' 
+          <LabelList
+            dataKey="consumo"
+            position="top"
+            style={{
+              fill: '#0f1c2c',
+              fontSize: '10px',
+              fontWeight: 900,
+              fontFamily: 'Inter, sans-serif'
             }}
             formatter={(val) => `${val} kWh`}
             offset={12}
@@ -90,12 +90,12 @@ export default function SubstationAudit() {
   const [selectedPt, setSelectedPt] = useState(null);
 
   // Calculate dynamic data based on current PTs
-  const consumptionData = pts.length > 0 
+  const consumptionData = pts.length > 0
     ? pts.slice(0, 6).map(p => ({
-        name: p.id_pt,
-        consumo: p.potencia_kva,
-        anterior: p.potencia_kva * 0.85 // Simulating comparison for now
-      }))
+      name: p.id_pt,
+      consumo: p.potencia_kva,
+      anterior: p.potencia_kva * 0.85 // Simulating comparison for now
+    }))
     : [];
 
   const totalPower = pts.reduce((acc, p) => acc + (p.potencia_kva || 0), 0);
@@ -149,7 +149,7 @@ export default function SubstationAudit() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Auditando: {subestacao?.nome}</h2>
+            <h2 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Auditando : {subestacao?.municipio}</h2>
             <p className="text-[10px] font-bold text-[#747686] uppercase tracking-[0.2em]">{subestacao?.codigo} • MBT Energia</p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function SubstationAudit() {
             <Plus className="w-4 h-4" />
             Novo PT
           </button>
-          <button 
+          <button
             className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all disabled:opacity-30"
             onClick={() => selectedPt && navigate(`/subestacoes/${id}/pts/editar/${selectedPt.id_pt}`)}
             disabled={!selectedPt}
@@ -170,7 +170,7 @@ export default function SubstationAudit() {
             <Edit2 className="w-4 h-4" />
             Editar PT
           </button>
-          <button 
+          <button
             className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-red-500 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all disabled:opacity-30"
             onClick={() => selectedPt && handleDeletePt(selectedPt.id_pt)}
             disabled={!selectedPt}
@@ -178,8 +178,8 @@ export default function SubstationAudit() {
             <Trash2 className="w-4 h-4" />
             Eliminar PT
           </button>
-          <button 
-            className="flex items-center gap-2 bg-[#243141] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1a2533] transition-all disabled:opacity-30" 
+          <button
+            className="flex items-center gap-2 bg-[#243141] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1a2533] transition-all disabled:opacity-30"
             onClick={() => selectedPt && navigate(`/ficha-tecnica/${selectedPt?.id_pt}`)}
             disabled={!selectedPt}
           >
@@ -193,7 +193,7 @@ export default function SubstationAudit() {
         {/* Sidebar - PT List */}
         <div className="w-80 flex flex-col bg-white rounded-3xl border border-[#c4c5d7]/20 overflow-hidden shadow-sm">
           <div className="p-4 bg-[#0d3fd1] text-white">
-            <h3 className="text-[10px] font-black uppercase tracking-widest">PTS auditados: {subestacao?.nome}</h3>
+            <h3 className="text-[16px] font-black text-center uppercase tracking-widest">PTS da Substação: {subestacao?.municipio}</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
             {pts.length === 0 ? (
@@ -209,7 +209,7 @@ export default function SubstationAudit() {
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-black text-[#0d3fd1] opacity-40">{index + 1} -</span>
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">ID: {pt.id_pt}</span>
+                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">{pt.nome || pt.id_pt}</span>
                     <span className="text-[9px] font-bold text-[#747686]">{pt.localizacao}</span>
                   </div>
                 </div>

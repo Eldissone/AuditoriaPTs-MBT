@@ -211,15 +211,15 @@ export default function SubstationManagement() {
           <table className="w-full text-left border-collapse min-w-[1500px]">
             <thead>
               <tr className="bg-[#243141] text-white">
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Subestação (Município)</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Conta Contrato</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Proprietário / Subestação</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">PT (Proprietário)</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Instalação</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Equipamento</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Parceiro Negócios</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Parceiro de Negócios</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Cat. Tarifa</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Txt. categoria tarifa</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Potência</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Município</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Distrito/Comuna</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Bairro</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-center sticky right-0 bg-[#243141] z-10">Ações</th>
@@ -234,8 +234,9 @@ export default function SubstationManagement() {
                 </tr>
               ) : subestacoes.map((sub) => (
                 <tr key={sub.id} className="hover:bg-[#f8faff] transition-colors group text-[#0f1c2c] text-[11px]">
+                  <td className="px-5 py-4 font-bold text-[#0d3fd1]">{sub.municipio || '---'}</td>
                   <td className="px-5 py-4 font-mono font-black text-[#0d3fd1]">{sub.conta_contrato || '---'}</td>
-                  <td className="px-5 py-4 font-bold uppercase">{sub.nome}</td>
+                  <td className="px-5 py-4 font-bold uppercase">{sub.proprietario || sub.nome}</td>
                   <td className="px-5 py-4 text-[#444655] font-medium">{sub.instalacao || '---'}</td>
                   <td className="px-5 py-4 text-[#444655] font-medium">{sub.equipamento || '---'}</td>
                   <td className="px-5 py-4 text-[#444655] font-medium">{sub.parceiro_negocios || '---'}</td>
@@ -246,7 +247,6 @@ export default function SubstationManagement() {
                   <td className="px-5 py-4 text-center font-black">
                     {sub.potencia_total_kva?.toLocaleString()} <span className="text-[9px] opacity-40">kVA</span>
                   </td>
-                  <td className="px-5 py-4 font-bold text-[#0d3fd1]">{sub.municipio || '---'}</td>
                   <td className="px-5 py-4 text-[#444655] uppercase">{sub.distrito_comuna || '---'}</td>
                   <td className="px-5 py-4 text-[#444655] uppercase">{sub.bairro || '---'}</td>
                   <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">

@@ -13,11 +13,11 @@ async function main() {
   // 1. Criar Utilizador Auditor (se não existir)
   const passwordHash = await bcrypt.hashSync('admin123', 10);
   const auditor = await prisma.utilizador.upsert({
-    where: { email: 'auditor@ptas.ao' },
+    where: { email: 'mbt@mbtenergia.com' },
     update: {},
     create: {
       nome: 'Auditor MBT Energia',
-      email: 'auditor@ptas.ao',
+      email: 'mbt@mbtenergia.com',
       password_hash: passwordHash,
       role: 'admin',
       municipio: 'Viana',
