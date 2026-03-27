@@ -11,9 +11,11 @@ import {
   Filter,
   ArrowUpDown,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import api from '../services/api';
+import ExcelImportModal from '../components/ExcelImportModal';
 
 export default function SubstationManagement() {
   const [subestacoes, setSubestacoes] = useState([]);
@@ -22,6 +24,7 @@ export default function SubstationManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [municipio, setMunicipio] = useState('');
   const [estado, setEstado] = useState('');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -73,12 +76,21 @@ export default function SubstationManagement() {
           <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Gestão de Subestações</h2>
           <p className="text-sm text-[#747686] font-medium uppercase tracking-wider opacity-60">Inventário e controlo de ativos</p>
         </div>
-        <Link to="/subestacoes/nova">
-          <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
-            <Plus className="w-5 h-5" />
-            Registar Subestação
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 bg-white border-2 border-[#0d3fd1] text-[#0d3fd1] px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#eff4ff] transition-all shadow-sm active:scale-95 uppercase"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            Importar Excel
           </button>
-        </Link>
+          <Link to="/subestacoes/nova">
+            <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
+              <Plus className="w-5 h-5" />
+              Registar Subestação
+            </button>
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm overflow-hidden">
@@ -218,6 +230,12 @@ export default function SubstationManagement() {
           </div>
         </div>
       </div>
+
+      <ExcelImportModal 
+        isOpen={isImportModalOpen} 
+        onClose={() => setIsImportModalOpen(false)} 
+        onImportSuccess={fetchSubestacoes}
+      />
     </div>
   );
 }

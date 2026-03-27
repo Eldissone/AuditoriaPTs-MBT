@@ -66,6 +66,13 @@ class SubestacaoRepository {
       where: { id },
     });
   }
+
+  async bulkCreate(data) {
+    return prisma.subestacao.createMany({
+      data,
+      skipDuplicates: true,
+    });
+  }
 }
 
 module.exports = new SubestacaoRepository();
