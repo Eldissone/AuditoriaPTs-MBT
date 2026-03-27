@@ -1,4 +1,5 @@
 const repository = require('./repository');
+const { getGpsForMunicipio } = require('../../utils/angolaGps');
 
 class SubestacaoService {
   async listAll(filters = {}) {
@@ -53,6 +54,7 @@ class SubestacaoService {
           txt_categoria_tarifa: item.txt_categoria_tarifa ? String(item.txt_categoria_tarifa) : null,
           potencia_total_kva: parseFloat(item.potencia_total_kva || item.potencia) || 0,
           estado: String(item.estado || 'Ativa'),
+          gps: item.gps || getGpsForMunicipio(item.municipio) || null,
         };
 
         let subestacao;
@@ -96,6 +98,7 @@ class SubestacaoService {
               parceiro_negocios: item.parceiro_negocios ? String(item.parceiro_negocios) : null,
               categoria_tarifa: item.categoria_tarifa ? String(item.categoria_tarifa) : null,
               txt_categoria_tarifa: item.txt_categoria_tarifa ? String(item.txt_categoria_tarifa) : null,
+              gps: item.gps || getGpsForMunicipio(item.municipio) || null,
             }
           });
           results.pts++;

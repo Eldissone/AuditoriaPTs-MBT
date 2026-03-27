@@ -28,12 +28,23 @@ L.Icon.Default.mergeOptions({
 // Custom Substation Icon
 const substationIcon = L.divIcon({
   className: 'custom-substation-icon',
-  html: `<div style="background-color: #0d3fd1; width: 32px; height: 32px; border-radius: 8px; display: flex; items-center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 12px rgba(13, 63, 209, 0.4);">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  html: `<div style="background-color: #0d3fd1; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 12px rgba(13, 63, 209, 0.4);">
+           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
          </div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 16],
   popupAnchor: [0, -16]
+});
+
+// Custom PT Icon
+const ptIcon = L.divIcon({
+  className: 'custom-pt-icon',
+  html: `<div style="background-color: #5fff9b; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #005229; box-shadow: 0 2px 8px rgba(0,82,41,0.3);">
+           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#005229" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+         </div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  popupAnchor: [0, -12]
 });
 
 function ChangeView({ center, zoom }) {
@@ -64,8 +75,8 @@ export default function Dashboard() {
   const [selectedPtId, setSelectedPtId] = useState(null);
   const [pts, setPts] = useState([]);
   const [recentAudits, setRecentAudits] = useState([]);
-  const [mapCenter, setMapCenter] = useState([-8.8383, 13.2344]); // Luanda
-  const [zoom, setZoom] = useState(12);
+  const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]); // Angola center
+  const [zoom, setZoom] = useState(6);
   const [gpsInput, setGpsInput] = useState({ lat: '', lng: '' });
   const [isLocating, setIsLocating] = useState(false);
 
@@ -163,10 +174,10 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { title: 'Subestações', value: stats.locais, icon: Layers, color: '#0d3fd1', label: filters.id_subestacao || 'Subestações' },
-    { title: 'Postos (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
+    { title: 'Subestações/Localidades', value: stats.locais, icon: Layers, color: '#0d3fd1', label: 'Distritos/Mun.' },
+    { title: 'Proprietários (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
     { title: 'Auditorias', value: stats.auditorias, icon: Activity, color: '#243141', label: 'Ciclo Ativo' },
-    { title: 'Locais', value: stats.locais, icon: MapIcon, color: '#ff4d4d', label: 'Distritos/Mun.' }
+    { title: 'N/A', value: stats.subestacoes, icon: Layers, color: '#0dd114', label: 'N/A' }
   ];
 
   return (
@@ -211,17 +222,17 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-6 bg-[#0d3fd1] rounded-full"></div>
-              <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Localização da Substação</h3>
+              <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Mapa de Subestações (Municípios)</h3>
             </div>
             <div className="flex gap-4">
-              <select
+              {/* <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
                 value={filters.id_subestacao}
                 onChange={e => setFilters({ ...filters, id_subestacao: e.target.value })}
               >
                 <option value="">Todas Subestações</option>
                 {Array.isArray(subestacoes) && subestacoes.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
+              </select> */}
               <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
                 value={filters.estado_operacional}
@@ -254,7 +265,7 @@ export default function Dashboard() {
                   onClick={() => setSelectedPtId(null)}
                   className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-100 transition-all border border-red-100"
                 >
-                  Limpar Foco (PT: {selectedPtId})
+                  Limpar Foco
                 </button>
               )}
             </div>
@@ -299,13 +310,15 @@ export default function Dashboard() {
                         <hr className="my-2 border-[#c4c5d7]/20" />
                         <div className="flex flex-col gap-1 mb-3">
                           <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Código: {sub.codigo}</span>
-                          <span className="text-[9px] font-bold">Potência Total: {sub.potencia_total_kva} kVA</span>
+                          <span className="text-[9px] font-bold">Potência Total: {sub.potencia_total_kva?.toLocaleString()} kVA</span>
+                          <span className="text-[9px] font-bold">Município: {sub.municipio || 'N/D'}</span>
+                          <span className="text-[9px] font-bold">PTs: {sub._count?.pts ?? '—'}</span>
                         </div>
                         <button
                           onClick={() => setFilters({ ...filters, id_subestacao: sub.id.toString() })}
                           className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
                         >
-                          Ver PTs Desta Subestação
+                          Ver Proprietários (PTs)
                         </button>
                       </div>
                     </Popup>
@@ -331,7 +344,7 @@ export default function Dashboard() {
                       <div className="text-sm p-1">
                         <div className="flex items-center gap-2 mb-2">
                           <div className={`w-2 h-2 rounded-full ${pt.estado_operacional === 'Operacional' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <strong className="text-[#0f1c2c] uppercase">PT: {pt.id_pt}</strong>
+                          <strong className="text-[#0f1c2c] uppercase">{pt.parceiro_negocios || pt.id_pt}</strong>
                         </div>
                         <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{pt.localizacao}</p>
                         <hr className="my-2 border-[#c4c5d7]/20" />
@@ -405,7 +418,7 @@ export default function Dashboard() {
               recentAudits.map((audit) => (
                 <div key={audit.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/10 transition-all group cursor-pointer">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-white px-2 py-0.5 rounded bg-[#0d3fd1] uppercase tracking-wider">{audit.id_pt}</span>
+                    <span className="text-[10px] font-black text-white px-2 py-0.5 rounded bg-[#0d3fd1] uppercase tracking-wider">{audit.pt?.parceiro_negocios || audit.id_pt}</span>
                     <span className="text-[9px] font-bold text-white/40 uppercase">
                       {new Date(audit.data_inspecao).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                     </span>
