@@ -49,6 +49,10 @@ class SubestacaoService {
 
     return repository.bulkCreate(formattedData);
   }
+
+  async getFiltersMetadata() {
+    return repository.getMetadata();
+  }
 }
 
 module.exports = new SubestacaoService();

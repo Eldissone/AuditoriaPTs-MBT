@@ -7,6 +7,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/', (req, res) => controller.index(req, res));
+router.get('/metadata', (req, res) => controller.getMetadata(req, res));
 router.get('/:id', (req, res) => controller.show(req, res));
 router.post('/', (req, res) => controller.store(req, res));
 router.post('/bulk', (req, res) => controller.bulkStore(req, res));

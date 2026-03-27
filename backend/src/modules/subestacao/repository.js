@@ -95,6 +95,46 @@ class SubestacaoRepository {
       skipDuplicates: true,
     });
   }
+
+  async getMetadata() {
+    // Buscar todos os valores únicos para os filtros
+    const [municipios, categorias, potencias] = await Promise.all([
+      prisma.subestacao.findMany({
+        distinct: ['municipio'],
+        select: { municipio: true },
+        where: { 
+          AND: [
+            { municipio: { not: null } },
+            { municipio: { not: '' } }
+          ]
+        },
+        orderBy: { municipio: 'asc' }
+      }),
+      prisma.subestacao.findMany({
+        distinct: ['categoria_tarifa'],
+        select: { categoria_tarifa: true },
+        where: { 
+          AND: [
+            { categoria_tarifa: { not: null } },
+            { categoria_tarifa: { not: '' } }
+          ]
+        },
+        orderBy: { categoria_tarifa: 'asc' }
+      }),
+      prisma.subestacao.findMany({
+        distinct: ['potencia_total_kva'],
+        select: { potencia_total_kva: true },
+        where: { potencia_total_kva: { gt: 0 } },
+        orderBy: { potencia_total_kva: 'asc' }
+      })
+    ]);
+
+    return {
+      municipios: municipios.map(m => m.municipio),
+      categorias: categorias.map(c => c.categoria_tarifa),
+      potencias: potencias.map(p => p.potencia_total_kva)
+    };
+  }
 }
 
 module.exports = new SubestacaoRepository();

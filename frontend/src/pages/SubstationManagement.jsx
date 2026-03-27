@@ -19,7 +19,7 @@ import ExcelImportModal from '../components/ExcelImportModal';
 
 export default function SubstationManagement() {
   const [subestacoes, setSubestacoes] = useState([]);
-  const [allSubestacoes, setAllSubestacoes] = useState([]); // Permite popular filtros mesmo com resultados vazios
+  const [metadata, setMetadata] = useState({ municipios: [], categorias: [], potencias: [] });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [municipio, setMunicipio] = useState('');
@@ -37,6 +37,10 @@ export default function SubstationManagement() {
   const tableRef = useRef(null);
   const navigate = useNavigate();
  
+  useEffect(() => {
+    fetchMetadata();
+  }, []);
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchSubestacoes();
@@ -74,17 +78,6 @@ export default function SubstationManagement() {
       if (tableRef.current) {
         tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-
-      // Popular allSubestacoes apenas na primeira carga para manter filtros persistentes
-      // This should ideally be done with a separate, non-paginated call or on initial load only
-      // For now, we'll populate it if it's empty and no filters are active.
-      if (allSubestacoes.length === 0 && !searchTerm && !municipio && !estado) {
-        // Make a separate call or store all data if needed for filter options
-        // For simplicity, if the API returns all data when no filters, use that.
-        // Otherwise, a dedicated endpoint for filter options might be better.
-        const allResponse = await api.get('/subestacoes'); // Fetch all for filter options
-        setAllSubestacoes(allResponse.data.data || allResponse.data);
-      }
     } catch (error) {
       console.error('Erro ao buscar subestações', error);
       setSubestacoes([]);
@@ -92,6 +85,15 @@ export default function SubstationManagement() {
       setTotalRecords(0);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchMetadata() {
+    try {
+      const res = await api.get('/subestacoes/metadata');
+      setMetadata(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar metadados dos filtros', err);
     }
   }
 
@@ -158,7 +160,7 @@ export default function SubstationManagement() {
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todos Municípios</option>
-              {[...new Set(allSubestacoes.map(s => s.municipio))].filter(Boolean).map(m => (
+              {(metadata.municipios || []).map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
@@ -179,18 +181,21 @@ export default function SubstationManagement() {
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todas Tarifas</option>
-              {[...new Set(allSubestacoes.map(s => s.categoria_tarifa))].filter(Boolean).map(t => (
+              {(metadata.categorias || []).map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
 
-            <input
-              type="number"
-              placeholder="Potência (kVA)"
+            <select
               value={potencia}
               onChange={(e) => {setPotencia(e.target.value); setCurrentPage(1);}}
-              className="w-32 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
-            />
+              className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
+            >
+              <option value="">Potência (Todas)</option>
+              {(metadata.potencias || []).map(p => (
+                <option key={p} value={p}>{p} kVA</option>
+              ))}
+            </select>
 
             <button 
               onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setPotencia(''); setCategoriaTarifa(''); setCurrentPage(1); }}
@@ -316,7 +321,10 @@ export default function SubstationManagement() {
       <ExcelImportModal 
         isOpen={isImportModalOpen} 
         onClose={() => setIsImportModalOpen(false)} 
-        onImportSuccess={fetchSubestacoes}
+        onImportSuccess={() => {
+          fetchSubestacoes();
+          fetchMetadata();
+        }}
       />
     </div>
   );
