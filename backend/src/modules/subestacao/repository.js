@@ -3,6 +3,9 @@ const prisma = require('../../database/client');
 class SubestacaoRepository {
   async getAll(filters = {}) {
     const where = {};
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const skip = (page - 1) * limit;
 
     if (filters.search) {
       where.OR = [
@@ -20,15 +23,22 @@ class SubestacaoRepository {
       where.estado = filters.estado;
     }
 
-    return prisma.subestacao.findMany({
-      where,
-      include: {
-        _count: {
-          select: { pts: true },
+    const [data, total] = await Promise.all([
+      prisma.subestacao.findMany({
+        where,
+        include: {
+          _count: {
+            select: { pts: true },
+          },
         },
-      },
-      orderBy: { nome: 'asc' }
-    });
+        orderBy: { nome: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.subestacao.count({ where })
+    ]);
+
+    return { data, total, page, limit };
   }
 
   async getById(id) {

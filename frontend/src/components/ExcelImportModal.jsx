@@ -38,14 +38,21 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
           });
 
           const findVal = (keywords) => {
-            const match = keywords.map(kw => kw.toLowerCase().replace(/[.]/g, '')).find(kw => 
-              Object.keys(normalizedRow).some(k => k.includes(kw))
+            const normalizedKeywords = keywords.map(kw => kw.toLowerCase().replace(/[.]/g, '').trim());
+            
+            // 1. Tentar correspondência exata primeiro
+            let foundKey = Object.keys(normalizedRow).find(k => 
+              normalizedKeywords.some(kw => k === kw)
             );
+
+            // 2. Se não achou, tentar por inclusão
+            if (!foundKey) {
+              foundKey = Object.keys(normalizedRow).find(k => 
+                normalizedKeywords.some(kw => k.includes(kw))
+              );
+            }
             
-            if (!match) return null;
-            
-            const key = Object.keys(normalizedRow).find(k => k.includes(match));
-            return normalizedRow[key];
+            return foundKey ? normalizedRow[foundKey] : null;
           };
 
           return {
@@ -54,9 +61,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
             nome: findVal(['Nome Proprietário', 'Nome Proprietario', 'Subestação', 'Subestacao', 'Nome']),
             instalacao: findVal(['Instalação', 'Instalacao']),
             equipamento: findVal(['Equipamento']),
-            categoria_tarifa: findVal(['Categoria de tarifa', 'Categoria Tarifa', 'Cat Tarifa']),
-            txt_categoria_tarifa: findVal(['Txt categoria tarifa', 'Tipo Tarifa', 'Desc Tarifa']),
-            potencia_total_kva: parseFloat(findVal(['potência', 'potencia', 'kva'])) || 0,
+            categoria_tarifa: findVal(['Categoria de tarifa', 'Categoria Tarifa', 'Cat Tarifa', 'Cod Tarifa']),
+            txt_categoria_tarifa: findVal(['Txt categoria tarifa', 'Texto Categoria', 'Tipo Tarifa', 'Desc Tarifa', 'Descrição Tarifa', 'Desc. Tarifa', 'Txt Categoria', 'Txt. Cat.']),
+            potencia_total_kva: parseFloat(findVal(['potência', 'potencia', 'kva', 'total kva'])) || 0,
             municipio: findVal(['Município', 'Municipio']),
             distrito_comuna: findVal(['Distrito', 'Comuna']),
             bairro: findVal(['Bairro']),
@@ -166,6 +173,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Nome / Subestação</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Equipamento</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Potência</th>
+                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Tarifa</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Município</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Bairro</th>
                       </tr>
@@ -177,6 +185,10 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                           <td className="px-4 py-3 uppercase">{row.nome || '---'}</td>
                           <td className="px-4 py-3 text-[#444655]">{row.equipamento || '---'}</td>
                           <td className="px-4 py-3 font-black">{row.potencia_total_kva} <span className="text-[8px] opacity-40 uppercase">kVA</span></td>
+                          <td className="px-4 py-3">
+                            <span className="text-[#0d3fd1] uppercase">{row.categoria_tarifa}</span>
+                            <p className="text-[8px] opacity-50 uppercase">{row.txt_categoria_tarifa}</p>
+                          </td>
                           <td className="px-4 py-3">{row.municipio || '---'}</td>
                           <td className="px-4 py-3">{row.bairro || '---'}</td>
                         </tr>

@@ -25,6 +25,13 @@ export default function SubstationManagement() {
   const [municipio, setMunicipio] = useState('');
   const [estado, setEstado] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
+
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -33,25 +40,46 @@ export default function SubstationManagement() {
     }, 500);
  
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, municipio, estado]);
+  }, [searchTerm, municipio, estado, currentPage]);
 
   async function fetchSubestacoes() {
     try {
       setLoading(true);
-      const params = {};
-      if (searchTerm) params.search = searchTerm;
-      if (municipio) params.municipio = municipio;
-      if (estado) params.estado = estado;
-      
+      const params = {
+        search: searchTerm,
+        municipio,
+        estado,
+        page: currentPage,
+        limit
+      };
       const response = await api.get('/subestacoes', { params });
-      setSubestacoes(response.data);
+      
+      // Handle paginated response structure
+      if (response.data.data) {
+        setSubestacoes(response.data.data);
+        setTotalPages(Math.ceil(response.data.total / limit));
+        setTotalRecords(response.data.total);
+      } else {
+        setSubestacoes(response.data);
+        setTotalPages(1); // If no pagination data, assume 1 page
+        setTotalRecords(response.data.length);
+      }
       
       // Popular allSubestacoes apenas na primeira carga para manter filtros persistentes
+      // This should ideally be done with a separate, non-paginated call or on initial load only
+      // For now, we'll populate it if it's empty and no filters are active.
       if (allSubestacoes.length === 0 && !searchTerm && !municipio && !estado) {
-        setAllSubestacoes(response.data);
+        // Make a separate call or store all data if needed for filter options
+        // For simplicity, if the API returns all data when no filters, use that.
+        // Otherwise, a dedicated endpoint for filter options might be better.
+        const allResponse = await api.get('/subestacoes'); // Fetch all for filter options
+        setAllSubestacoes(allResponse.data.data || allResponse.data);
       }
     } catch (error) {
       console.error('Erro ao buscar subestações', error);
+      setSubestacoes([]);
+      setTotalPages(1);
+      setTotalRecords(0);
     } finally {
       setLoading(false);
     }
@@ -61,7 +89,8 @@ export default function SubstationManagement() {
     if (window.confirm(`Tem a certeza que deseja eliminar a subestação ${codigo}?`)) {
       try {
         await api.delete(`/subestacoes/${id}`);
-        setSubestacoes(subestacoes.filter(s => s.id !== id));
+        // After deletion, re-fetch to update pagination and data
+        fetchSubestacoes();
         alert('Subestação eliminada com sucesso.');
       } catch (error) {
         alert('Erro ao eliminar subestação.');
@@ -109,7 +138,7 @@ export default function SubstationManagement() {
           <div className="flex gap-3">
             <select
               value={municipio}
-              onChange={(e) => setMunicipio(e.target.value)}
+              onChange={(e) => {setMunicipio(e.target.value); setCurrentPage(1);}}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todos Municípios</option>
@@ -119,7 +148,7 @@ export default function SubstationManagement() {
             </select>
             <select
               value={estado}
-              onChange={(e) => setEstado(e.target.value)}
+              onChange={(e) => {setEstado(e.target.value); setCurrentPage(1);}}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todos Estados</option>
@@ -128,7 +157,7 @@ export default function SubstationManagement() {
               <option value="Inativa">Inativa</option>
             </select>
             <button 
-              onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); }}
+              onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all"
             >
               <Filter className="w-4 h-4" />
@@ -147,7 +176,7 @@ export default function SubstationManagement() {
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Equipamento</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Parceiro Negócios</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Cat. Tarifa</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Tipo Tarifa</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Txt. categoria tarifa</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Potência</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Município</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Distrito/Comuna</th>
@@ -218,15 +247,41 @@ export default function SubstationManagement() {
             </tbody>
           </table>
         </div>
-
-        <div className="p-6 bg-[#fcfdff] border-t border-[#c4c5d7]/10 flex justify-between items-center text-[10px] font-bold text-[#747686] uppercase tracking-[0.2em]">
-          <span>Total de Ativos: {subestacoes.length}</span>
-          <div className="flex gap-4">
-            <button className="opacity-40 cursor-not-allowed">Anterior</button>
-            <div className="flex gap-1 text-[#0f1c2c]">
-              <span className="w-6 h-6 flex items-center justify-center bg-[#0d3fd1] text-white rounded">1</span>
+        {/* Pagination Controls */}
+        <div className="bg-[#fcfdff] px-8 py-4 border-t border-[#c4c5d7]/10 flex items-center justify-between">
+          <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest leading-none">
+            Mostrando <span className="text-[#0f1c2c]">{subestacoes.length}</span> de <span className="text-[#0f1c2c]">{totalRecords}</span> resultados
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
+            >
+              <ArrowUpDown className="w-4 h-4 rotate-90" />
+            </button>
+            <div className="flex gap-1 overflow-x-auto max-w-[200px] custom-scrollbar">
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex-shrink-0 ${
+                    currentPage === i + 1 
+                      ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/20' 
+                      : 'text-[#747686] hover:bg-[#eff4ff]'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
             </div>
-            <button className="opacity-40 cursor-not-allowed">Próximo</button>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
+            >
+              <ArrowUpDown className="w-4 h-4 -rotate-90" />
+            </button>
           </div>
         </div>
       </div>
