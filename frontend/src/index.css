@@ -1,11 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0d3fd1;
+  --color-secondary: #243141;
+  --color-accent: #5fff9b;
+  --color-dark: #0f1c2c;
+  --font-sans: "Outfit", sans-serif;
+}
 
 @keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(5deg); }
-  75% { transform: rotate(-5deg); }
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(5deg);
+  }
+
+  75% {
+    transform: rotate(-5deg);
+  }
 }
 
 .animate-shake {

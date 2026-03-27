@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -24,14 +24,17 @@ export default function SubstationManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [municipio, setMunicipio] = useState('');
   const [estado, setEstado] = useState('');
+  const [potencia, setPotencia] = useState('');
+  const [categoriaTarifa, setCategoriaTarifa] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const limit = 10;
+  const limit = 30;
 
+  const tableRef = useRef(null);
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function SubstationManagement() {
     }, 500);
  
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, municipio, estado, currentPage]);
+  }, [searchTerm, municipio, estado, currentPage, potencia, categoriaTarifa]);
 
   async function fetchSubestacoes() {
     try {
@@ -49,6 +52,8 @@ export default function SubstationManagement() {
         search: searchTerm,
         municipio,
         estado,
+        potencia,
+        categoria_tarifa: categoriaTarifa,
         page: currentPage,
         limit
       };
@@ -65,6 +70,11 @@ export default function SubstationManagement() {
         setTotalRecords(response.data.length);
       }
       
+      // Rolar para o topo da tabela após carregar
+      if (tableRef.current) {
+        tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
       // Popular allSubestacoes apenas na primeira carga para manter filtros persistentes
       // This should ideally be done with a separate, non-paginated call or on initial load only
       // For now, we'll populate it if it's empty and no filters are active.
@@ -122,7 +132,13 @@ export default function SubstationManagement() {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm overflow-hidden">
+      <div ref={tableRef} className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+            <div className="w-12 h-12 border-4 border-[#0d3fd1] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-[0.2em]">Processando Inventário...</p>
+          </div>
+        )}
         <div className="p-6 border-b border-[#c4c5d7]/10 flex flex-wrap gap-4 items-center justify-between bg-[#fcfdff]">
           <div className="relative group flex-grow max-w-md">
             <input
@@ -156,8 +172,28 @@ export default function SubstationManagement() {
               <option value="Manutenção">Manutenção</option>
               <option value="Inativa">Inativa</option>
             </select>
+
+            <select
+              value={categoriaTarifa}
+              onChange={(e) => {setCategoriaTarifa(e.target.value); setCurrentPage(1);}}
+              className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
+            >
+              <option value="">Todas Tarifas</option>
+              {[...new Set(allSubestacoes.map(s => s.categoria_tarifa))].filter(Boolean).map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              placeholder="Potência (kVA)"
+              value={potencia}
+              onChange={(e) => {setPotencia(e.target.value); setCurrentPage(1);}}
+              className="w-32 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
+            />
+
             <button 
-              onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setCurrentPage(1); }}
+              onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setPotencia(''); setCategoriaTarifa(''); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all"
             >
               <Filter className="w-4 h-4" />
@@ -185,16 +221,7 @@ export default function SubstationManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c5d7]/10">
-              {loading ? (
-                <tr>
-                  <td colSpan="12" className="px-6 py-12 text-center text-sm font-bold text-[#747686] uppercase tracking-widest">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-8 h-8 border-4 border-[#0d3fd1] border-t-transparent rounded-full animate-spin"></div>
-                      Sincronizando Ativos...
-                    </div>
-                  </td>
-                </tr>
-              ) : subestacoes.length === 0 ? (
+              {subestacoes.length === 0 && !loading ? (
                 <tr>
                   <td colSpan="12" className="px-6 py-12 text-center text-sm font-bold text-[#747686] uppercase tracking-widest">
                     Nenhuma subestação encontrada.

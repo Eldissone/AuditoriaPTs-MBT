@@ -23,6 +23,18 @@ class SubestacaoRepository {
       where.estado = filters.estado;
     }
 
+    if (filters.categoria_tarifa) {
+      where.categoria_tarifa = filters.categoria_tarifa;
+    }
+
+    if (filters.potencia) {
+      // Filtrar por potência exata ou próxima (convertendo para float)
+      const p = parseFloat(filters.potencia);
+      if (!isNaN(p)) {
+        where.potencia_total_kva = p;
+      }
+    }
+
     const [data, total] = await Promise.all([
       prisma.subestacao.findMany({
         where,

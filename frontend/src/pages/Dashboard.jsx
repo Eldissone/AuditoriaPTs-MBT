@@ -93,12 +93,13 @@ export default function Dashboard() {
           api.get('/inspecoes')
         ]);
 
-        setSubestacoes(subs.data);
+        const subestacoesList = subs.data.data || subs.data;
+        setSubestacoes(subestacoesList);
 
         // Filter subestacoes if id_subestacao is selected for stats
         const displayedSubs = filters.id_subestacao
-          ? subs.data.filter(s => s.id === Number(filters.id_subestacao))
-          : subs.data;
+          ? subestacoesList.filter(s => s.id === Number(filters.id_subestacao))
+          : subestacoesList;
 
         const currentPts = ptsRes.data;
 
@@ -219,7 +220,7 @@ export default function Dashboard() {
                 onChange={e => setFilters({ ...filters, id_subestacao: e.target.value })}
               >
                 <option value="">Todas Subestações</option>
-                {subestacoes.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                {Array.isArray(subestacoes) && subestacoes.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
               </select>
               <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
@@ -273,7 +274,7 @@ export default function Dashboard() {
               />
 
               {/* Substation Markers */}
-              {subestacoes.map((sub) => {
+              {Array.isArray(subestacoes) && subestacoes.map((sub) => {
                 const pos = parseGps(sub.gps);
                 return pos && (
                   <Marker

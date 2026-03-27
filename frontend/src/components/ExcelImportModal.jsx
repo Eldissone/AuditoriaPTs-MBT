@@ -31,14 +31,15 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
         
         // Mapeamento de campos (Case insensitive e flexível)
         const mappedData = json.map(row => {
-          // Normalizar chaves para facilitar a busca
+          // Normalizar chaves para facilitar a busca (remove pontos e espaços)
           const normalizedRow = {};
           Object.keys(row).forEach(k => {
-            normalizedRow[k.toLowerCase().trim().replace(/[.]/g, '')] = row[k];
+            const normalizedKey = k.toLowerCase().replace(/[.\s]/g, '');
+            normalizedRow[normalizedKey] = row[k];
           });
 
           const findVal = (keywords) => {
-            const normalizedKeywords = keywords.map(kw => kw.toLowerCase().replace(/[.]/g, '').trim());
+            const normalizedKeywords = keywords.map(kw => kw.toLowerCase().replace(/[.\s]/g, ''));
             
             // 1. Tentar correspondência exata primeiro
             let foundKey = Object.keys(normalizedRow).find(k => 
@@ -173,21 +174,24 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Nome / Subestação</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Equipamento</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Potência</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Tarifa</th>
+                        <th className="px-4 py-3 font-black text-[#747686] uppercase text-center">Cat. Tarifa</th>
+                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Txt. Cat. Tarifa</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Município</th>
                         <th className="px-4 py-3 font-black text-[#747686] uppercase">Bairro</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#c4c5d7]/10 font-bold text-[#0f1c2c]">
-                      {data.slice(0, 10).map((row, i) => (
+                      {data.slice(0, 50).map((row, i) => (
                         <tr key={i} className="hover:bg-[#f8faff]">
                           <td className="px-4 py-3 text-[#0d3fd1] font-mono">{row.conta_contrato || '---'}</td>
                           <td className="px-4 py-3 uppercase">{row.nome || '---'}</td>
                           <td className="px-4 py-3 text-[#444655]">{row.equipamento || '---'}</td>
-                          <td className="px-4 py-3 font-black">{row.potencia_total_kva} <span className="text-[8px] opacity-40 uppercase">kVA</span></td>
-                          <td className="px-4 py-3">
-                            <span className="text-[#0d3fd1] uppercase">{row.categoria_tarifa}</span>
-                            <p className="text-[8px] opacity-50 uppercase">{row.txt_categoria_tarifa}</p>
+                          <td className="px-4 py-3 font-black text-center">{row.potencia_total_kva} <span className="text-[8px] opacity-40 uppercase">kVA</span></td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="bg-[#eff4ff] text-[#0d3fd1] px-2 py-1 rounded text-[9px] font-black uppercase">{row.categoria_tarifa || '---'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-[9px] font-bold text-[#747686] uppercase">
+                            {row.txt_categoria_tarifa || '---'}
                           </td>
                           <td className="px-4 py-3">{row.municipio || '---'}</td>
                           <td className="px-4 py-3">{row.bairro || '---'}</td>
@@ -196,9 +200,9 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                     </tbody>
                   </table>
                 </div>
-                {data.length > 10 && (
+                {data.length > 50 && (
                   <div className="p-3 text-center bg-[#fcfdff] border-t border-[#c4c5d7]/10 text-[9px] font-bold text-[#747686] uppercase tracking-[0.2em]">
-                    ...e mais {data.length - 10} registos
+                    ...e mais {data.length - 50} registos
                   </div>
                 )}
               </div>
