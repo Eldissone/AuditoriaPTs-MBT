@@ -6,7 +6,6 @@ import {
   Map as MapIcon,
   TrendingUp,
   Layers,
-  Activity,
   PlusCircle,
   ArrowUpRight,
   Navigation,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import SubstationDetail from './SubstationDetail';
 import { MapContainer, TileLayer, Marker, Popup, useMap, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -119,30 +119,7 @@ const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapC
       position={[pos.lat, pos.lng]}
       icon={substationIcon}
       eventHandlers={{ click: handleClick }}
-    >
-      <Popup>
-        <div className="text-sm p-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Layers className="w-4 h-4 text-[#0d3fd1]" />
-            <strong className="text-[#0f1c2c] uppercase">Subestação: {sub.nome}</strong>
-          </div>
-          <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{sub.localizacao}</p>
-          <hr className="my-2 border-[#c4c5d7]/20" />
-          <div className="flex flex-col gap-1 mb-3">
-            <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Código: {sub.codigo}</span>
-            <span className="text-[9px] font-bold">Potência Total: {sub.potencia_total_kva?.toLocaleString()} kVA</span>
-            <span className="text-[9px] font-bold">Município: {sub.municipio || 'N/D'}</span>
-            <span className="text-[9px] font-bold">PTs: {sub._count?.pts ?? '—'}</span>
-          </div>
-          <button
-            onClick={() => onSelectSubstation(sub.id.toString(), sub)}
-            className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
-          >
-            Ver Proprietários (PTs)
-          </button>
-        </div>
-      </Popup>
-    </Marker>
+    />
   );
 });
 
@@ -172,17 +149,18 @@ export default function Dashboard() {
     return null;
   }, []);
 
-  // API Calls com React Query
-  const { data: subestacoes = [] } = useQuery({
+  // API Calls com React Query - Auto-updating counters
+  const { data: subestacoes = [], isRefetching: isRefetchingSubs } = useQuery({
     queryKey: ['subestacoes'],
     queryFn: async () => {
       const res = await api.get('/subestacoes');
       return res.data.data || res.data;
     },
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
   });
 
-  const { data: pts = [] } = useQuery({
+  const { data: pts = [], isRefetching: isRefetchingPts } = useQuery({
     queryKey: ['pts', filters],
     queryFn: async () => {
       const params = {};
@@ -194,15 +172,7 @@ export default function Dashboard() {
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: allAudits = [] } = useQuery({
-    queryKey: ['inspecoes'],
-    queryFn: async () => {
-      const res = await api.get('/inspecoes');
-      return res.data || [];
-    },
-    staleTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
   });
 
   // Debounced filter handler
@@ -225,24 +195,12 @@ export default function Dashboard() {
       pts.map(p => p.municipio || p.localizacao || 'Luanda')
     ).size;
 
-    const currentPtIds = new Set(pts.map(p => p.id_pt));
-    const filteredAudits = allAudits.filter(a => currentPtIds.has(a.id_pt));
-
     return {
       subestacoes: displayedSubs.length,
       pts: pts.length,
-      auditorias: filteredAudits.length,
       locais: uniqueLocais,
-      anomalias: filteredAudits.filter(a => a.nivel_urgencia === 'Critico').length
     };
-  }, [filters, subestacoes, pts, allAudits]);
-
-  // Memoized recent audits
-  const recentAudits = useMemo(() => {
-    const currentPtIds = new Set(pts.map(p => p.id_pt));
-    const filteredAudits = allAudits.filter(a => currentPtIds.has(a.id_pt));
-    return [...filteredAudits].sort((a, b) => new Date(b.data_inspecao) - new Date(a.data_inspecao)).slice(0, 4);
-  }, [pts, allAudits]);
+  }, [filters, subestacoes, pts]);
 
   // Memoized filter options
   const{ municipios, bairros } = useMemo(() => ({
@@ -282,14 +240,12 @@ export default function Dashboard() {
   const cards = useMemo(() => [
     { title: 'Subestações/Localidades', value: stats.locais, icon: Layers, color: '#0d3fd1', label: 'Distritos/Mun.' },
     { title: 'Proprietários (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
-    { title: 'Auditorias', value: stats.auditorias, icon: Activity, color: '#243141', label: 'Ciclo Ativo' },
     { title: 'N/A', value: stats.subestacoes, icon: Layers, color: '#0dd114', label: 'N/A' }
   ], [stats, filters.estado_operacional]);
 
   const onSelectSubstation = useCallback((subId, sub) => {
     setSelectedSubstation(sub);
-    handleFilterChange({ ...filters, id_subestacao: subId });
-  }, [filters, handleFilterChange]);
+  }, []);
 
   const onSelectPt = useCallback((ptId) => {
     setSelectedPtId(ptId);
@@ -305,7 +261,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Painel de Operações</h2>
-          <p className="text-sm text-[#747686] font-medium">Controlo centralizado da malha de distribuição</p>
+          <p className="text-sm text-[#747686] font-medium">Controlo centralizado com atualização automática a cada 30 segundos</p>
         </div>
         <div className="flex gap-3">
           <button className="flex items-center gap-2 bg-[#243141] text-white px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider hover:bg-[#0f1c2c] transition-all shadow-lg active:scale-95 uppercase">
@@ -316,24 +272,32 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((card, idx) => (
-          <div key={idx} className="bg-white rounded-2xl p-6 shadow-sm border border-[#c4c5d7]/10 group hover:shadow-xl hover:shadow-[#0d3fd1]/5 transition-all relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[#eff4ff] rounded-bl-[80px] -mr-8 -mt-8 group-hover:bg-[#0d3fd1]/5 transition-colors"></div>
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-4">
-                <div style={{ backgroundColor: `${card.color}15` }} className="p-3 rounded-xl transition-transform group-hover:scale-110">
-                  <card.icon style={{ color: card.color }} className="w-6 h-6" />
+        {cards.map((card, idx) => {
+          const isRefetching = idx === 0 || idx === 1 ? (isRefetchingPts || isRefetchingSubs) : false;
+          return (
+            <div key={idx} className={`bg-white rounded-2xl p-6 shadow-sm border border-[#c4c5d7]/10 group hover:shadow-xl hover:shadow-[#0d3fd1]/5 transition-all relative overflow-hidden ${isRefetching ? 'animate-pulse' : ''}`}>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#eff4ff] rounded-bl-[80px] -mr-8 -mt-8 group-hover:bg-[#0d3fd1]/5 transition-colors"></div>
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div style={{ backgroundColor: `${card.color}15` }} className="p-3 rounded-xl transition-transform group-hover:scale-110">
+                    <card.icon style={{ color: card.color }} className="w-6 h-6" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isRefetching && (
+                      <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin"></div>
+                    )}
+                    <ArrowUpRight className="text-[#c4c5d7] w-4 h-4 group-hover:text-[#0d3fd1] transition-colors" />
+                  </div>
                 </div>
-                <ArrowUpRight className="text-[#c4c5d7] w-4 h-4 group-hover:text-[#0d3fd1] transition-colors" />
-              </div>
-              <h3 className="text-[11px] font-black text-[#747686] uppercase tracking-widest mb-1">{card.title}</h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#0f1c2c] tracking-tighter">{card.value}</span>
-                <span className="text-[10px] font-bold text-[#5fff9b] bg-[#005229] px-1.5 py-0.5 rounded uppercase tracking-tighter">{card.label}</span>
+                <h3 className="text-[11px] font-black text-[#747686] uppercase tracking-widest mb-1">{card.title}</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#0f1c2c] tracking-tighter">{card.value}</span>
+                  <span className="text-[10px] font-bold text-[#5fff9b] bg-[#005229] px-1.5 py-0.5 rounded uppercase tracking-tighter">{card.label}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="">
@@ -429,104 +393,22 @@ export default function Dashboard() {
             </MapContainer>
 
             <div className="absolute bottom-6 right-6 bg-[#243141] text-white p-4 rounded-xl shadow-2xl border border-white/10 max-w-[200px] z-[1000]">
-              <p className="text-[10px] font-bold text-[#5fff9b] uppercase tracking-widest mb-1">Deteção Inteligente</p>
-              <p className="text-xs font-medium leading-relaxed opacity-80">{stats.anomalias} PTs reportando estados críticos na malha.</p>
+              <p className="text-[10px] font-bold text-[#5fff9b] uppercase tracking-widest mb-1">Informações do Mapa</p>
+              <p className="text-xs font-medium leading-relaxed opacity-80">Clique nos marcadores para visualizar detalhes das subestações e proprietários.</p>
             </div>
           </div>
         </div>
 
       </div>
 
-      {/* Substation Summary Card */}
+      {/* Substation Detail Modal */}
       {selectedSubstation && (
-        <div className="bg-gradient-to-br from-[#0d3fd1] to-[#0034cc] rounded-3xl p-8 shadow-xl relative overflow-hidden border border-[#5fff9b]/20">
-          <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="font-black text-white text-xl uppercase tracking-tight mb-2">{selectedSubstation.nome}</h3>
-                <p className="text-sm text-white/70 font-medium">{selectedSubstation.localizacao}</p>
-              </div>
-              <button
-                onClick={() => setSelectedSubstation(null)}
-                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all border border-white/20"
-              >
-                ✕ Fechar
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Código</p>
-                <p className="text-2xl font-black text-white">{selectedSubstation.codigo}</p>
-              </div>
-
-              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Potência (kVA)</p>
-                <p className="text-2xl font-black text-white">{(selectedSubstation.potencia_total_kva / 1000).toFixed(1)}K</p>
-              </div>
-
-              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Município</p>
-                <p className="text-2xl font-black text-[#5fff9b]">{selectedSubstation.municipio || 'N/D'}</p>
-              </div>
-
-              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
-                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">PTs Nesta Localidade</p>
-                <p className="text-2xl font-black text-[#5fff9b]">{getPtsCountBySubstation(selectedSubstation.id)}</p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => handleFilterChange({ ...filters, id_subestacao: selectedSubstation.id.toString() })}
-                className="flex-1 bg-[#5fff9b] text-[#005229] px-6 py-3 rounded-lg text-sm font-black uppercase hover:bg-[#4ae085] transition-all shadow-lg"
-              >
-                Filtrar PTs desta Localidade
-              </button>
-              <button
-                onClick={() => setSelectedSubstation(null)}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg text-sm font-black uppercase transition-all border border-white/20"
-              >
-                Voltar ao Mapa
-              </button>
-            </div>
-          </div>
-        </div>
+        <SubstationDetail
+          substation={selectedSubstation}
+          onClose={() => setSelectedSubstation(null)}
+          onFilterPts={(subId) => handleFilterChange({ ...filters, id_subestacao: subId })}
+        />
       )}
-
-      <div className="bg-[#243141] rounded-3xl p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-        <div className="relative z-10 h-full flex flex-col">
-          <h3 className="font-black text-white text-lg uppercase tracking-tight mb-6">Auditorias Recentes</h3>
-
-          <div className="space-y-4 flex-grow overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-            {recentAudits.length > 0 ? (
-              recentAudits.map((audit) => (
-                <div key={audit.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 hover:bg-white/10 transition-all group cursor-pointer">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-white px-2 py-0.5 rounded bg-[#0d3fd1] uppercase tracking-wider">{audit.pt?.parceiro_negocios || audit.id_pt}</span>
-                    <span className="text-[9px] font-bold text-white/40 uppercase">
-                      {new Date(audit.data_inspecao).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-white mb-1 group-hover:text-[#5fff9b] transition-colors uppercase tracking-tight truncate">{audit.pt?.localizacao || 'Localização Desconhecida'}</h4>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${audit.nivel_urgencia === 'Critico' ? 'bg-red-500' : 'bg-[#5fff9b]'}`}></div>
-                    <span className="text-[10px] font-medium text-white/60 tracking-tight">Status: {audit.tipo}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-10 text-white/20 text-[10px] font-bold uppercase tracking-widest">
-                Nenhuma auditoria recente
-              </div>
-            )}
-          </div>
-
-          <button className="w-full mt-8 bg-white/10 hover:bg-white/20 text-white font-bold text-[10px] uppercase tracking-[0.2em] py-4 rounded-xl transition-all border border-white/10">Ver Histórico Completo</button>
-        </div>
-      </div>
     </div>
   );
 }
