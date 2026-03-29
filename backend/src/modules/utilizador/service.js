@@ -16,6 +16,7 @@ class UtilizadorService {
       email: userData.email,
       password_hash: hashedPassword,
       role: userData.role || 'auditor',
+      permissoes: userData.permissoes || ["/pts", "/subestacoes", "/ficha-tecnica"],
     });
 
     return this.generateToken(user);
@@ -40,6 +41,32 @@ class UtilizadorService {
 
     const { password_hash, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };
+  }
+
+  async getAllUsers() {
+    return repository.findAll();
+  }
+
+  async updateUser(id, updateData) {
+    const user = await repository.findById(id);
+    if (!user) throw new Error('Utilizador não encontrado.');
+    
+    // Hash password se providenciada
+    if (updateData.password) {
+      updateData.password_hash = await bcrypt.hash(updateData.password, 10);
+      delete updateData.password;
+    }
+    
+    const updated = await repository.update(id, updateData);
+    const { password_hash, ...userWithoutPassword } = updated;
+    return userWithoutPassword;
+  }
+
+  async deleteUser(id) {
+    const user = await repository.findById(id);
+    if (!user) throw new Error('Utilizador não encontrado.');
+    
+    return repository.softDelete(id);
   }
 
   async getProfile(id) {

@@ -71,13 +71,21 @@ export default function Navbar() {
     }
   };
 
-  const menuItems = [
+  const allMenuItems = [
     { name: 'Painel Central', icon: LayoutDashboard, path: '/' },
     { name: 'Subestações', icon: MapPin, path: '/subestacoes' },
     { name: 'Auditorias PT', icon: FileText, path: '/pts' },
     { name: 'Ficha Técnica', icon: History, path: '/ficha-tecnica' },
     { name: 'Ajustes', icon: Settings, path: '/configuracoes' },
   ];
+
+  if (user?.role === 'admin') {
+    allMenuItems.splice(4, 0, { name: 'Utilizadores', icon: ShieldAlert, path: '/usuarios' });
+  }
+
+  const menuItems = user?.role === 'admin'
+    ? allMenuItems
+    : allMenuItems.filter(item => item.path === '/' || item.path === '/configuracoes' || (user?.permissoes || []).includes(item.path));
 
   return (
     <header className="bg-[#243141] text-white sticky top-0 z-50 shadow-xl border-b border-white/5">

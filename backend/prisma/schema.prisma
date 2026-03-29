@@ -52,6 +52,7 @@ model Utilizador {
   email          String          @unique @db.VarChar(255)
   password_hash  String          @db.VarChar(255)
   role           String          @default("auditor") @db.VarChar(50)
+  permissoes     Json            @default("[]")
   telefone       String?         @db.VarChar(30)
   localizacao    String?         @db.Text
   gps            String?         

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   Zap,
   ShieldCheck,
@@ -12,6 +12,7 @@ import {
   Navigation,
   Search
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { MapContainer, TileLayer, Marker, Popup, useMap, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
@@ -57,15 +58,97 @@ function ChangeView({ center, zoom }) {
   return null;
 }
 
-export default function Dashboard() {
-  const [stats, setStats] = useState({
-    subestacoes: 0,
-    pts: 0,
-    auditorias: 0,
-    anomalias: 0
-  });
+// Memoized PT Marker Component
+const PtMarker = React.memo(({ pt, parseGps, onSelectPt, onMapCenter, onZoomChange }) => {
+  const pos = parseGps(pt.gps);
+  if (!pos) return null;
 
-  const [subestacoes, setSubestacoes] = useState([]);
+  const handleClick = useCallback(() => {
+    onSelectPt(pt.id_pt);
+    onMapCenter([pos.lat, pos.lng]);
+    onZoomChange(16);
+  }, [pt.id_pt, pos.lat, pos.lng, onSelectPt, onMapCenter, onZoomChange]);
+
+  return (
+    <Marker
+      key={pt.id}
+      position={[pos.lat, pos.lng]}
+      icon={ptIcon}
+      eventHandlers={{ click: handleClick }}
+    >
+      <Popup>
+        <div className="text-sm p-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-2 h-2 rounded-full ${pt.estado_operacional === 'Operacional' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <strong className="text-[#0f1c2c] uppercase">{pt.parceiro_negocios || pt.id_pt}</strong>
+          </div>
+          <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{pt.localizacao}</p>
+          <hr className="my-2 border-[#c4c5d7]/20" />
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Subestação: {pt.subestacao?.nome || 'N/A'}</span>
+            <span className="text-[9px] font-bold">Potência: {pt.potencia_kva} kVA</span>
+          </div>
+          <button
+            onClick={() => onSelectPt(pt.id_pt)}
+            className="w-full mt-3 bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
+          >
+            Filtrar Dash
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+PtMarker.displayName = 'PtMarker';
+
+// Memoized Substation Marker Component
+const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapCenter, onZoomChange }) => {
+  const pos = parseGps(sub.gps);
+  if (!pos) return null;
+
+  const handleClick = useCallback(() => {
+    onSelectSubstation(sub.id.toString());
+    onMapCenter([pos.lat, pos.lng]);
+    onZoomChange(14);
+  }, [sub.id, pos.lat, pos.lng, onSelectSubstation, onMapCenter, onZoomChange]);
+
+  return (
+    <Marker
+      key={`sub-${sub.id}`}
+      position={[pos.lat, pos.lng]}
+      icon={substationIcon}
+      eventHandlers={{ click: handleClick }}
+    >
+      <Popup>
+        <div className="text-sm p-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Layers className="w-4 h-4 text-[#0d3fd1]" />
+            <strong className="text-[#0f1c2c] uppercase">Subestação: {sub.nome}</strong>
+          </div>
+          <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{sub.localizacao}</p>
+          <hr className="my-2 border-[#c4c5d7]/20" />
+          <div className="flex flex-col gap-1 mb-3">
+            <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Código: {sub.codigo}</span>
+            <span className="text-[9px] font-bold">Potência Total: {sub.potencia_total_kva?.toLocaleString()} kVA</span>
+            <span className="text-[9px] font-bold">Município: {sub.municipio || 'N/D'}</span>
+            <span className="text-[9px] font-bold">PTs: {sub._count?.pts ?? '—'}</span>
+          </div>
+          <button
+            onClick={() => onSelectSubstation(sub.id.toString())}
+            className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
+          >
+            Ver Proprietários (PTs)
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+SubstationMarker.displayName = 'SubstationMarker';
+
+export default function Dashboard() {
   const [filters, setFilters] = useState({
     id_subestacao: '',
     estado_operacional: '',
@@ -73,82 +156,104 @@ export default function Dashboard() {
     bairro: ''
   });
   const [selectedPtId, setSelectedPtId] = useState(null);
-  const [pts, setPts] = useState([]);
-  const [recentAudits, setRecentAudits] = useState([]);
-  const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]); // Angola center
+  const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]);
   const [zoom, setZoom] = useState(6);
   const [gpsInput, setGpsInput] = useState({ lat: '', lng: '' });
   const [isLocating, setIsLocating] = useState(false);
+  const debounceTimerRef = useRef(null);
 
-  const parseGps = (gpsString) => {
+  const parseGps = useCallback((gpsString) => {
     if (!gpsString) return null;
     const parts = gpsString.split(',').map(p => parseFloat(p.trim()));
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
       return { lat: parts[0], lng: parts[1] };
     }
     return null;
-  };
+  }, []);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const params = {};
-        if (filters.id_subestacao) params.id_subestacao = filters.id_subestacao;
-        if (filters.estado_operacional) params.estado_operacional = filters.estado_operacional;
-        if (filters.municipio) params.municipio = filters.municipio;
-        if (filters.bairro) params.bairro = filters.bairro;
+  // API Calls com React Query
+  const { data: subestacoes = [] } = useQuery({
+    queryKey: ['subestacoes'],
+    queryFn: async () => {
+      const res = await api.get('/subestacoes');
+      return res.data.data || res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-        const [subs, ptsRes, audits] = await Promise.all([
-          api.get('/subestacoes'),
-          api.get('/pts', { params }),
-          api.get('/inspecoes')
-        ]);
+  const { data: pts = [] } = useQuery({
+    queryKey: ['pts', filters],
+    queryFn: async () => {
+      const params = {};
+      if (filters.id_subestacao) params.id_subestacao = filters.id_subestacao;
+      if (filters.estado_operacional) params.estado_operacional = filters.estado_operacional;
+      if (filters.municipio) params.municipio = filters.municipio;
+      if (filters.bairro) params.bairro = filters.bairro;
+      const res = await api.get('/pts', { params });
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-        const subestacoesList = subs.data.data || subs.data;
-        setSubestacoes(subestacoesList);
+  const { data: allAudits = [] } = useQuery({
+    queryKey: ['inspecoes'],
+    queryFn: async () => {
+      const res = await api.get('/inspecoes');
+      return res.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-        // Filter subestacoes if id_subestacao is selected for stats
-        const displayedSubs = filters.id_subestacao
-          ? subestacoesList.filter(s => s.id === Number(filters.id_subestacao))
-          : subestacoesList;
-
-        const currentPts = ptsRes.data;
-
-        // Calculate unique locations (Municípios + Distritos)
-        const uniqueLocais = new Set(
-          currentPts.map(p => p.municipio || p.localizacao || 'Luanda')
-        ).size;
-
-        // Filter audits based on current PTs
-        const currentPtIds = new Set(currentPts.map(p => p.id_pt));
-        const filteredAudits = audits.data.filter(a => currentPtIds.has(a.id_pt));
-
-        setStats({
-          subestacoes: displayedSubs.length,
-          pts: currentPts.length,
-          auditorias: filteredAudits.length,
-          locais: uniqueLocais,
-          anomalias: filteredAudits.filter(a => a.nivel_urgencia === 'Critico').length
-        });
-
-        setPts(currentPts);
-
-        const sortedAudits = [...filteredAudits].sort((a, b) => new Date(b.data_inspecao) - new Date(a.data_inspecao)).slice(0, 4);
-        setRecentAudits(sortedAudits);
-
-      } catch (err) {
-        console.error('Erro ao buscar dados do dashboard', err);
-      }
+  // Debounced filter handler
+  const handleFilterChange = useCallback((newFilters) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
-    fetchData();
-  }, [filters, selectedPtId]);
+    debounceTimerRef.current = setTimeout(() => {
+      setFilters(newFilters);
+    }, 500);
+  }, []);
 
-  const handleCurrentLocation = () => {
+  // Memoized stats calculation
+  const stats = useMemo(() => {
+    const displayedSubs = filters.id_subestacao
+      ? subestacoes.filter(s => s.id === Number(filters.id_subestacao))
+      : subestacoes;
+
+    const uniqueLocais = new Set(
+      pts.map(p => p.municipio || p.localizacao || 'Luanda')
+    ).size;
+
+    const currentPtIds = new Set(pts.map(p => p.id_pt));
+    const filteredAudits = allAudits.filter(a => currentPtIds.has(a.id_pt));
+
+    return {
+      subestacoes: displayedSubs.length,
+      pts: pts.length,
+      auditorias: filteredAudits.length,
+      locais: uniqueLocais,
+      anomalias: filteredAudits.filter(a => a.nivel_urgencia === 'Critico').length
+    };
+  }, [filters, subestacoes, pts, allAudits]);
+
+  // Memoized recent audits
+  const recentAudits = useMemo(() => {
+    const currentPtIds = new Set(pts.map(p => p.id_pt));
+    const filteredAudits = allAudits.filter(a => currentPtIds.has(a.id_pt));
+    return [...filteredAudits].sort((a, b) => new Date(b.data_inspecao) - new Date(a.data_inspecao)).slice(0, 4);
+  }, [pts, allAudits]);
+
+  // Memoized filter options
+  const{ municipios, bairros } = useMemo(() => ({
+    municipios: [...new Set(pts.map(p => p.municipio))].filter(Boolean),
+    bairros: [...new Set(pts.map(p => p.bairro))].filter(Boolean)
+  }), [pts]);
+
+  const handleCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       alert('Geolocalização não é suportada pelo seu navegador');
       return;
     }
-
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -161,9 +266,9 @@ export default function Dashboard() {
         setIsLocating(false);
       }
     );
-  };
+  }, []);
 
-  const handleGpsSearch = (e) => {
+  const handleGpsSearch = useCallback((e) => {
     e.preventDefault();
     const lat = parseFloat(gpsInput.lat);
     const lng = parseFloat(gpsInput.lng);
@@ -171,14 +276,22 @@ export default function Dashboard() {
       setMapCenter([lat, lng]);
       setZoom(16);
     }
-  };
+  }, [gpsInput]);
 
-  const cards = [
+  const cards = useMemo(() => [
     { title: 'Subestações/Localidades', value: stats.locais, icon: Layers, color: '#0d3fd1', label: 'Distritos/Mun.' },
     { title: 'Proprietários (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
     { title: 'Auditorias', value: stats.auditorias, icon: Activity, color: '#243141', label: 'Ciclo Ativo' },
     { title: 'N/A', value: stats.subestacoes, icon: Layers, color: '#0dd114', label: 'N/A' }
-  ];
+  ], [stats, filters.estado_operacional]);
+
+  const onSelectSubstation = useCallback((subId) => {
+    handleFilterChange({ ...filters, id_subestacao: subId });
+  }, [filters, handleFilterChange]);
+
+  const onSelectPt = useCallback((ptId) => {
+    setSelectedPtId(ptId);
+  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -192,7 +305,6 @@ export default function Dashboard() {
             <TrendingUp className="w-4 h-4 text-[#5fff9b]" />
             Relatório Global
           </button>
-
         </div>
       </div>
 
@@ -225,18 +337,10 @@ export default function Dashboard() {
               <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Mapa de Subestações (Municípios)</h3>
             </div>
             <div className="flex gap-4">
-              {/* <select
-                className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
-                value={filters.id_subestacao}
-                onChange={e => setFilters({ ...filters, id_subestacao: e.target.value })}
-              >
-                <option value="">Todas Subestações</option>
-                {Array.isArray(subestacoes) && subestacoes.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select> */}
               <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
                 value={filters.estado_operacional}
-                onChange={e => setFilters({ ...filters, estado_operacional: e.target.value })}
+                onChange={e => handleFilterChange({ ...filters, estado_operacional: e.target.value })}
               >
                 <option value="">Todos Estados</option>
                 <option value="Operacional">Operacional</option>
@@ -247,18 +351,18 @@ export default function Dashboard() {
               <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
                 value={filters.municipio}
-                onChange={e => setFilters({ ...filters, municipio: e.target.value })}
+                onChange={e => handleFilterChange({ ...filters, municipio: e.target.value })}
               >
                 <option value="">Todos Municípios</option>
-                {[...new Set(pts.map(p => p.municipio))].filter(Boolean).map(m => <option key={m} value={m}>{m}</option>)}
+                {municipios.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <select
                 className="bg-[#eff4ff] border-0 rounded-lg px-4 py-2 text-[10px] font-bold text-[#0d3fd1] outline-none ring-1 ring-[#c4c5d7]/20"
                 value={filters.bairro}
-                onChange={e => setFilters({ ...filters, bairro: e.target.value })}
+                onChange={e => handleFilterChange({ ...filters, bairro: e.target.value })}
               >
                 <option value="">Todos Bairros</option>
-                {[...new Set(pts.map(p => p.bairro))].filter(Boolean).map(b => <option key={b} value={b}>{b}</option>)}
+                {bairros.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
               {selectedPtId && (
                 <button
@@ -285,119 +389,29 @@ export default function Dashboard() {
               />
 
               {/* Substation Markers */}
-              {Array.isArray(subestacoes) && subestacoes.map((sub) => {
-                const pos = parseGps(sub.gps);
-                return pos && (
-                  <Marker
-                    key={`sub-${sub.id}`}
-                    position={[pos.lat, pos.lng]}
-                    icon={substationIcon}
-                    eventHandlers={{
-                      click: () => {
-                        setFilters({ ...filters, id_subestacao: sub.id.toString() });
-                        setMapCenter([pos.lat, pos.lng]);
-                        setZoom(14);
-                      },
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-sm p-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Layers className="w-4 h-4 text-[#0d3fd1]" />
-                          <strong className="text-[#0f1c2c] uppercase">Subestação: {sub.nome}</strong>
-                        </div>
-                        <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{sub.localizacao}</p>
-                        <hr className="my-2 border-[#c4c5d7]/20" />
-                        <div className="flex flex-col gap-1 mb-3">
-                          <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Código: {sub.codigo}</span>
-                          <span className="text-[9px] font-bold">Potência Total: {sub.potencia_total_kva?.toLocaleString()} kVA</span>
-                          <span className="text-[9px] font-bold">Município: {sub.municipio || 'N/D'}</span>
-                          <span className="text-[9px] font-bold">PTs: {sub._count?.pts ?? '—'}</span>
-                        </div>
-                        <button
-                          onClick={() => setFilters({ ...filters, id_subestacao: sub.id.toString() })}
-                          className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
-                        >
-                          Ver Proprietários (PTs)
-                        </button>
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
+              {Array.isArray(subestacoes) && subestacoes.map((sub) => (
+                <SubstationMarker
+                  key={`sub-${sub.id}`}
+                  sub={sub}
+                  parseGps={parseGps}
+                  onSelectSubstation={onSelectSubstation}
+                  onMapCenter={setMapCenter}
+                  onZoomChange={setZoom}
+                />
+              ))}
 
-              {pts.map((pt) => {
-                const pos = parseGps(pt.gps);
-                return pos && (
-                  <Marker
-                    key={pt.id}
-                    position={[pos.lat, pos.lng]}
-                    eventHandlers={{
-                      click: () => {
-                        setSelectedPtId(pt.id_pt);
-                        setMapCenter([pos.lat, pos.lng]);
-                        setZoom(16);
-                      },
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-sm p-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`w-2 h-2 rounded-full ${pt.estado_operacional === 'Operacional' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <strong className="text-[#0f1c2c] uppercase">{pt.parceiro_negocios || pt.id_pt}</strong>
-                        </div>
-                        <p className="text-[10px] text-[#747686] mb-1 font-medium italic">{pt.localizacao}</p>
-                        <hr className="my-2 border-[#c4c5d7]/20" />
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[9px] font-black uppercase text-[#0d3fd1]">Subestação: {pt.subestacao?.nome || 'N/A'}</span>
-                          <span className="text-[9px] font-bold">Potência: {pt.potencia_kva} kVA</span>
-                        </div>
-                        <button
-                          onClick={() => setSelectedPtId(pt.id_pt)}
-                          className="w-full mt-3 bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
-                        >
-                          Filtrar Dash
-                        </button>
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
+              {/* PT Markers */}
+              {pts.map((pt) => (
+                <PtMarker
+                  key={pt.id}
+                  pt={pt}
+                  parseGps={parseGps}
+                  onSelectPt={onSelectPt}
+                  onMapCenter={setMapCenter}
+                  onZoomChange={setZoom}
+                />
+              ))}
             </MapContainer>
-
-            {/* GPS Search Overlay */}
-            {/* <div className="absolute top-4 left-4 z-[1000] visible group-hover:visible transition-all">
-              <form onSubmit={handleGpsSearch} className="flex items-center gap-2 bg-white p-2 rounded-xl shadow-2xl border border-[#c4c5d7]/30">
-                <div className="flex flex-col gap-1">
-                  <input
-                    type="text"
-                    placeholder="Lat"
-                    value={gpsInput.lat}
-                    onChange={e => setGpsInput({ ...gpsInput, lat: e.target.value })}
-                    className="w-20 bg-[#eff4ff] border-0 rounded-lg py-1 px-2 text-[10px] font-bold outline-none ring-1 ring-[#c4c5d7]/20 focus:ring-[#0d3fd1]"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Lng"
-                    value={gpsInput.lng}
-                    onChange={e => setGpsInput({ ...gpsInput, lng: e.target.value })}
-                    className="w-20 bg-[#eff4ff] border-0 rounded-lg py-1 px-2 text-[10px] font-bold outline-none ring-1 ring-[#c4c5d7]/20 focus:ring-[#0d3fd1]"
-                  />
-                </div>
-                <button type="submit" className="bg-[#0d3fd1] text-white p-2.5 rounded-lg hover:bg-[#0034cc] transition-all">
-                  <Search className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCurrentLocation}
-                  disabled={isLocating}
-                  className={`p-2.5 rounded-lg transition-all ${isLocating ? 'bg-gray-100 text-gray-400' : 'bg-[#5fff9b] text-[#005229] hover:bg-[#4ae085]'}`}
-                  title="Minha Localização"
-                >
-                  <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-pulse' : ''}`} />
-                </button>
-              </form>
-            </div> */}
 
             <div className="absolute bottom-6 right-6 bg-[#243141] text-white p-4 rounded-xl shadow-2xl border border-white/10 max-w-[200px] z-[1000]">
               <p className="text-[10px] font-bold text-[#5fff9b] uppercase tracking-widest mb-1">Deteção Inteligente</p>
