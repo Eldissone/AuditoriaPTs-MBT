@@ -108,10 +108,10 @@ const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapC
   if (!pos) return null;
 
   const handleClick = useCallback(() => {
-    onSelectSubstation(sub.id.toString());
+    onSelectSubstation(sub.id.toString(), sub);
     onMapCenter([pos.lat, pos.lng]);
     onZoomChange(14);
-  }, [sub.id, pos.lat, pos.lng, onSelectSubstation, onMapCenter, onZoomChange]);
+  }, [sub, pos.lat, pos.lng, onSelectSubstation, onMapCenter, onZoomChange]);
 
   return (
     <Marker
@@ -135,7 +135,7 @@ const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapC
             <span className="text-[9px] font-bold">PTs: {sub._count?.pts ?? '—'}</span>
           </div>
           <button
-            onClick={() => onSelectSubstation(sub.id.toString())}
+            onClick={() => onSelectSubstation(sub.id.toString(), sub)}
             className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-2 rounded-lg hover:bg-[#0034cc] transition-all"
           >
             Ver Proprietários (PTs)
@@ -156,6 +156,7 @@ export default function Dashboard() {
     bairro: ''
   });
   const [selectedPtId, setSelectedPtId] = useState(null);
+  const [selectedSubstation, setSelectedSubstation] = useState(null);
   const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]);
   const [zoom, setZoom] = useState(6);
   const [gpsInput, setGpsInput] = useState({ lat: '', lng: '' });
@@ -285,13 +286,19 @@ export default function Dashboard() {
     { title: 'N/A', value: stats.subestacoes, icon: Layers, color: '#0dd114', label: 'N/A' }
   ], [stats, filters.estado_operacional]);
 
-  const onSelectSubstation = useCallback((subId) => {
+  const onSelectSubstation = useCallback((subId, sub) => {
+    setSelectedSubstation(sub);
     handleFilterChange({ ...filters, id_subestacao: subId });
   }, [filters, handleFilterChange]);
 
   const onSelectPt = useCallback((ptId) => {
     setSelectedPtId(ptId);
   }, []);
+
+  // Contar PTs por subestação
+  const getPtsCountBySubstation = useCallback((substationId) => {
+    return pts.filter(pt => pt.id_subestacao === substationId).length;
+  }, [pts]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -369,7 +376,15 @@ export default function Dashboard() {
                   onClick={() => setSelectedPtId(null)}
                   className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-red-100 transition-all border border-red-100"
                 >
-                  Limpar Foco
+                  Limpar Foco PT
+                </button>
+              )}
+              {selectedSubstation && (
+                <button
+                  onClick={() => setSelectedSubstation(null)}
+                  className="bg-yellow-50 text-yellow-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-yellow-100 transition-all border border-yellow-100"
+                >
+                  Limpar Subestação
                 </button>
               )}
             </div>
@@ -421,6 +436,64 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Substation Summary Card */}
+      {selectedSubstation && (
+        <div className="bg-gradient-to-br from-[#0d3fd1] to-[#0034cc] rounded-3xl p-8 shadow-xl relative overflow-hidden border border-[#5fff9b]/20">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="font-black text-white text-xl uppercase tracking-tight mb-2">{selectedSubstation.nome}</h3>
+                <p className="text-sm text-white/70 font-medium">{selectedSubstation.localizacao}</p>
+              </div>
+              <button
+                onClick={() => setSelectedSubstation(null)}
+                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all border border-white/20"
+              >
+                ✕ Fechar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Código</p>
+                <p className="text-2xl font-black text-white">{selectedSubstation.codigo}</p>
+              </div>
+
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Potência (kVA)</p>
+                <p className="text-2xl font-black text-white">{(selectedSubstation.potencia_total_kva / 1000).toFixed(1)}K</p>
+              </div>
+
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Município</p>
+                <p className="text-2xl font-black text-[#5fff9b]">{selectedSubstation.municipio || 'N/D'}</p>
+              </div>
+
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur border border-white/10">
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">PTs Nesta Localidade</p>
+                <p className="text-2xl font-black text-[#5fff9b]">{getPtsCountBySubstation(selectedSubstation.id)}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => handleFilterChange({ ...filters, id_subestacao: selectedSubstation.id.toString() })}
+                className="flex-1 bg-[#5fff9b] text-[#005229] px-6 py-3 rounded-lg text-sm font-black uppercase hover:bg-[#4ae085] transition-all shadow-lg"
+              >
+                Filtrar PTs desta Localidade
+              </button>
+              <button
+                onClick={() => setSelectedSubstation(null)}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg text-sm font-black uppercase transition-all border border-white/20"
+              >
+                Voltar ao Mapa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#243141] rounded-3xl p-8 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
