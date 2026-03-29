@@ -9,7 +9,8 @@ import {
   PlusCircle,
   ArrowUpRight,
   Navigation,
-  Search
+  Search,
+  CheckCircle2
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
@@ -175,6 +176,17 @@ export default function Dashboard() {
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
   });
 
+  // Fetch tasks/tarefas realizadas
+  const { data: tasks = [], isRefetching: isRefetchingTasks } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const res = await api.get('/tasks');
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
+  });
+
   // Debounced filter handler
   const handleFilterChange = useCallback((newFilters) => {
     if (debounceTimerRef.current) {
@@ -195,12 +207,15 @@ export default function Dashboard() {
       pts.map(p => p.municipio || p.localizacao || 'Luanda')
     ).size;
 
+    const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'done').length;
+
     return {
       subestacoes: displayedSubs.length,
       pts: pts.length,
       locais: uniqueLocais,
+      tasksCompleted: completedTasks,
     };
-  }, [filters, subestacoes, pts]);
+  }, [filters, subestacoes, pts, tasks]);
 
   // Memoized filter options
   const{ municipios, bairros } = useMemo(() => ({
@@ -240,7 +255,7 @@ export default function Dashboard() {
   const cards = useMemo(() => [
     { title: 'Subestações/Localidades', value: stats.locais, icon: Layers, color: '#0d3fd1', label: 'Distritos/Mun.' },
     { title: 'Proprietários (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
-    { title: 'N/A', value: stats.subestacoes, icon: Layers, color: '#0dd114', label: 'N/A' }
+    { title: 'Tarefas Realizadas', value: stats.tasksCompleted, icon: CheckCircle2, color: '#0dd114', label: 'Concluídas' }
   ], [stats, filters.estado_operacional]);
 
   const onSelectSubstation = useCallback((subId, sub) => {
@@ -273,7 +288,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((card, idx) => {
-          const isRefetching = idx === 0 || idx === 1 ? (isRefetchingPts || isRefetchingSubs) : false;
+          const isRefetching = (idx === 0 || idx === 1) ? (isRefetchingPts || isRefetchingSubs) : (idx === 2) ? isRefetchingTasks : false;
           return (
             <div key={idx} className={`bg-white rounded-2xl p-6 shadow-sm border border-[#c4c5d7]/10 group hover:shadow-xl hover:shadow-[#0d3fd1]/5 transition-all relative overflow-hidden ${isRefetching ? 'animate-pulse' : ''}`}>
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#eff4ff] rounded-bl-[80px] -mr-8 -mt-8 group-hover:bg-[#0d3fd1]/5 transition-colors"></div>
