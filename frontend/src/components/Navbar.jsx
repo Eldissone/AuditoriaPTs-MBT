@@ -12,7 +12,8 @@ import {
   History,
   Settings,
   ShieldAlert,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -74,13 +75,15 @@ export default function Navbar() {
   const allMenuItems = [
     { name: 'Painel Central', icon: LayoutDashboard, path: '/' },
     { name: 'Subestações', icon: MapPin, path: '/subestacoes' },
+    { name: 'Minhas Tarefas', icon: ClipboardList, path: '/minhas-tarefas' },
     { name: 'Auditorias PT', icon: FileText, path: '/pts' },
     { name: 'Ficha Técnica', icon: History, path: '/ficha-tecnica' },
     { name: 'Ajustes', icon: Settings, path: '/configuracoes' },
   ];
 
   if (user?.role === 'admin') {
-    allMenuItems.splice(4, 0, { name: 'Utilizadores', icon: ShieldAlert, path: '/usuarios' });
+    allMenuItems.splice(5, 0, { name: 'Utilizadores', icon: ShieldAlert, path: '/usuarios' });
+    allMenuItems.splice(3, 0, { name: 'Tarefas (Gestão)', icon: ClipboardList, path: '/tarefas' });
   }
 
   const menuItems = user?.role === 'admin'

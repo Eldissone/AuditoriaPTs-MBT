@@ -21,13 +21,15 @@ export default function UserManagement() {
     role: 'auditor',
     password: '',
     ativo: true,
-    permissoes: ['/pts', '/subestacoes', '/ficha-tecnica']
+    permissoes: ['/pts', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
   });
   
-  const allPermissions = [
+  const availablePermissions = [
+    { id: '/', label: 'Painel Central' },
     { id: '/subestacoes', label: 'Subestações' },
     { id: '/pts', label: 'Auditorias PT' },
     { id: '/ficha-tecnica', label: 'Ficha Técnica' },
+    { id: '/minhas-tarefas', label: 'Minhas Tarefas' },
   ];
 
   const fetchUsers = async () => {
@@ -61,7 +63,7 @@ export default function UserManagement() {
         role: 'auditor',
         password: '',
         ativo: true,
-        permissoes: ['/pts', '/subestacoes', '/ficha-tecnica']
+        permissoes: ['/pts', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
       });
     }
     setIsModalOpen(true);
@@ -297,7 +299,7 @@ export default function UserManagement() {
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {allPermissions.map(perm => {
+                    {availablePermissions.map(perm => {
                       const isSelected = formData.permissoes.includes(perm.id);
                       return (
                         <label 

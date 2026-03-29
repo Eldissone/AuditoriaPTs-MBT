@@ -19,9 +19,11 @@ import api from '../services/api';
 
 export default function PTAudits() {
   const [view, setView] = useState('list'); // 'list' or 'form'
+  const [subView, setSubView] = useState('inspecoes'); // 'inspecoes' or 'tarefas'
   const [step, setStep] = useState(1);
   const [pts, setPts] = useState([]);
   const [audits, setAudits] = useState([]);
+  const [tarefas, setTarefas] = useState([]);
   const [selectedAuditId, setSelectedAuditId] = useState(null);
   const [formData, setFormData] = useState({
     id_pt: '',
@@ -68,12 +70,14 @@ export default function PTAudits() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [ptsRes, auditsRes] = await Promise.all([
+        const [ptsRes, auditsRes, tarefasRes] = await Promise.all([
           api.get('/pts'),
-          api.get('/inspecoes')
+          api.get('/inspecoes'),
+          api.get('/tarefas').catch(() => ({ data: [] }))
         ]);
         setPts(ptsRes.data);
         setAudits(auditsRes.data);
+        setTarefas(tarefasRes.data ? tarefasRes.data.filter(t => t.status === 'Concluída') : []);
       } catch (err) {
         console.error(err);
       }
@@ -175,9 +179,23 @@ export default function PTAudits() {
   if (view === 'list') {
     return (
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Listagem de Auditorias Feitas</h2>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-4 items-center">
+            <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Relatório de Atividades</h2>
+            <div className="bg-[#f8faff] rounded-xl p-1 border border-[#c4c5d7]/20 flex">
+              <button 
+                onClick={() => setSubView('inspecoes')}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'inspecoes' ? 'bg-white text-[#0d3fd1] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
+              >
+                Inspeções PT
+              </button>
+              <button 
+                onClick={() => setSubView('tarefas')}
+                className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'tarefas' ? 'bg-white text-[#005229] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
+              >
+                Tarefas Concluídas
+              </button>
+            </div>
           </div>
           <button
             onClick={() => {
@@ -226,66 +244,112 @@ export default function PTAudits() {
           </button>
         </div>
 
-        <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
-                <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">PT ID</th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Data da Auditoria</th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#c4c5d7]/10">
-              {audits.map((audit, idx) => (
-                <tr key={audit.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors group`}>
-                  <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-[#c4c5d7]/10 text-center font-mono">
-                    {audit.id_pt}
-                  </td>
-                  <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-[#c4c5d7]/10">
-                    {audit.pt?.proprietario || 'N/A'}
-                  </td>
-                  <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono">
-                    {new Date(audit.data_inspecao).toLocaleDateString('pt-PT')}
-                  </td>
-                  <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
-                    {audit.pt?.subestacao?.nome || 'Sekele'}
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="flex justify-center gap-2">
-                      <button 
-                        onClick={() => handleView(audit)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
-                      >
-                        Abrir
-                      </button>
-                      <button 
-                        onClick={() => handleEdit(audit)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-                      >
-                        Editar
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(audit.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
-                      >
-                        Apagar
-                      </button>
-                    </div>
-                  </td>
+        {subView === 'inspecoes' ? (
+          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">PT ID</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Data da Auditoria</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center">Ações</th>
                 </tr>
-              ))}
-              {audits.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
-                    Nenhuma auditoria registada
-                  </td>
+              </thead>
+              <tbody className="divide-y divide-[#c4c5d7]/10">
+                {audits.map((audit, idx) => (
+                  <tr key={audit.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors group`}>
+                    <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-[#c4c5d7]/10 text-center font-mono">
+                      {audit.id_pt}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-[#c4c5d7]/10">
+                      {audit.pt?.proprietario || 'N/A'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono">
+                      {new Date(audit.data_inspecao).toLocaleDateString('pt-PT')}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
+                      {audit.pt?.subestacao?.nome || 'Sekele'}
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex justify-center gap-2">
+                        <button 
+                          onClick={() => handleView(audit)}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
+                        >
+                          Abrir
+                        </button>
+                        <button 
+                          onClick={() => handleEdit(audit)}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(audit.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
+                        >
+                          Apagar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {audits.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                      Nenhuma auditoria registada
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-white rounded-[2rem] border border-emerald-100 shadow-xl overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-emerald-50 border-b border-emerald-100">
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Auditor</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Tarefa/PT</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Início</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Fim (Conclusão)</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] text-center">Relatório Tarefa</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-emerald-100/50">
+                {tarefas.map((tarefa, idx) => (
+                  <tr key={tarefa.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50/30'} hover:bg-emerald-50 transition-colors group`}>
+                    <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-emerald-50">
+                      {tarefa.auditor?.nome || 'N/A'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-emerald-50">
+                      {tarefa.titulo} {tarefa.id_pt && `(PT: ${tarefa.id_pt})`}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-emerald-50 font-mono">
+                      {tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '-'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-emerald-50 font-mono">
+                      {tarefa.data_fim ? new Date(tarefa.data_fim).toLocaleString('pt-PT') : '-'}
+                    </td>
+                    <td className="px-8 py-5">
+                       <span className="flex justify-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md max-w-max mx-auto">
+                        Validado Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
+                       </span>
+                    </td>
+                  </tr>
+                ))}
+                {tarefas.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                      Nenhuma tarefa de auditoria concluída
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }
