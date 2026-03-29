@@ -33,7 +33,7 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/utilizador');
+      const { data } = await api.get('/utilizadores');
       setUsers(data);
     } catch (err) {
       setError('Erro ao carregar utilizadores');
@@ -88,10 +88,10 @@ export default function UserManagement() {
       }
       
       if (payload.id) {
-        await api.put(`/utilizador/${payload.id}`, payload);
+        await api.put(`/utilizadores/${payload.id}`, payload);
       } else {
         if (!payload.password) payload.password = '123456'; // Senha padrão se não enviada
-        await api.post('/utilizador', payload);
+        await api.post('/utilizadores', payload);
       }
       
       handleCloseModal();
@@ -104,7 +104,7 @@ export default function UserManagement() {
   const handleDelete = async (id) => {
     if (window.confirm('Tem a certeza que deseja inativar este utilizador?')) {
       try {
-        await api.delete(`/utilizador/${id}`);
+        await api.delete(`/utilizadores/${id}`);
         fetchUsers();
       } catch (err) {
         alert("Erro ao inativar utilizador.");

@@ -40,7 +40,7 @@ const PrivateRoute = ({ children, requiredPerm }) => {
 };
 
 export default function AppRoutes() {
-  const { signed, loading } = useAuth();
+  const { user, signed, loading } = useAuth();
 
   if (loading) return null;
 
