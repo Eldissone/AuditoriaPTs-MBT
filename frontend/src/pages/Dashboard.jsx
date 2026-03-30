@@ -38,7 +38,7 @@ const substationIcon = L.divIcon({
   popupAnchor: [0, -16]
 });
 
-// Custom PT Icon
+// Custom PT Icon - Default
 const ptIcon = L.divIcon({
   className: 'custom-pt-icon',
   html: `<div style="background-color: #5fff9b; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #005229; box-shadow: 0 2px 8px rgba(0,82,41,0.3);">
@@ -47,6 +47,17 @@ const ptIcon = L.divIcon({
   iconSize: [22, 22],
   iconAnchor: [11, 11],
   popupAnchor: [0, -12]
+});
+
+// Custom PT Icon - Selected (highlighted)
+const ptIconSelected = L.divIcon({
+  className: 'custom-pt-icon-selected',
+  html: `<div style="background-color: #fb923c; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #c2410c; box-shadow: 0 4px 16px rgba(251, 146, 60, 0.6), inset 0 0 8px rgba(255,255,255,0.3);">
+           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+         </div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -14]
 });
 
 function ChangeView({ center, zoom }) {
@@ -400,7 +411,6 @@ export default function Dashboard() {
                   key={pt.id}
                   pt={pt}
                   parseGps={parseGps}
-                  onSelectPt={onSelectPt}
                   onMapCenter={setMapCenter}
                   onZoomChange={setZoom}
                 />

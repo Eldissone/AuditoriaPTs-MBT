@@ -8,7 +8,8 @@ export default function TaskManagement() {
   const [auditores, setAuditores] = useState([]);
   const [pts, setPts] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState('all');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     id: null,
@@ -130,6 +131,10 @@ export default function TaskManagement() {
     }
   };
 
+  const filteredTarefas = activeTab === 'completed'
+    ? tarefas.filter(t => t.status === 'Concluída')
+    : tarefas;
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
       <div className="flex justify-between items-end">
@@ -148,6 +153,30 @@ export default function TaskManagement() {
         </button>
       </div>
 
+      {/* TABS */}
+      <div className="flex gap-2 border-b border-[#c4c5d7]/20">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
+            activeTab === 'all'
+              ? 'border-[#0d3fd1] text-[#0d3fd1]'
+              : 'border-transparent text-[#747686] hover:text-[#444655]'
+          }`}
+        >
+          Todas as Tarefas ({tarefas.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
+            activeTab === 'completed'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-[#747686] hover:text-[#444655]'
+          }`}
+        >
+          Tarefas Concluídas ({tarefas.filter(t => t.status === 'Concluída').length})
+        </button>
+      </div>
+
       <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-[#747686] font-bold">Carregando tarefas...</div>
@@ -155,15 +184,15 @@ export default function TaskManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa / PT</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Auditor Atribuído</th>
+                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa</th>
+                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Data Prevista</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Estado</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center w-1/6">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c5d7]/10">
-              {tarefas.map((tarefa, i) => (
+              {filteredTarefas.map((tarefa, i) => (
                 <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors`}>
                   <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
                     <div className="space-y-1">
@@ -201,10 +230,10 @@ export default function TaskManagement() {
                   </td>
                 </tr>
               ))}
-              {tarefas.length === 0 && !loading && (
+              {filteredTarefas.length === 0 && !loading && (
                 <tr>
                   <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
-                    Nenhuma tarefa atribuída
+                    {activeTab === 'completed' ? 'Nenhuma tarefa concluída' : 'Nenhuma tarefa atribuída'}
                   </td>
                 </tr>
               )}
