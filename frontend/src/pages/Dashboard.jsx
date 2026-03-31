@@ -191,7 +191,7 @@ export default function Dashboard() {
   const { data: tasks = [], isRefetching: isRefetchingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const res = await api.get('/tasks');
+      const res = await api.get('/tarefas');
       return res.data;
     },
     staleTime: 5 * 60 * 1000,

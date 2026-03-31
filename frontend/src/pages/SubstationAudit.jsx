@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Zap,
   Plus,
@@ -84,10 +84,12 @@ const IndustrialChart = ({ data }) => {
 export default function SubstationAudit() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [subestacao, setSubestacao] = useState(null);
   const [pts, setPts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPt, setSelectedPt] = useState(null);
+  const localidadeFiltro = searchParams.get('localidade') || '';
 
   // Calculate dynamic data based on current PTs
   const consumptionData = pts.length > 0
@@ -100,13 +102,22 @@ export default function SubstationAudit() {
 
   const totalPower = pts.reduce((acc, p) => acc + (p.potencia_kva || 0), 0);
   const avgEfficiency = 95; // Industry standard baseline
+  const proprietarios = [...new Set(
+    pts
+      .map((pt) => pt.subestacao?.proprietario || pt.proprietario)
+      .filter(Boolean)
+  )];
 
   useEffect(() => {
     async function fetchData() {
       try {
         const [subRes, ptsRes] = await Promise.all([
           api.get(`/subestacoes/${id}`),
-          api.get(`/pts?subestacaoId=${id}`)
+          api.get('/pts', {
+            params: localidadeFiltro
+              ? { localidade: localidadeFiltro }
+              : { id_subestacao: id }
+          })
         ]);
         setSubestacao(subRes.data);
         setPts(ptsRes.data || []);
@@ -118,7 +129,7 @@ export default function SubstationAudit() {
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, localidadeFiltro]);
 
   async function handleDeletePt(idPt) {
     if (!idPt) return;
@@ -155,6 +166,14 @@ export default function SubstationAudit() {
         </div>
 
         <div className="flex gap-2">
+          {localidadeFiltro && (
+            <button
+              className="flex items-center gap-2 bg-[#eff4ff] border border-[#0d3fd1]/20 text-[#0d3fd1] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+              onClick={() => navigate(`/subestacoes/${id}/auditoria`)}
+            >
+              Localidade: {localidadeFiltro}
+            </button>
+          )}
           <button
             onClick={() => navigate(`/subestacoes/${id}/pts/novo`)}
             className="flex items-center gap-2 bg-[#0d3fd1] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
@@ -196,6 +215,20 @@ export default function SubstationAudit() {
             <h3 className="text-[16px] font-black text-center uppercase tracking-widest">PTS da Substação: {subestacao?.municipio}</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {proprietarios.length > 0 && (
+              <div className="px-3 py-2 mb-2 bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl">
+                <p className="text-[9px] font-black text-[#747686] uppercase tracking-[0.15em] mb-2">
+                  Proprietários ({proprietarios.length})
+                </p>
+                <div className="space-y-1">
+                  {proprietarios.map((prop) => (
+                    <p key={prop} className="text-[10px] font-bold text-[#0f1c2c] uppercase truncate">
+                      {prop}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
             {pts.length === 0 ? (
               <div className="p-8 text-center text-[10px] font-bold text-[#747686] uppercase opacity-40">
                 Nenhum PT registado nesta subestação
@@ -209,7 +242,7 @@ export default function SubstationAudit() {
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-black text-[#0d3fd1] opacity-40">{index + 1} -</span>
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">{pt.nome || pt.id_pt}</span>
+                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">{subestacao.proprietario || pt.id_pt}</span>
                     <span className="text-[9px] font-bold text-[#747686]">{pt.localizacao}</span>
                   </div>
                 </div>

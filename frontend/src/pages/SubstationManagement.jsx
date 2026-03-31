@@ -252,7 +252,13 @@ export default function SubstationManagement() {
                   <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
                     <div className="flex justify-center gap-2">
                       <button
-                        onClick={() => navigate(`/subestacoes/${sub.id}/auditoria`)}
+                        onClick={() => {
+                          const localidadeSelecionada = municipio || sub.municipio;
+                          const query = localidadeSelecionada
+                            ? `?localidade=${encodeURIComponent(localidadeSelecionada)}`
+                            : '';
+                          navigate(`/subestacoes/${sub.id}/auditoria${query}`);
+                        }}
                         className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
                         title="Auditoria & Relatórios"
                       >

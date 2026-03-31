@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ClipboardCheck,
   Zap,
@@ -15,9 +16,11 @@ import {
   ExternalLink,
   Edit2
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
 export default function PTAudits() {
+  const [searchParams] = useSearchParams();
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [subView, setSubView] = useState('inspecoes'); // 'inspecoes' or 'tarefas'
   const [step, setStep] = useState(1);
@@ -25,8 +28,10 @@ export default function PTAudits() {
   const [audits, setAudits] = useState([]);
   const [tarefas, setTarefas] = useState([]);
   const [selectedAuditId, setSelectedAuditId] = useState(null);
+  const localidadeFiltro = searchParams.get('localidade') || '';
   const [formData, setFormData] = useState({
     id_pt: '',
+    id_tarefa: '',
     tipo: 'Preventiva',
     data_inspecao: new Date().toISOString().split('T')[0],
     observacoes: '',
@@ -70,27 +75,51 @@ export default function PTAudits() {
   useEffect(() => {
     async function fetchData() {
       try {
+        const ptsParams = localidadeFiltro ? { params: { localidade: localidadeFiltro } } : undefined;
         const [ptsRes, auditsRes, tarefasRes] = await Promise.all([
-          api.get('/pts'),
+          api.get('/pts', ptsParams),
           api.get('/inspecoes'),
           api.get('/tarefas').catch(() => ({ data: [] }))
         ]);
         setPts(ptsRes.data);
-        setAudits(auditsRes.data);
+        const filteredAudits = localidadeFiltro
+          ? (auditsRes.data || []).filter((audit) =>
+              (audit.pt?.municipio || audit.pt?.subestacao?.municipio) === localidadeFiltro
+            )
+          : (auditsRes.data || []);
+        setAudits(filteredAudits);
         setTarefas(tarefasRes.data ? tarefasRes.data.filter(t => t.status === 'Concluída') : []);
       } catch (err) {
         console.error(err);
       }
     }
     fetchData();
-  }, [view]);
+  }, [view, localidadeFiltro]);
+
+  // Fetch all tasks for linking to audits
+  const { data: allTasks = [] } = useQuery({
+    queryKey: ['allTasks'],
+    queryFn: async () => {
+      const res = await api.get('/tarefas');
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!formData.id_pt || formData.id_pt === '') {
+      alert('Por favor, selecione um PT.');
+      return;
+    }
+    
     try {
       // Formating data for nested Prisma create/update
       const payload = {
         ...formData,
+        id_tarefa: formData.id_tarefa || undefined,
         transformadores: [formData.transformador], // Repository expects array
         riscos: [formData.risco]
       };
@@ -128,7 +157,8 @@ export default function PTAudits() {
       const fullAudit = res.data;
       
       setFormData({
-        id_pt: fullAudit.id_pt,
+        id_pt: fullAudit.id_pt || '',
+        id_tarefa: fullAudit.tarefa?.id || '',
         tipo: fullAudit.tipo,
         data_inspecao: fullAudit.data_inspecao.split('T')[0],
         observacoes: fullAudit.observacoes || '',
@@ -182,6 +212,11 @@ export default function PTAudits() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4 items-center">
             <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Relatório de Atividades</h2>
+            {localidadeFiltro && (
+              <span className="px-3 py-2 bg-[#eff4ff] border border-[#0d3fd1]/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-[#0d3fd1]">
+                Localidade: {localidadeFiltro}
+              </span>
+            )}
             <div className="bg-[#f8faff] rounded-xl p-1 border border-[#c4c5d7]/20 flex">
               <button 
                 onClick={() => setSubView('inspecoes')}
@@ -202,6 +237,7 @@ export default function PTAudits() {
               setSelectedAuditId(null);
               setFormData({
                 id_pt: '',
+                id_tarefa: '',
                 tipo: 'Preventiva',
                 data_inspecao: new Date().toISOString().split('T')[0],
                 observacoes: '',
@@ -253,6 +289,7 @@ export default function PTAudits() {
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Data da Auditoria</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Tarefa</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center">Ações</th>
                 </tr>
               </thead>
@@ -270,6 +307,9 @@ export default function PTAudits() {
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
                       {audit.pt?.subestacao?.nome || 'Sekele'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10">
+                      {audit.tarefa?.titulo || 'N/A'}
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex justify-center gap-2">
@@ -397,7 +437,7 @@ export default function PTAudits() {
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Selecionar Posto (PT)</label>
                   <select
                     className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
-                    value={formData.id_pt}
+                    value={formData.id_pt || ''}
                     onChange={(e) => setFormData({ ...formData, id_pt: e.target.value })}
                     required
                   >
@@ -416,6 +456,19 @@ export default function PTAudits() {
                   >
                     <option value="Preventiva">Preventiva</option>
                     <option value="Corretiva">Corretiva</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Tarefa Associada (Opcional)</label>
+                  <select
+                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
+                    value={formData.id_tarefa || ''}
+                    onChange={(e) => setFormData({ ...formData, id_tarefa: e.target.value })}
+                  >
+                    <option value="">Nenhuma tarefa associada</option>
+                    {allTasks.filter(t => t.id_pt === formData.id_pt).map(task => (
+                      <option key={task.id} value={task.id}>{task.titulo}</option>
+                    ))}
                   </select>
                 </div>
               </div>

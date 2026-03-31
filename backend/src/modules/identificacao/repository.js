@@ -4,8 +4,9 @@ class IdentificacaoRepository {
   async getAll(filters = {}) {
     const where = {};
     
-    if (filters.id_subestacao) {
-      where.id_subestacao = Number(filters.id_subestacao);
+    const subestacaoId = filters.id_subestacao || filters.subestacaoId;
+    if (subestacaoId) {
+      where.id_subestacao = Number(subestacaoId);
     }
     
     if (filters.estado_operacional) {
@@ -14,6 +15,13 @@ class IdentificacaoRepository {
 
     if (filters.municipio) {
       where.municipio = filters.municipio;
+    }
+
+    if (filters.localidade) {
+      where.OR = [
+        { municipio: filters.localidade },
+        { subestacao: { municipio: filters.localidade } },
+      ];
     }
 
     if (filters.bairro) {

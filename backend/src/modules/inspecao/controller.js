@@ -12,7 +12,11 @@ class InspecaoController {
 
   async show(req, res) {
     try {
-      const result = await service.getDetails(req.params.id);
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'ID inválido.' });
+      }
+      const result = await service.getDetails(id);
       res.json(result);
     } catch (error) {
       res.status(404).json({ error: error.message });
@@ -21,6 +25,9 @@ class InspecaoController {
 
   async store(req, res) {
     try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+      }
       // Automatic auditor assignment from auth middleware
       const data = { ...req.body, id_auditor: req.user.id };
       const result = await service.createInspecao(data);
