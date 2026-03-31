@@ -89,6 +89,7 @@ export default function SubstationAudit() {
   const [pts, setPts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPt, setSelectedPt] = useState(null);
+  const [localidadeAtiva, setLocalidadeAtiva] = useState('');
   const localidadeFiltro = searchParams.get('localidade') || '';
 
   // Calculate dynamic data based on current PTs
@@ -111,16 +112,15 @@ export default function SubstationAudit() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [subRes, ptsRes] = await Promise.all([
-          api.get(`/subestacoes/${id}`),
-          api.get('/pts', {
-            params: localidadeFiltro
-              ? { localidade: localidadeFiltro }
-              : { id_subestacao: id }
-          })
-        ]);
+        const subRes = await api.get(`/subestacoes/${id}`);
+        const localidadeEfetiva = localidadeFiltro || subRes.data?.municipio || '';
+        const ptsRes = await api.get('/pts', {
+          params: localidadeEfetiva ? { localidade: localidadeEfetiva } : {}
+        });
+
         setSubestacao(subRes.data);
         setPts(ptsRes.data || []);
+        setLocalidadeAtiva(localidadeEfetiva);
         if (ptsRes.data?.length > 0) setSelectedPt(ptsRes.data[0]);
       } catch (error) {
         console.error('Erro ao buscar dados de auditoria', error);
@@ -166,12 +166,12 @@ export default function SubstationAudit() {
         </div>
 
         <div className="flex gap-2">
-          {localidadeFiltro && (
+          {localidadeAtiva && (
             <button
               className="flex items-center gap-2 bg-[#eff4ff] border border-[#0d3fd1]/20 text-[#0d3fd1] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
               onClick={() => navigate(`/subestacoes/${id}/auditoria`)}
             >
-              Localidade: {localidadeFiltro}
+              Localidade: {localidadeAtiva}
             </button>
           )}
           <button
@@ -218,15 +218,15 @@ export default function SubstationAudit() {
             {proprietarios.length > 0 && (
               <div className="px-3 py-2 mb-2 bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl">
                 <p className="text-[9px] font-black text-[#747686] uppercase tracking-[0.15em] mb-2">
-                  Proprietários ({proprietarios.length})
+                  Proprietários (pts) ({proprietarios.length})
                 </p>
-                <div className="space-y-1">
+                {/*<div className="space-y-1">
                   {proprietarios.map((prop) => (
                     <p key={prop} className="text-[10px] font-bold text-[#0f1c2c] uppercase truncate">
                       {prop}
                     </p>
                   ))}
-                </div>
+                </div>*/}
               </div>
             )}
             {pts.length === 0 ? (
@@ -242,7 +242,9 @@ export default function SubstationAudit() {
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-black text-[#0d3fd1] opacity-40">{index + 1} -</span>
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">{subestacao.proprietario || pt.id_pt}</span>
+                    <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">
+                      {pt.subestacao?.proprietario || pt.proprietario || pt.id_pt}
+                    </span>
                     <span className="text-[9px] font-bold text-[#747686]">{pt.localizacao}</span>
                   </div>
                 </div>

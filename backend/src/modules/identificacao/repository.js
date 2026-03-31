@@ -4,9 +4,8 @@ class IdentificacaoRepository {
   async getAll(filters = {}) {
     const where = {};
     
-    const subestacaoId = filters.id_subestacao || filters.subestacaoId;
-    if (subestacaoId) {
-      where.id_subestacao = Number(subestacaoId);
+    if (filters.id_subestacao) {
+      where.id_subestacao = Number(filters.id_subestacao);
     }
     
     if (filters.estado_operacional) {

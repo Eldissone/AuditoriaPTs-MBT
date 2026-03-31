@@ -8,6 +8,7 @@ import {
   Edit2,
   Trash2,
   BarChart3,
+  FileText,
   Filter,
   ArrowUpDown,
   CheckCircle2,
@@ -109,6 +110,13 @@ export default function SubstationManagement() {
       }
     }
   }
+
+  const getLocalidadeQuery = (sub) => {
+    const localidadeSelecionada = municipio || sub.municipio;
+    return localidadeSelecionada
+      ? `?localidade=${encodeURIComponent(localidadeSelecionada)}`
+      : '';
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -252,17 +260,18 @@ export default function SubstationManagement() {
                   <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
                     <div className="flex justify-center gap-2">
                       <button
-                        onClick={() => {
-                          const localidadeSelecionada = municipio || sub.municipio;
-                          const query = localidadeSelecionada
-                            ? `?localidade=${encodeURIComponent(localidadeSelecionada)}`
-                            : '';
-                          navigate(`/subestacoes/${sub.id}/auditoria${query}`);
-                        }}
+                        onClick={() => navigate(`/subestacoes/${sub.id}/auditoria${getLocalidadeQuery(sub)}`)}
                         className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                        title="Auditoria & Relatórios"
+                        title="Auditoria"
                       >
                         <BarChart3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => navigate(`/pts${getLocalidadeQuery(sub)}`)}
+                        className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
+                        title="Relatório"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
