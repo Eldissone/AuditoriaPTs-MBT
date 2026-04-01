@@ -15,7 +15,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import SubstationDetail from './SubstationDetail';
-import { MapContainer, TileLayer, Marker, Popup, useMap, FeatureGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -27,38 +27,42 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom Substation Icon
-const substationIcon = L.divIcon({
-  className: 'custom-substation-icon',
-  html: `<div style="background-color: #0d3fd1; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 12px rgba(13, 63, 209, 0.4);">
-           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-         </div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-  popupAnchor: [0, -16]
-});
+const createSubstationIcon = (size) => {
+  const iconSize = Math.max(22, Math.min(44, size));
+  const svgSize = Math.round(iconSize * 0.56);
+  const radius = Math.round(iconSize * 0.25);
+  return L.divIcon({
+    className: 'custom-substation-icon',
+    html: `<div style="background-color: #0d3fd1; width: ${iconSize}px; height: ${iconSize}px; border-radius: ${radius}px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 12px rgba(13, 63, 209, 0.4);">
+             <svg xmlns="http://www.w3.org/2000/svg" width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+           </div>`,
+    iconSize: [iconSize, iconSize],
+    iconAnchor: [iconSize / 2, iconSize / 2],
+    popupAnchor: [0, -(iconSize / 2)]
+  });
+};
 
-// Custom PT Icon - Default
-const ptIcon = L.divIcon({
-  className: 'custom-pt-icon',
-  html: `<div style="background-color: #5fff9b; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #005229; box-shadow: 0 2px 8px rgba(0,82,41,0.3);">
-           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#005229" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-         </div>`,
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-  popupAnchor: [0, -12]
-});
+const createPtIcon = (size, selected = false) => {
+  const iconSize = Math.max(16, Math.min(34, size));
+  const svgSize = Math.round(iconSize * 0.55);
+  const border = selected ? 3 : 2;
+  const bg = selected ? '#fb923c' : '#5fff9b';
+  const borderColor = selected ? '#c2410c' : '#005229';
+  const fill = selected ? 'white' : '#005229';
+  const shadow = selected
+    ? '0 4px 16px rgba(251, 146, 60, 0.6), inset 0 0 8px rgba(255,255,255,0.3)'
+    : '0 2px 8px rgba(0,82,41,0.3)';
 
-// Custom PT Icon - Selected (highlighted)
-const ptIconSelected = L.divIcon({
-  className: 'custom-pt-icon-selected',
-  html: `<div style="background-color: #fb923c; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #c2410c; box-shadow: 0 4px 16px rgba(251, 146, 60, 0.6), inset 0 0 8px rgba(255,255,255,0.3);">
-           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-         </div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-  popupAnchor: [0, -14]
-});
+  return L.divIcon({
+    className: selected ? 'custom-pt-icon-selected' : 'custom-pt-icon',
+    html: `<div style="background-color: ${bg}; width: ${iconSize}px; height: ${iconSize}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: ${border}px solid ${borderColor}; box-shadow: ${shadow};">
+             <svg xmlns="http://www.w3.org/2000/svg" width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24" fill="${fill}" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+           </div>`,
+    iconSize: [iconSize, iconSize],
+    iconAnchor: [iconSize / 2, iconSize / 2],
+    popupAnchor: [0, -(iconSize / 2)]
+  });
+};
 
 function ChangeView({ center, zoom }) {
   const map = useMap();
@@ -70,8 +74,17 @@ function ChangeView({ center, zoom }) {
   return null;
 }
 
+function ZoomSync({ onZoomChange }) {
+  useMapEvents({
+    zoomend: (e) => {
+      onZoomChange(e.target.getZoom());
+    },
+  });
+  return null;
+}
+
 // Memoized PT Marker Component
-const PtMarker = React.memo(({ pt, parseGps, onSelectPt, onMapCenter, onZoomChange }) => {
+const PtMarker = React.memo(({ pt, parseGps, selectedPtId, iconSize, onSelectPt, onMapCenter, onZoomChange }) => {
   const pos = parseGps(pt.gps);
   if (!pos) return null;
 
@@ -85,7 +98,7 @@ const PtMarker = React.memo(({ pt, parseGps, onSelectPt, onMapCenter, onZoomChan
     <Marker
       key={pt.id}
       position={[pos.lat, pos.lng]}
-      icon={ptIcon}
+      icon={createPtIcon(iconSize, selectedPtId === pt.id_pt)}
       eventHandlers={{ click: handleClick }}
     >
       <Popup>
@@ -115,7 +128,7 @@ const PtMarker = React.memo(({ pt, parseGps, onSelectPt, onMapCenter, onZoomChan
 PtMarker.displayName = 'PtMarker';
 
 // Memoized Substation Marker Component
-const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapCenter, onZoomChange }) => {
+const SubstationMarker = React.memo(({ sub, parseGps, iconSize, onSelectSubstation, onMapCenter, onZoomChange }) => {
   const pos = parseGps(sub.gps);
   if (!pos) return null;
 
@@ -129,7 +142,7 @@ const SubstationMarker = React.memo(({ sub, parseGps, onSelectSubstation, onMapC
     <Marker
       key={`sub-${sub.id}`}
       position={[pos.lat, pos.lng]}
-      icon={substationIcon}
+      icon={createSubstationIcon(iconSize)}
       eventHandlers={{ click: handleClick }}
     />
   );
@@ -148,6 +161,15 @@ export default function Dashboard() {
   const [selectedSubstation, setSelectedSubstation] = useState(null);
   const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]);
   const [zoom, setZoom] = useState(6);
+  const iconSizes = useMemo(() => {
+    // Ajuste progressivo: quanto mais zoom, maior o ícone.
+    // Subestações: mais destaque; PTs: menores.
+    const z = zoom;
+    const subSize = z < 7 ? 22 : z < 10 ? 28 : z < 13 ? 34 : 40;
+    const ptSize = z < 12 ? 16 : z < 14 ? 20 : z < 16 ? 24 : 28;
+    return { subSize, ptSize };
+  }, [zoom]);
+
   const [gpsInput, setGpsInput] = useState({ lat: '', lng: '' });
   const [isLocating, setIsLocating] = useState(false);
   const debounceTimerRef = useRef(null);
@@ -165,7 +187,8 @@ export default function Dashboard() {
   const { data: subestacoes = [], isRefetching: isRefetchingSubs } = useQuery({
     queryKey: ['subestacoes'],
     queryFn: async () => {
-      const res = await api.get('/subestacoes');
+      // Buscar todas as subestações (backend é paginado por padrão)
+      const res = await api.get('/subestacoes', { params: { page: 1, limit: 5000 } });
       return res.data.data || res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -271,11 +294,20 @@ export default function Dashboard() {
 
   const onSelectSubstation = useCallback((subId, sub) => {
     setSelectedSubstation(sub);
-  }, []);
+    setSelectedPtId(null);
+    handleFilterChange({ ...filters, id_subestacao: subId });
+  }, [filters, handleFilterChange]);
 
   const onSelectPt = useCallback((ptId) => {
     setSelectedPtId(ptId);
   }, []);
+
+  const ptsParaMapa = useMemo(() => {
+    // Mostrar mais detalhe só quando zoom está alto e uma subestação está selecionada
+    if (!selectedSubstation) return [];
+    if (zoom < 12) return [];
+    return pts.filter((p) => p.id_subestacao === selectedSubstation.id);
+  }, [pts, selectedSubstation, zoom]);
 
   // Contar PTs por subestação
   const getPtsCountBySubstation = useCallback((substationId) => {
@@ -371,7 +403,11 @@ export default function Dashboard() {
               )}
               {selectedSubstation && (
                 <button
-                  onClick={() => setSelectedSubstation(null)}
+                  onClick={() => {
+                    setSelectedSubstation(null);
+                    setSelectedPtId(null);
+                    handleFilterChange({ ...filters, id_subestacao: '' });
+                  }}
                   className="bg-yellow-50 text-yellow-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-yellow-100 transition-all border border-yellow-100"
                 >
                   Limpar Subestação
@@ -388,6 +424,7 @@ export default function Dashboard() {
               zoomControl={false}
             >
               <ChangeView center={mapCenter} zoom={zoom} />
+              <ZoomSync onZoomChange={setZoom} />
               <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -399,6 +436,7 @@ export default function Dashboard() {
                   key={`sub-${sub.id}`}
                   sub={sub}
                   parseGps={parseGps}
+                  iconSize={iconSizes.subSize}
                   onSelectSubstation={onSelectSubstation}
                   onMapCenter={setMapCenter}
                   onZoomChange={setZoom}
@@ -406,11 +444,14 @@ export default function Dashboard() {
               ))}
 
               {/* PT Markers */}
-              {pts.map((pt) => (
+              {ptsParaMapa.map((pt) => (
                 <PtMarker
                   key={pt.id}
                   pt={pt}
                   parseGps={parseGps}
+                  selectedPtId={selectedPtId}
+                  iconSize={iconSizes.ptSize}
+                  onSelectPt={onSelectPt}
                   onMapCenter={setMapCenter}
                   onZoomChange={setZoom}
                 />
