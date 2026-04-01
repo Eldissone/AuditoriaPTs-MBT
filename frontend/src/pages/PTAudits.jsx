@@ -168,12 +168,14 @@ export default function PTAudits() {
     
     let payload;
     try {
+      // Destructure to remove singular properties and instead use arrays
+      const { transformador, risco, ...restData } = formData;
       // Formating data for nested Prisma create/update
       payload = {
-        ...formData,
-        id_tarefa: formData.id_tarefa ? Number(formData.id_tarefa) : undefined,
-        transformadores: [formData.transformador], // Repository expects array
-        riscos: [formData.risco]
+        ...restData,
+        id_tarefa: restData.id_tarefa ? Number(restData.id_tarefa) : undefined,
+        transformadores: [transformador], // Repository expects array
+        riscos: [risco]
       };
 
       if (selectedAuditId) {
