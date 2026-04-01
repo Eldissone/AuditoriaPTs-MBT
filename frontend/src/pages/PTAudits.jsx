@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ClipboardCheck,
   Zap,
@@ -12,14 +12,26 @@ import {
   Info,
   AlertCircle,
   Plus,
+  Download,
   Trash2,
   ExternalLink,
-  Edit2
+  Edit2,
+  RefreshCw,          
+  LayoutGrid,        
+  Minimize2,         
+  CheckCircle,       
+  ClipboardList,     
+  FileSpreadsheet,   
+  FileText,        
+  FilePlus
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function PTAudits() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [subView, setSubView] = useState('inspecoes'); // 'inspecoes' or 'tarefas'
@@ -29,6 +41,12 @@ export default function PTAudits() {
   const [tarefas, setTarefas] = useState([]);
   const [selectedAuditId, setSelectedAuditId] = useState(null);
   const localidadeFiltro = searchParams.get('localidade') || '';
+  const [busca, setBusca] = useState('');
+  const [tipoFiltroRelatorio, setTipoFiltroRelatorio] = useState('');
+  const [periodoFiltro, setPeriodoFiltro] = useState('todos');
+  const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('recentes');
+  const [modoRelatorio, setModoRelatorio] = useState(() => localStorage.getItem('@PTAS:ptaudits:modo') || 'completo');
+  const [limiteExecutivo, setLimiteExecutivo] = useState(() => Number(localStorage.getItem('@PTAS:ptaudits:limiteExecutivo')) || 12);
   const [formData, setFormData] = useState({
     id_pt: '',
     id_tarefa: '',
@@ -95,6 +113,14 @@ export default function PTAudits() {
     }
     fetchData();
   }, [view, localidadeFiltro]);
+
+  useEffect(() => {
+    localStorage.setItem('@PTAS:ptaudits:modo', modoRelatorio);
+  }, [modoRelatorio]);
+
+  useEffect(() => {
+    localStorage.setItem('@PTAS:ptaudits:limiteExecutivo', String(limiteExecutivo));
+  }, [limiteExecutivo]);
 
   // Fetch all tasks for linking to audits
   const { data: allTasks = [] } = useQuery({
@@ -206,10 +232,205 @@ export default function PTAudits() {
     { title: 'Revisão', icon: Eye }
   ];
 
+  const auditsFiltrados = [...audits]
+    .filter((audit) => (tipoFiltroRelatorio ? audit.tipo === tipoFiltroRelatorio : true))
+    .filter((audit) => {
+      if (!busca.trim()) return true;
+      const termo = busca.toLowerCase();
+      return (
+        audit.id_pt?.toLowerCase().includes(termo) ||
+        audit.pt?.proprietario?.toLowerCase().includes(termo) ||
+        audit.pt?.subestacao?.nome?.toLowerCase().includes(termo) ||
+        audit.tarefa?.titulo?.toLowerCase().includes(termo)
+      );
+    })
+    .filter((audit) => {
+      if (periodoFiltro === 'todos') return true;
+      const dataAudit = new Date(audit.data_inspecao);
+      const hoje = new Date();
+      const dias = periodoFiltro === '7' ? 7 : periodoFiltro === '30' ? 30 : 90;
+      const limite = new Date(hoje);
+      limite.setDate(hoje.getDate() - dias);
+      return dataAudit >= limite;
+    })
+    .sort((a, b) =>
+      ordenacaoRelatorio === 'recentes'
+        ? new Date(b.data_inspecao) - new Date(a.data_inspecao)
+        : new Date(a.data_inspecao) - new Date(b.data_inspecao)
+    );
+
+  const totalPreventivas = auditsFiltrados.filter((a) => a.tipo === 'Preventiva').length;
+  const totalCorretivas = auditsFiltrados.filter((a) => a.tipo === 'Corretiva').length;
+  const totalComTarefa = auditsFiltrados.filter((a) => Boolean(a.tarefa?.id)).length;
+  const emissaoRelatorio = new Date().toLocaleString('pt-PT');
+  const auditsParaExibicao = modoRelatorio === 'executivo' ? auditsFiltrados.slice(0, limiteExecutivo) : auditsFiltrados;
+  const tarefasParaExibicao = modoRelatorio === 'executivo' ? tarefas.slice(0, limiteExecutivo) : tarefas;
+
+  const csvEscape = (value) => {
+    const text = String(value ?? '');
+    if (text.includes(';') || text.includes('"') || text.includes('\n')) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+
+  const handleExportCSV = () => {
+    if (subView === 'inspecoes') {
+      if (auditsFiltrados.length === 0) {
+        alert('Sem dados para exportar no relatório atual.');
+        return;
+      }
+
+      const header = [
+        'PT ID',
+        'Proprietário',
+        'Tipo',
+        'Data da Auditoria',
+        'Subestação',
+        'Localidade',
+        'Tarefa',
+        'Auditor',
+        'Observações'
+      ];
+
+      const rows = auditsFiltrados.map((audit) => ([
+        audit.id_pt,
+        audit.pt?.proprietario || '',
+        audit.tipo || '',
+        audit.data_inspecao ? new Date(audit.data_inspecao).toLocaleDateString('pt-PT') : '',
+        audit.pt?.subestacao?.nome || '',
+        audit.pt?.municipio || audit.pt?.subestacao?.municipio || '',
+        audit.tarefa?.titulo || '',
+        audit.auditor?.nome || '',
+        audit.observacoes || ''
+      ]));
+
+      const csv = [header, ...rows].map((line) => line.map(csvEscape).join(';')).join('\n');
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio-inspecoes-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (tarefas.length === 0) {
+      alert('Sem tarefas concluídas para exportar.');
+      return;
+    }
+
+    const header = [
+      'Auditor',
+      'Tarefa',
+      'PT',
+      'Data de Início',
+      'Data de Fim',
+      'Checklist Validado'
+    ];
+
+    const rows = tarefas.map((tarefa) => {
+      const totalChecklist = tarefa.checklist?.length || 0;
+      const checkedChecklist = tarefa.checklist?.filter((c) => c.checked).length || 0;
+      return [
+        tarefa.auditor?.nome || '',
+        tarefa.titulo || '',
+        tarefa.id_pt || '',
+        tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '',
+        tarefa.data_fim ? new Date(tarefa.data_fim).toLocaleString('pt-PT') : '',
+        `${checkedChecklist}/${totalChecklist}`
+      ];
+    });
+
+    const csv = [header, ...rows].map((line) => line.map(csvEscape).join(';')).join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relatorio-tarefas-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  const handleResetPreferencias = () => {
+    setModoRelatorio('completo');
+    setLimiteExecutivo(12);
+    localStorage.removeItem('@PTAS:ptaudits:modo');
+    localStorage.removeItem('@PTAS:ptaudits:limiteExecutivo');
+  };
+
   if (view === 'list') {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-        <div className="flex justify-between items-center mb-6">
+      <div className={`max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 print-report ${modoRelatorio === 'executivo' ? 'executive-mode' : ''}`}>
+        <style>{`
+          @media print {
+            .print-hide { display: none !important; }
+            .print-only { display: block !important; }
+            .print-report { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .print-compact { margin-bottom: 12px !important; }
+            .print-table-wrap { border: 1px solid #d1d5db !important; border-radius: 0 !important; box-shadow: none !important; }
+            .print-table-wrap table { font-size: 11px !important; }
+            .print-kpi { border: 1px solid #d1d5db !important; box-shadow: none !important; }
+            .print-footer {
+              position: fixed;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              border-top: 1px solid #d1d5db;
+              padding: 6px 12px;
+              font-size: 10px;
+              color: #4b5563;
+              display: flex !important;
+              justify-content: space-between;
+              align-items: center;
+              background: #fff;
+            }
+            .print-page::after {
+              content: "Página " counter(page);
+            }
+            .executive-mode .executive-hide {
+              display: none !important;
+            }
+            .executive-mode .print-table-wrap table th,
+            .executive-mode .print-table-wrap table td {
+              padding: 8px 10px !important;
+              font-size: 10px !important;
+            }
+            body { background: #fff !important; }
+          }
+          @media screen {
+            .print-only { display: none !important; }
+            .print-footer { display: none !important; }
+          }
+        `}</style>
+
+        <div className="print-only mb-4 border border-[#d1d5db] p-4">
+          <h1 className="text-lg font-black text-[#0f1c2c] uppercase">Relatório Técnico de Auditorias PT</h1>
+          <div className="grid grid-cols-2 gap-2 mt-3 text-[11px]">
+            <p><strong>Emitido em:</strong> {emissaoRelatorio}</p>
+            <p><strong>Utilizador:</strong> {user?.nome || 'Operador'}</p>
+            <p><strong>Localidade:</strong> {localidadeFiltro || 'Todas'}</p>
+            <p><strong>Secção:</strong> {subView === 'inspecoes' ? 'Inspeções PT' : 'Tarefas Concluídas'}</p>
+            <p><strong>Modo:</strong> {modoRelatorio === 'executivo' ? 'Executivo (1 página)' : 'Completo'}</p>
+            {modoRelatorio === 'executivo' && <p><strong>Limite:</strong> {limiteExecutivo} linhas</p>}
+          </div>
+        </div>
+
+        <div className="print-footer">
+          <span>MBT Energia - Relatório Oficial de Auditorias</span>
+          <span className="print-page"></span>
+        </div>
+
+        <div className="flex justify-between items-center mb-6 print-compact">
           <div className="flex gap-4 items-center">
             <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Relatório de Atividades</h2>
             {localidadeFiltro && (
@@ -217,71 +438,168 @@ export default function PTAudits() {
                 Localidade: {localidadeFiltro}
               </span>
             )}
-            <div className="bg-[#f8faff] rounded-xl p-1 border border-[#c4c5d7]/20 flex">
+            <div className="bg-[#f8faff] rounded-xl p-1 border border-[#c4c5d7]/20 flex print-hide">
               <button 
                 onClick={() => setSubView('inspecoes')}
-                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'inspecoes' ? 'bg-white text-[#0d3fd1] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
-              >
-                Inspeções PT
+                className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'inspecoes' ? 'bg-white text-[#0d3fd1] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
+              > <ClipboardList className="w-4 h-4" />
+                Inspeções
               </button>
               <button 
                 onClick={() => setSubView('tarefas')}
                 className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'tarefas' ? 'bg-white text-[#005229] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
-              >
-                Tarefas Concluídas
+              >  <CheckCircle className="w-4 h-4" />
+                Tarefas
               </button>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setSelectedAuditId(null);
-              setFormData({
-                id_pt: '',
-                id_tarefa: '',
-                tipo: 'Preventiva',
-                data_inspecao: new Date().toISOString().split('T')[0],
-                observacoes: '',
-                conformidade: {
-                  licenciamento: false,
-                  projeto_aprovado: false,
-                  diagramas_unifilares: false,
-                  plano_manutencao: false,
-                  registos_inspecao: false,
-                  normas_iec: false,
-                  normas_ieee: false,
-                  normas_locais: false
-                },
-                transformador: {
-                  num_transformador: 1,
-                  potencia_kva: 630,
-                  tensao_primaria: 15,
-                  tensao_secundaria: 0.4,
-                  tipo_isolamento: 'Oleo',
-                  estado_oleo: 'Bom',
-                  fugas: false,
-                  temperatura_operacao: 45
-                },
-                seguranca: {
-                  resistencia_terra: 2.5,
-                  protecao_raios: false,
-                  spd: false,
-                  sinalizacao: false,
-                  combate_incendio: false,
-                  distancias_seguranca: false
-                }
-              });
-              setView('form');
-              setStep(1);
-            }}
-            className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+          <div className="flex items-center gap-2 print-hide">
+            <button
+              onClick={() => setModoRelatorio((prev) => (prev === 'executivo' ? 'completo' : 'executivo'))}
+              className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+            >  <LayoutGrid className="w-4 h-4" />
+              Rel.{modoRelatorio === 'executivo' ? 'Executivo' : 'Completo'}
+            </button>
+            <button
+              onClick={handleResetPreferencias}
+              className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+            >  <RefreshCw className="w-4 h-4" />
+              Repor
+            </button>
+            {modoRelatorio === 'executivo' && (
+              <select
+                value={limiteExecutivo}
+                onChange={(e) => setLimiteExecutivo(Number(e.target.value))}
+                className="bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest"
+              >
+                <option value={8}> 8</option>
+                <option value={12}> 12</option>
+                <option value={20}> 20</option>
+              </select>
+            )}
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 bg-[#38b000] border border-[#c4c5d7]/30 text-white px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#007200] transition-all"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              CSV
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="flex items-center gap-2 bg-[#d00000] text-white px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#9d0208] transition-all"
+            >
+              <FileText className="w-4 h-4" />
+              PDF
+            </button>
+            <button
+              onClick={() => {
+                setSelectedAuditId(null);
+                setFormData({
+                  id_pt: '',
+                  id_tarefa: '',
+                  tipo: 'Preventiva',
+                  data_inspecao: new Date().toISOString().split('T')[0],
+                  observacoes: '',
+                  conformidade: {
+                    licenciamento: false,
+                    projeto_aprovado: false,
+                    diagramas_unifilares: false,
+                    plano_manutencao: false,
+                    registos_inspecao: false,
+                    normas_iec: false,
+                    normas_ieee: false,
+                    normas_locais: false
+                  },
+                  transformador: {
+                    num_transformador: 1,
+                    potencia_kva: 630,
+                    tensao_primaria: 15,
+                    tensao_secundaria: 0.4,
+                    tipo_isolamento: 'Oleo',
+                    estado_oleo: 'Bom',
+                    fugas: false,
+                    temperatura_operacao: 45
+                  },
+                  seguranca: {
+                    resistencia_terra: 2.5,
+                    protecao_raios: false,
+                    spd: false,
+                    sinalizacao: false,
+                    combate_incendio: false,
+                    distancias_seguranca: false
+                  }
+                });
+                setView('form');
+                setStep(1);
+              }}
+              className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+            >
+              <Plus className="w-4 h-4" />
+              Auditoria
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 print-hide">
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por PT, proprietário, subestação ou tarefa..."
+            className="md:col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-sm font-bold text-[#0f1c2c]"
+          />
+          <select
+            value={tipoFiltroRelatorio}
+            onChange={(e) => setTipoFiltroRelatorio(e.target.value)}
+            className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold uppercase text-[#0f1c2c]"
           >
-            <Plus className="w-4 h-4" />
-            Nova Auditoria
-          </button>
+            <option value="">Todos os tipos</option>
+            <option value="Preventiva">Preventiva</option>
+            <option value="Corretiva">Corretiva</option>
+          </select>
+          <select
+            value={periodoFiltro}
+            onChange={(e) => setPeriodoFiltro(e.target.value)}
+            className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold uppercase text-[#0f1c2c]"
+          >
+            <option value="todos">Todo período</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </div>
+
+        <div className="mb-6 print-hide">
+          <select
+            value={ordenacaoRelatorio}
+            onChange={(e) => setOrdenacaoRelatorio(e.target.value)}
+            className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold uppercase text-[#0f1c2c]"
+          >
+            <option value="recentes">Ordenação: mais recentes</option>
+            <option value="antigas">Ordenação: mais antigas</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 print-compact executive-hide">
+          <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
+            <p className="text-[10px] font-black text-[#747686] uppercase">Total filtrado</p>
+            <p className="text-lg font-black text-[#0f1c2c]">{auditsFiltrados.length}</p>
+          </div>
+          <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
+            <p className="text-[10px] font-black text-[#747686] uppercase">Preventivas</p>
+            <p className="text-lg font-black text-[#0d3fd1]">{totalPreventivas}</p>
+          </div>
+          <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
+            <p className="text-[10px] font-black text-[#747686] uppercase">Corretivas</p>
+            <p className="text-lg font-black text-[#0f1c2c]">{totalCorretivas}</p>
+          </div>
+          <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
+            <p className="text-[10px] font-black text-[#747686] uppercase">Com tarefa</p>
+            <p className="text-lg font-black text-[#005229]">{totalComTarefa}</p>
+          </div>
         </div>
 
         {subView === 'inspecoes' ? (
-          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
+          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden print-table-wrap">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
@@ -289,12 +607,13 @@ export default function PTAudits() {
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Data da Auditoria</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Localidade</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Tarefa</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c5d7]/10">
-                {audits.map((audit, idx) => (
+                {auditsParaExibicao.map((audit, idx) => (
                   <tr key={audit.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors group`}>
                     <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-[#c4c5d7]/10 text-center font-mono">
                       {audit.id_pt}
@@ -308,11 +627,14 @@ export default function PTAudits() {
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
                       {audit.pt?.subestacao?.nome || 'Sekele'}
                     </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 uppercase">
+                      {audit.pt?.municipio || audit.pt?.subestacao?.municipio || 'N/A'}
+                    </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10">
                       {audit.tarefa?.titulo || 'N/A'}
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex justify-center gap-2">
+                    <td className="px-8 py-5 print-hide">
+                      <div className="flex justify-center gap-2 print-hide">
                         <button 
                           onClick={() => handleView(audit)}
                           className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
@@ -335,9 +657,9 @@ export default function PTAudits() {
                     </td>
                   </tr>
                 ))}
-                {audits.length === 0 && (
+                {auditsParaExibicao.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                    <td colSpan="7" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
                       Nenhuma auditoria registada
                     </td>
                   </tr>
@@ -346,25 +668,43 @@ export default function PTAudits() {
             </table>
           </div>
         ) : (
-          <div className="bg-white rounded-[2rem] border border-emerald-100 shadow-xl overflow-hidden">
+          <div className="bg-white rounded-[2rem] border border-emerald-100 shadow-xl overflow-hidden print-table-wrap">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-emerald-50 border-b border-emerald-100">
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Auditor</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Tarefa/PT</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Proprietário/Localidade</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">GPS</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Início</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Fim (Conclusão)</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] text-center">Relatório Tarefa</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50 text-center">Relatório Tarefa</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] text-center">Fluxo PT</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-100/50">
-                {tarefas.map((tarefa, idx) => (
+                {tarefasParaExibicao.map((tarefa, idx) => (
                   <tr key={tarefa.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-emerald-50/30'} hover:bg-emerald-50 transition-colors group`}>
                     <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-emerald-50">
                       {tarefa.auditor?.nome || 'N/A'}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-emerald-50">
                       {tarefa.titulo} {tarefa.id_pt && `(PT: ${tarefa.id_pt})`}
+                    </td>
+                    <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50 uppercase">
+                      {(tarefa.pt?.subestacao?.proprietario || 'N/A')} / {(tarefa.pt?.subestacao?.municipio || tarefa.pt?.municipio || 'N/A')}
+                    </td>
+                    <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50">
+                      {tarefa.pt?.gps ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#0d3fd1] hover:underline"
+                        >
+                          {tarefa.pt.gps}
+                        </a>
+                      ) : 'N/A'}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-emerald-50 font-mono">
                       {tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '-'}
@@ -377,11 +717,23 @@ export default function PTAudits() {
                         Validado Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
                        </span>
                     </td>
+                    <td className="px-8 py-5">
+                      {tarefa.id_pt && tarefa.pt?.subestacao?.id ? (
+                        <button
+                          onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
+                          className="mx-auto flex items-center justify-center px-3 py-2 bg-white border border-emerald-200 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all"
+                        >
+                          Auditar PT
+                        </button>
+                      ) : (
+                        <span className="text-[10px] font-bold text-[#747686] uppercase">N/A</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
-                {tarefas.length === 0 && (
+                {tarefasParaExibicao.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                    <td colSpan="8" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
                       Nenhuma tarefa de auditoria concluída
                     </td>
                   </tr>

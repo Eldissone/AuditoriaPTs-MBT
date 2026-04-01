@@ -1,16 +1,37 @@
 const prisma = require('../../database/client');
 
 class TarefaRepository {
+  getInclude() {
+    return {
+      auditor: { select: { nome: true, email: true } },
+      pt: {
+        select: {
+          id_pt: true,
+          gps: true,
+          municipio: true,
+          localizacao: true,
+          conta_contrato: true,
+          equipamento: true,
+          subestacao: {
+            select: {
+              id: true,
+              nome: true,
+              municipio: true,
+              proprietario: true
+            }
+          }
+        }
+      }
+    };
+  }
+
   async create(data) {
     return prisma.tarefa.create({ data });
   }
 
   async findAll() {
     return prisma.tarefa.findMany({
-      include: {
-        auditor: { select: { nome: true, email: true } },
-        pt: { select: { subestacao: { select: { nome: true } } } }
-      },
+      include: this.getInclude(),
       orderBy: { data_prevista: 'asc' }
     });
   }
@@ -18,9 +39,7 @@ class TarefaRepository {
   async findByAuditorId(auditorId) {
     return prisma.tarefa.findMany({
       where: { id_auditor: auditorId },
-      include: {
-        pt: { select: { subestacao: { select: { nome: true } } } }
-      },
+      include: this.getInclude(),
       orderBy: { data_prevista: 'asc' }
     });
   }

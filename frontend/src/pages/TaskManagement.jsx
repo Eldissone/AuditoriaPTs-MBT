@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Clock, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function TaskManagement() {
+  const navigate = useNavigate();
   const [tarefas, setTarefas] = useState([]);
   const [auditores, setAuditores] = useState([]);
   const [pts, setPts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [ptFiltro, setPtFiltro] = useState('');
+  const [proprietarioFiltro, setProprietarioFiltro] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -133,7 +137,15 @@ export default function TaskManagement() {
 
   const filteredTarefas = activeTab === 'completed'
     ? tarefas.filter(t => t.status === 'Concluída')
-    : tarefas;
+    : tarefas
+  ;
+
+  const tarefasFiltradas = filteredTarefas
+    .filter((t) => (ptFiltro ? t.id_pt === ptFiltro : true))
+    .filter((t) => {
+      if (!proprietarioFiltro) return true;
+      return (t.pt?.subestacao?.proprietario || '').toLowerCase().includes(proprietarioFiltro.toLowerCase());
+    });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
@@ -177,6 +189,25 @@ export default function TaskManagement() {
         </button>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <select
+          value={ptFiltro}
+          onChange={(e) => setPtFiltro(e.target.value)}
+          className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
+        >
+          <option value="">Filtrar por PT (Todos)</option>
+          {pts.map((p) => (
+            <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.proprietario || p.subestacao?.nome}</option>
+          ))}
+        </select>
+        <input
+          value={proprietarioFiltro}
+          onChange={(e) => setProprietarioFiltro(e.target.value)}
+          placeholder="Filtrar por proprietário..."
+          className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-xs font-bold text-[#0f1c2c]"
+        />
+      </div>
+
       <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-[#747686] font-bold">Carregando tarefas...</div>
@@ -187,12 +218,13 @@ export default function TaskManagement() {
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Data Prevista</th>
+                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">GPS / Mapa</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Estado</th>
                 <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center w-1/6">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c5d7]/10">
-              {filteredTarefas.map((tarefa, i) => (
+              {tarefasFiltradas.map((tarefa, i) => (
                 <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors`}>
                   <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
                     <div className="space-y-1">
@@ -200,6 +232,16 @@ export default function TaskManagement() {
                       {tarefa.id_pt && (
                         <p className="text-xs text-[#0d3fd1] font-bold bg-[#0d3fd1]/5 inline-flex p-1 rounded">
                           <MapPin className="w-3 h-3 mr-1 inline" /> PT: {tarefa.id_pt}
+                        </p>
+                      )}
+                      {tarefa.pt?.subestacao?.proprietario && (
+                        <p className="text-[10px] font-black uppercase text-[#444655]">
+                          Proprietário: {tarefa.pt.subestacao.proprietario}
+                        </p>
+                      )}
+                      {tarefa.pt?.subestacao?.municipio && (
+                        <p className="text-[10px] font-bold uppercase text-[#747686]">
+                          Localidade: {tarefa.pt.subestacao.municipio}
                         </p>
                       )}
                     </div>
@@ -216,10 +258,33 @@ export default function TaskManagement() {
                     {new Date(tarefa.data_prevista).toLocaleDateString('pt-PT')}
                   </td>
                   <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
+                    {tarefa.pt?.gps ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] font-black text-[#0d3fd1] uppercase hover:underline"
+                      >
+                        {tarefa.pt.gps}
+                      </a>
+                    ) : (
+                      <span className="text-[10px] font-bold text-[#747686] uppercase">Sem GPS</span>
+                    )}
+                  </td>
+                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
                     {getStatusBadge(tarefa.status)}
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex justify-center gap-3">
+                      {tarefa.id_pt && tarefa.pt?.subestacao?.id && (
+                        <button
+                          onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
+                          className="p-2 text-[#0d3fd1] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#eff4ff] transition-all"
+                          title="Abrir auditoria do PT"
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                        </button>
+                      )}
                       <button onClick={() => handleOpenModal(tarefa)} className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#f8faff] hover:text-[#0d3fd1] transition-all" title="Editar">
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -230,9 +295,9 @@ export default function TaskManagement() {
                   </td>
                 </tr>
               ))}
-              {filteredTarefas.length === 0 && !loading && (
+              {tarefasFiltradas.length === 0 && !loading && (
                 <tr>
-                  <td colSpan="5" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                  <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
                     {activeTab === 'completed' ? 'Nenhuma tarefa concluída' : 'Nenhuma tarefa atribuída'}
                   </td>
                 </tr>
@@ -315,6 +380,11 @@ export default function TaskManagement() {
                     </select>
                     <MapPin className="w-5 h-5 absolute left-4 top-4 text-[#c4c5d7]" />
                   </div>
+                  {formData.id_pt && (
+                    <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-[#0d3fd1]">
+                      GPS: {pts.find((p) => p.id_pt === formData.id_pt)?.gps || 'Sem coordenadas'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-2xl p-6">

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Calendar, MapPin, ClipboardList, CheckSquare } from 'lucide-react';
+import { Play, CheckCircle, Calendar, MapPin, ClipboardList, CheckSquare, FileText } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function MyTasks() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTarefa, setActiveTarefa] = useState(null); // Para modal de checklist
@@ -113,6 +115,27 @@ export default function MyTasks() {
                   PT: {tarefa.id_pt} - {tarefa.pt?.subestacao?.nome || ''}
                 </div>
               )}
+              {tarefa.pt?.subestacao?.proprietario && (
+                <p className="text-[10px] font-black uppercase text-[#444655] mb-1">
+                  Proprietário: {tarefa.pt.subestacao.proprietario}
+                </p>
+              )}
+              {tarefa.pt?.subestacao?.municipio && (
+                <p className="text-[10px] font-bold uppercase text-[#747686] mb-4">
+                  Localidade: {tarefa.pt.subestacao.municipio}
+                </p>
+              )}
+              {tarefa.pt?.gps && (
+                <a
+                  href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#0d3fd1] mb-4 hover:underline"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  GPS: {tarefa.pt.gps}
+                </a>
+              )}
 
               {tarefa.descricao && (
                 <p className="text-[#444655] text-sm font-medium opacity-80 mb-6 bg-white/40 p-3 rounded-xl border border-white/50 line-clamp-3">
@@ -121,6 +144,15 @@ export default function MyTasks() {
               )}
 
               <div className="mt-auto pt-4 border-t border-black/5 flex justify-end gap-3">
+                {tarefa.id_pt && tarefa.pt?.subestacao?.id && (
+                  <button
+                    onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
+                    className="flex-1 flex justify-center items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#0d3fd1] py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Auditar
+                  </button>
+                )}
                 {tarefa.status === 'Pendente' && (
                   <button 
                     onClick={() => handleIniciar(tarefa.id)}

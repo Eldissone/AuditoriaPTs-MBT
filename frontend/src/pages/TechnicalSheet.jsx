@@ -10,15 +10,23 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Filter
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function TechnicalSheet() {
+  const { user } = useAuth();
   const { id_pt } = useParams();
   const [pt, setPt] = useState(null);
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tipoFiltro, setTipoFiltro] = useState('');
+  const [ordenacaoData, setOrdenacaoData] = useState('desc');
+  const [mostrarComObservacao, setMostrarComObservacao] = useState(false);
+  const [modoFicha, setModoFicha] = useState(() => localStorage.getItem('@PTAS:technicalsheet:modo') || 'completo');
+  const [limiteExecutivo, setLimiteExecutivo] = useState(() => Number(localStorage.getItem('@PTAS:technicalsheet:limiteExecutivo')) || 12);
 
   useEffect(() => {
     async function fetchData() {
@@ -40,6 +48,14 @@ export default function TechnicalSheet() {
     fetchData();
   }, [id_pt]);
 
+  useEffect(() => {
+    localStorage.setItem('@PTAS:technicalsheet:modo', modoFicha);
+  }, [modoFicha]);
+
+  useEffect(() => {
+    localStorage.setItem('@PTAS:technicalsheet:limiteExecutivo', String(limiteExecutivo));
+  }, [limiteExecutivo]);
+
   const handleExportPDF = () => {
     window.print();
   };
@@ -55,6 +71,13 @@ export default function TechnicalSheet() {
         alert('Dados recalibrados com sucesso!');
       });
     }, 1000);
+  };
+
+  const handleResetPreferencias = () => {
+    setModoFicha('completo');
+    setLimiteExecutivo(12);
+    localStorage.removeItem('@PTAS:technicalsheet:modo');
+    localStorage.removeItem('@PTAS:technicalsheet:limiteExecutivo');
   };
 
   // Calculate days until next revision from the most recent inspection
@@ -91,6 +114,20 @@ export default function TechnicalSheet() {
   const performance = getThermalPerformance();
   const performanceColor = performance > 80 ? '#5fff9b' : performance > 60 ? '#facc15' : '#ff4d4d';
   const performanceStatus = performance > 80 ? 'ESTÁVEL' : performance > 60 ? 'AVISO' : 'CRÍTICO';
+  const emissaoFicha = new Date().toLocaleString('pt-PT');
+  const ultimaInspecao = inspections.length > 0
+    ? [...inspections].sort((a, b) => new Date(b.data_inspecao) - new Date(a.data_inspecao))[0]
+    : null;
+
+  const historicoFiltrado = [...inspections]
+    .filter((audit) => (tipoFiltro ? audit.tipo === tipoFiltro : true))
+    .filter((audit) => (mostrarComObservacao ? Boolean(audit.observacoes?.trim()) : true))
+    .sort((a, b) =>
+      ordenacaoData === 'desc'
+        ? new Date(b.data_inspecao) - new Date(a.data_inspecao)
+        : new Date(a.data_inspecao) - new Date(b.data_inspecao)
+    );
+  const historicoParaExibicao = modoFicha === 'executivo' ? historicoFiltrado.slice(0, limiteExecutivo) : historicoFiltrado;
 
   if (loading) {
     return (
@@ -102,7 +139,58 @@ export default function TechnicalSheet() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 print-report ${modoFicha === 'executivo' ? 'executive-mode' : ''}`}>
+      <style>{`
+        @media print {
+          .print-hide { display: none !important; }
+          .print-only { display: block !important; }
+          .print-report { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+          .print-table-wrap { border: 1px solid #d1d5db !important; border-radius: 0 !important; box-shadow: none !important; }
+          .print-card { border: 1px solid #d1d5db !important; box-shadow: none !important; }
+          .print-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-top: 1px solid #d1d5db;
+            padding: 6px 12px;
+            font-size: 10px;
+            color: #4b5563;
+            display: flex !important;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+          }
+          .print-page::after {
+            content: "Página " counter(page);
+          }
+          .executive-mode .executive-hide {
+            display: none !important;
+          }
+        }
+        @media screen {
+          .print-only { display: none !important; }
+          .print-footer { display: none !important; }
+        }
+      `}</style>
+
+      <div className="print-only mb-4 border border-[#d1d5db] p-4">
+        <h1 className="text-lg font-black text-[#0f1c2c] uppercase">Ficha Técnica do PT</h1>
+        <div className="grid grid-cols-2 gap-2 mt-3 text-[11px]">
+          <p><strong>Emitido em:</strong> {emissaoFicha}</p>
+          <p><strong>Utilizador:</strong> {user?.nome || 'Operador'}</p>
+          <p><strong>PT:</strong> {pt?.id_pt || id_pt || 'N/A'}</p>
+          <p><strong>Subestação:</strong> {pt?.subestacao?.nome || 'N/A'}</p>
+          <p><strong>Modo:</strong> {modoFicha === 'executivo' ? 'Executivo (1 página)' : 'Completo'}</p>
+          {modoFicha === 'executivo' && <p><strong>Limite:</strong> {limiteExecutivo} linhas</p>}
+        </div>
+      </div>
+
+      <div className="print-footer">
+        <span>MBT Energia - Ficha Técnica Oficial</span>
+        <span className="print-page"></span>
+      </div>
+
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-6">
           <Link to="/pts" className="p-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[#444655] hover:bg-[#eff4ff] transition-all">
@@ -118,7 +206,30 @@ export default function TechnicalSheet() {
             <p className="text-sm text-[#747686] font-medium uppercase tracking-tight">{pt?.subestacao?.nome || 'Localização Não Definida'}</p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 print-hide">
+          <button
+            onClick={() => setModoFicha((prev) => (prev === 'executivo' ? 'completo' : 'executivo'))}
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-5 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#eff4ff] transition-all uppercase"
+          >
+            Modo: {modoFicha === 'executivo' ? 'Executivo' : 'Completo'}
+          </button>
+          <button
+            onClick={handleResetPreferencias}
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-5 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#eff4ff] transition-all uppercase"
+          >
+            Repor Preferências
+          </button>
+          {modoFicha === 'executivo' && (
+            <select
+              value={limiteExecutivo}
+              onChange={(e) => setLimiteExecutivo(Number(e.target.value))}
+              className="bg-white border border-[#c4c5d7]/30 text-[#444655] px-5 py-3 rounded-xl text-[10px] font-black tracking-widest uppercase"
+            >
+              <option value={8}>Limite: 8</option>
+              <option value={12}>Limite: 12</option>
+              <option value={20}>Limite: 20</option>
+            </select>
+          )}
           <button
             onClick={handleExportPDF}
             className="flex items-center gap-2 bg-[#243141] text-white px-5 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#0f1c2c] transition-all shadow-lg active:scale-95 uppercase"
@@ -137,7 +248,7 @@ export default function TechnicalSheet() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm">
+          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm print-card">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-1.5 h-6 bg-[#0d3fd1] rounded-full"></div>
               <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Especificações da Unidade</h3>
@@ -180,18 +291,68 @@ export default function TechnicalSheet() {
                   <p className="text-xs font-mono font-bold text-[#0f1c2c] uppercase">{pt?.gps || 'NÃO DISPONÍVEL'}</p>
                 </div>
               </div>
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="text-[#0d3fd1] w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Localidade Técnica</p>
+                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">
+                    {[pt?.municipio, pt?.distrito_comuna, pt?.bairro].filter(Boolean).join(' / ') || '---'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText className="text-[#0d3fd1] w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Dados Comerciais</p>
+                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">Conta: {pt?.conta_contrato || '---'}</p>
+                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">Equipamento: {pt?.equipamento || '---'}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm">
+          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm print-card print-table-wrap executive-hide">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-1.5 h-6 bg-[#243141] rounded-full"></div>
               <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Histórico de Auditorias</h3>
             </div>
 
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+              <select
+                value={tipoFiltro}
+                onChange={(e) => setTipoFiltro(e.target.value)}
+                className="bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold text-[#0f1c2c] uppercase"
+              >
+                <option value="">Todos os tipos</option>
+                <option value="Preventiva">Preventiva</option>
+                <option value="Corretiva">Corretiva</option>
+              </select>
+              <select
+                value={ordenacaoData}
+                onChange={(e) => setOrdenacaoData(e.target.value)}
+                className="bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold text-[#0f1c2c] uppercase"
+              >
+                <option value="desc">Mais recentes</option>
+                <option value="asc">Mais antigas</option>
+              </select>
+              <label className="md:col-span-2 flex items-center gap-2 px-4 py-3 rounded-xl border border-[#c4c5d7]/20 bg-[#fcfdff] text-[10px] font-black text-[#444655] uppercase tracking-wider">
+                <Filter className="w-4 h-4 text-[#0d3fd1]" />
+                <input
+                  type="checkbox"
+                  checked={mostrarComObservacao}
+                  onChange={(e) => setMostrarComObservacao(e.target.checked)}
+                />
+                Mostrar apenas com observações
+              </label>
+            </div>
+
             <div className="space-y-4">
-              {inspections.length > 0 ? (
-                inspections.map((audit) => (
+              {historicoParaExibicao.length > 0 ? (
+                historicoParaExibicao.map((audit) => (
                   <div key={audit.id} className="flex items-center justify-between p-6 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-2xl group hover:border-[#0d3fd1]/30 transition-all">
                     <div className="flex items-center gap-6">
                       <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-[#c4c5d7]/20 flex items-center justify-center">
@@ -211,6 +372,9 @@ export default function TechnicalSheet() {
                           <span className="text-[9px] font-black text-[#005229] uppercase tracking-tighter">CONFORME</span>
                         </div>
                         <p className="text-[10px] text-[#747686] font-medium">Auditor: {audit.auditor?.nome || 'Sistema'}</p>
+                        <p className="text-[10px] text-[#747686] font-medium max-w-[260px] truncate">
+                          {audit.observacoes || 'Sem observações registadas'}
+                        </p>
                       </div>
                       <button className="p-2.5 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all">
                         <Download className="w-4 h-4" />
@@ -228,7 +392,24 @@ export default function TechnicalSheet() {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-[#243141] rounded-3xl p-8 shadow-xl relative overflow-hidden text-white">
+          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-6 shadow-sm grid grid-cols-2 gap-4 print-card">
+            <div>
+              <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Última inspeção</p>
+              <p className="text-sm font-black text-[#0f1c2c]">
+                {ultimaInspecao ? new Date(ultimaInspecao.data_inspecao).toLocaleDateString('pt-PT') : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Total auditorias</p>
+              <p className="text-sm font-black text-[#0f1c2c]">{inspections.length}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Estado operacional atual</p>
+              <p className="text-sm font-black text-[#0f1c2c]">{pt?.estado_operacional || 'N/A'}</p>
+            </div>
+          </div>
+
+          <div className="bg-[#243141] rounded-3xl p-8 shadow-xl relative overflow-hidden text-white print-card">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
             <h3 className="font-black text-white text-lg uppercase tracking-tight mb-6">Estado Crítico</h3>
             <div className="space-y-6">
@@ -257,7 +438,7 @@ export default function TechnicalSheet() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm">
+          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-8 shadow-sm print-card executive-hide">
             <h3 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight mb-6 flex items-center gap-2">
               <History className="w-4 h-4 text-[#0d3fd1]" />
               Atividade Recente

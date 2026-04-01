@@ -42,9 +42,9 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           </div>
           <button
             onClick={onClose}
-            className="bg-white/10 hover:bg-white/20 text-white p-3 rounded-xl transition-all"
+            className="bg-white/0 hover:bg-white/20 text-white p-3 rounded-xl transition-all"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -143,20 +143,29 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           </div>
 
           {/* Image Section */}
-          {substation.imagem_url && (
-            <div className="rounded-2xl overflow-hidden border border-[#c4c5d7]/20">
+          <div className="rounded-2xl overflow-hidden border border-[#c4c5d7]/20 bg-gray-100">
+            {substation.imagem_url ? (
               <img
                 src={substation.imagem_url}
                 alt={substation.nome}
                 className="w-full h-64 object-cover"
                 onError={(e) => {
-                  e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%239ca3af" text-anchor="middle" dy=".3em"%3ESem imagem disponível%3C/text%3E%3C/svg%3E';
+                  e.target.onerror = null;
+                  e.target.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjXFLI6ciYJOLq5zeXtbaXPAa0-gaG06Mc3g&s';
                 }}
               />
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="p-4 bg-white rounded-full shadow-sm mb-3">
+                  <Building2 className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500">Sem imagem disponível</p>
+                <p className="text-xs text-gray-400 mt-1">{substation.nome}</p>
+              </div>
+            )}
+          </div>
 
-          {/* Recent PTs List */}
+          {/* Recent PTs List 
           <div>
             <h3 className="font-black text-[#0f1c2c] text-lg mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-[#0d3fd1]" />
@@ -181,7 +190,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
               <p className="text-sm text-[#747686] text-center py-8">Nenhum proprietário associado</p>
             )}
           </div>
-
+          */}
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-[#c4c5d7]/10">
             <button

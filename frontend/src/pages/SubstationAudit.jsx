@@ -90,11 +90,20 @@ export default function SubstationAudit() {
   const [loading, setLoading] = useState(true);
   const [selectedPt, setSelectedPt] = useState(null);
   const [localidadeAtiva, setLocalidadeAtiva] = useState('');
+  const [topGrafico, setTopGrafico] = useState(6);
+  const [ordemPotencia, setOrdemPotencia] = useState('desc');
   const localidadeFiltro = searchParams.get('localidade') || '';
 
   // Calculate dynamic data based on current PTs
   const consumptionData = pts.length > 0
-    ? pts.slice(0, 6).map(p => ({
+    ? [...pts]
+      .sort((a, b) =>
+        ordemPotencia === 'desc'
+          ? (b.potencia_kva || 0) - (a.potencia_kva || 0)
+          : (a.potencia_kva || 0) - (b.potencia_kva || 0)
+      )
+      .slice(0, topGrafico)
+      .map(p => ({
       name: p.id_pt,
       consumo: p.potencia_kva,
       anterior: p.potencia_kva * 0.85 // Simulating comparison for now
@@ -262,6 +271,25 @@ export default function SubstationAudit() {
                 <BarChart3 className="w-6 h-6 text-[#0d3fd1]" />
               </div>
               <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Potência por PT (Asset Map)</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={topGrafico}
+                onChange={(e) => setTopGrafico(Number(e.target.value))}
+                className="bg-white border border-[#c4c5d7]/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-[#444655]"
+              >
+                <option value={4}>Top 4 PTs</option>
+                <option value={6}>Top 6 PTs</option>
+                <option value={10}>Top 10 PTs</option>
+              </select>
+              <select
+                value={ordemPotencia}
+                onChange={(e) => setOrdemPotencia(e.target.value)}
+                className="bg-white border border-[#c4c5d7]/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-[#444655]"
+              >
+                <option value="desc">Maior potência</option>
+                <option value="asc">Menor potência</option>
+              </select>
             </div>
             <div className="flex items-center gap-4 text-[10px] font-black text-[#747686] uppercase tracking-[0.1em]">
               <div className="flex items-center gap-2"><div className="w-3 h-3 bg-[#0d3fd1] rounded-sm"></div> Ativo Atual (kVA)</div>

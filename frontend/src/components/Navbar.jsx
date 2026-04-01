@@ -13,7 +13,8 @@ import {
   Settings,
   ShieldAlert,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  CheckSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -75,7 +76,7 @@ export default function Navbar() {
   const allMenuItems = [
     { name: 'Painel Central', icon: LayoutDashboard, path: '/' },
     { name: 'Subestações', icon: MapPin, path: '/subestacoes' },
-    { name: 'Minhas Tarefas', icon: ClipboardList, path: '/minhas-tarefas' },
+    { name: 'Minhas Tarefas', icon: CheckSquare, path: '/minhas-tarefas' },
     { name: 'Auditorias PT', icon: FileText, path: '/pts' },
     { name: 'Ficha Técnica', icon: History, path: '/ficha-tecnica' },
     { name: 'Ajustes', icon: Settings, path: '/configuracoes' },
