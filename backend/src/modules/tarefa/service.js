@@ -66,7 +66,40 @@ class TarefaService {
   }
 
   async updateTarefa(id, dados) {
-    return await TarefaRepository.update(id, dados);
+    // Normalizações para evitar erro de tipos no Prisma (ex.: data_prevista como string vazia)
+    const payload = { ...dados };
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'id_auditor')) {
+      const auditorNum = Number(payload.id_auditor);
+      if (!auditorNum) throw new Error('Auditor inválido');
+      payload.id_auditor = auditorNum;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'data_prevista')) {
+      const dt = new Date(payload.data_prevista);
+      if (Number.isNaN(dt.getTime())) throw new Error('Data Prevista inválida');
+      payload.data_prevista = dt;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'id_pt') && payload.id_pt === '') {
+      payload.id_pt = null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'checklist')) {
+      // Aceita Array/Objeto (Prisma Json). Se vier string/vazio, normaliza.
+      if (payload.checklist == null) payload.checklist = [];
+      else if (typeof payload.checklist === 'string') payload.checklist = [];
+    }
+
+    // Permitir "reabrir" tarefa concluída via edição (admin)
+    if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      if (payload.status === 'Pendente') {
+        payload.data_inicio = null;
+        payload.data_fim = null;
+      }
+    }
+
+    return await TarefaRepository.update(id, payload);
   }
 
   async deleteTarefa(id) {

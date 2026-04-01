@@ -110,12 +110,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header with close button */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] p-6 flex justify-between items-start">
-          <div>
-            <h2 className="text-white text-2xl font-black uppercase tracking-tight">{substation.nome}</h2>
+        <div className="sticky top-0 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] p-5 sm:p-6 flex justify-between items-start gap-4">
+          <div className="min-w-0">
+            <h2 className="text-white text-xl sm:text-2xl font-black uppercase tracking-tight truncate">{substation.nome}</h2>
             <p className="text-white/70 text-sm mt-1 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              {substation.localizacao}
+              <span className="truncate">{substation.localizacao}</span>
             </p>
           </div>
           <button
@@ -126,9 +126,9 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-5 sm:p-6 space-y-6">
           {/* Main Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-gradient-to-br from-[#0d3fd1]/10 to-[#5fff9b]/10 rounded-xl p-4 border border-[#0d3fd1]/20">
               <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-2">Código</p>
               <p className="text-xl font-black text-[#0f1c2c]">{substation.codigo}</p>
@@ -166,7 +166,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 <p className="text-xl font-black text-[#0d3fd1]">{proprietariosLocalidadeCount}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white rounded-xl p-4 border-l-4 border-green-500">
                 <p className="text-[10px] font-bold text-gray-600 uppercase">Operacional</p>
                 <p className="text-2xl font-black text-green-600">{statusCounts.operacional}</p>
@@ -232,7 +232,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
           {/* Image Gallery */}
           <div className="rounded-2xl overflow-hidden border border-[#c4c5d7]/20 bg-white">
-            <div className="p-5 border-b border-[#c4c5d7]/10 flex items-center justify-between gap-4">
+            <div className="p-5 border-b border-[#c4c5d7]/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#0d3fd1]" />
                 <h3 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">Imagens</h3>
@@ -241,7 +241,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 </span>
               </div>
 
-              <label className="cursor-pointer text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-[#eff4ff] text-[#0d3fd1] border border-[#0d3fd1]/10 hover:bg-[#0d3fd1] hover:text-white transition-all">
+              <label className="w-full sm:w-auto text-center cursor-pointer text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-[#eff4ff] text-[#0d3fd1] border border-[#0d3fd1]/10 hover:bg-[#0d3fd1] hover:text-white transition-all">
                 Adicionar fotos
                 <input
                   type="file"
@@ -258,7 +258,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
             {imagensDaSubestacao.length > 0 ? (
               <div className="p-5">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {imagensDaSubestacao.map((src) => (
                     <div key={src} className="group relative rounded-xl overflow-hidden border border-[#c4c5d7]/20 bg-gray-100">
                       <button
@@ -331,16 +331,16 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           </div>
           */}
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-[#c4c5d7]/10">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#c4c5d7]/10">
             <button
               onClick={handleFilterPts}
-              className="flex-1 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] text-white font-black py-3 rounded-xl hover:shadow-lg transition-all uppercase text-sm tracking-wider"
+              className="w-full sm:flex-1 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] text-white font-black py-3 rounded-xl hover:shadow-lg transition-all uppercase text-sm tracking-wider"
             >
               Ver Todos os PTs ({subPts.length})
             </button>
             <button
               onClick={onClose}
-              className="flex-1 bg-[#f8f9ff] text-[#0d3fd1] font-black py-3 rounded-xl hover:bg-[#eff4ff] transition-all uppercase text-sm tracking-wider border border-[#c4c5d7]/20"
+              className="w-full sm:flex-1 bg-[#f8f9ff] text-[#0d3fd1] font-black py-3 rounded-xl hover:bg-[#eff4ff] transition-all uppercase text-sm tracking-wider border border-[#c4c5d7]/20"
             >
               Fechar
             </button>

@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle, Calendar, MapPin, ClipboardList, CheckSquare, FileText } from 'lucide-react';
+import { Play, CheckCircle, X, Calendar, MapPin, ClipboardList, CheckSquare, Eye } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export default function MyTasks() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTarefa, setActiveTarefa] = useState(null); // Para modal de checklist
   const [checklistAtual, setChecklistAtual] = useState([]);
+  const [detailTarefa, setDetailTarefa] = useState(null);
 
   const fetchTarefas = async () => {
     try {
@@ -144,15 +141,13 @@ export default function MyTasks() {
               )}
 
               <div className="mt-auto pt-4 border-t border-black/5 flex justify-end gap-3">
-                {tarefa.id_pt && tarefa.pt?.subestacao?.id && (
-                  <button
-                    onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
-                    className="flex-1 flex justify-center items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#0d3fd1] py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Auditar
-                  </button>
-                )}
+                <button
+                  onClick={() => setDetailTarefa(tarefa)}
+                  className="flex-1 flex justify-center items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#0d3fd1] py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  Abrir
+                </button>
                 {tarefa.status === 'Pendente' && (
                   <button 
                     onClick={() => handleIniciar(tarefa.id)}
@@ -189,8 +184,8 @@ export default function MyTasks() {
 
       {activeTarefa && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white max-w-lg w-full rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8">
-            <div className="bg-[#f8faff] p-8 border-b border-[#c4c5d7]/20 flex justify-between items-start">
+          <div className="bg-white max-w-lg w-full rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
+            <div className="bg-[#f8faff] p-6 sm:p-8 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Resumo de Auditoria</span>
                 <h3 className="text-[#0f1c2c] text-xl font-black uppercase tracking-tighter leading-tight">
@@ -202,7 +197,7 @@ export default function MyTasks() {
               </button>
             </div>
             
-            <div className="p-8 space-y-6">
+            <div className="p-6 sm:p-8 space-y-6 overflow-y-auto">
               <p className="text-sm text-[#444655] font-medium leading-relaxed">
                 Antes de concluir esta ordem de serviço, confirme os itens técnicos da checklist (caso existam). A conclusão registará o seu identificador e marca de tempo.
               </p>
@@ -239,18 +234,119 @@ export default function MyTasks() {
               </div>
             </div>
 
-            <div className="p-6 bg-white border-t border-[#c4c5d7]/20 flex justify-end gap-3">
+            <div className="p-5 sm:p-6 bg-white border-t border-[#c4c5d7]/20 flex flex-col sm:flex-row justify-end gap-3">
               <button 
                 onClick={() => setActiveTarefa(null)} 
-                className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]"
               >
                 Voltar
               </button>
               <button 
                 onClick={handleConcluir} 
-                className="px-8 py-3 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-[#00e47c]/20 hover:bg-[#00d674]"
+                className="w-full sm:w-auto px-8 py-3 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-[#00e47c]/20 hover:bg-[#00d674]"
               >
                 Submeter Conclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailTarefa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white max-w-2xl w-full rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
+            <div className="bg-[#f8faff] p-6 sm:p-8 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Detalhes da Tarefa</span>
+                <h3 className="text-[#0f1c2c] text-xl font-black uppercase tracking-tighter leading-tight">
+                  {detailTarefa.titulo}
+                </h3>
+              </div>
+              <button onClick={() => setDetailTarefa(null)} className="p-2 bg-white rounded-lg border border-[#c4c5d7]/30 text-[#747686] hover:bg-red-50 hover:text-red-500 transition-all">
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-5 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Estado</p>
+                  <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.status}</p>
+                </div>
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Data Prevista</p>
+                  <p className="text-sm font-black text-[#0f1c2c]">{new Date(detailTarefa.data_prevista).toLocaleDateString('pt-PT')}</p>
+                </div>
+                {detailTarefa.data_inicio && (
+                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Início</p>
+                    <p className="text-sm font-black text-[#0f1c2c]">{new Date(detailTarefa.data_inicio).toLocaleString('pt-PT')}</p>
+                  </div>
+                )}
+                {detailTarefa.data_fim && (
+                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Conclusão</p>
+                    <p className="text-sm font-black text-[#0f1c2c]">{new Date(detailTarefa.data_fim).toLocaleString('pt-PT')}</p>
+                  </div>
+                )}
+              </div>
+
+              {detailTarefa.descricao && (
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Descrição</p>
+                  <p className="text-sm font-medium text-[#444655]">{detailTarefa.descricao}</p>
+                </div>
+              )}
+
+              <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT / Subestação</p>
+                <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem PT associada'}</p>
+                {detailTarefa.pt?.subestacao?.nome && (
+                  <p className="text-xs font-bold text-[#444655]">Subestação: {detailTarefa.pt.subestacao.nome}</p>
+                )}
+                {detailTarefa.pt?.subestacao?.proprietario && (
+                  <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.subestacao.proprietario}</p>
+                )}
+                {detailTarefa.pt?.subestacao?.municipio && (
+                  <p className="text-xs font-bold text-[#444655]">Localidade: {detailTarefa.pt.subestacao.municipio}</p>
+                )}
+              </div>
+
+              <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-[#0d3fd1]" /> Checklist
+                </h4>
+                {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 && (
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-3">
+                    {detailTarefa.checklist.filter((item) => item.checked).length}/{detailTarefa.checklist.length} marcados
+                  </p>
+                )}
+                {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 ? (
+                  <div className="space-y-2">
+                    {detailTarefa.checklist.map((item) => (
+                      <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${item.checked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                        <span className="text-sm font-bold text-[#444655]">{item.label}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${item.checked ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {item.checked ? <CheckCircle className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                          {item.checked ? '' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white rounded-lg border border-dashed border-[#c4c5d7] text-center">
+                    <span className="text-xs font-bold text-[#747686]">Sem checklist associada.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 bg-white border-t border-[#c4c5d7]/20 flex justify-end">
+              <button
+                onClick={() => setDetailTarefa(null)}
+                className="w-full sm:w-auto px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]"
+              >
+                Fechar
               </button>
             </div>
           </div>

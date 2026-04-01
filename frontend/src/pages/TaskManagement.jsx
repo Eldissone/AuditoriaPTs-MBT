@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export default function TaskManagement() {
-  const navigate = useNavigate();
   const [tarefas, setTarefas] = useState([]);
   const [auditores, setAuditores] = useState([]);
   const [pts, setPts] = useState([]);
@@ -22,9 +19,11 @@ export default function TaskManagement() {
     id_auditor: '',
     id_pt: '',
     data_prevista: new Date().toISOString().split('T')[0],
+    status: 'Pendente',
     checklist: []
   });
   const [novoChecklistItem, setNovoChecklistItem] = useState('');
+  const [detailTarefa, setDetailTarefa] = useState(null);
 
   const fetchDados = async () => {
     try {
@@ -59,6 +58,7 @@ export default function TaskManagement() {
         id_auditor: tarefa.id_auditor,
         id_pt: tarefa.id_pt || '',
         data_prevista: tarefa.data_prevista.split('T')[0],
+        status: tarefa.status || 'Pendente',
         checklist: tarefa.checklist || []
       });
     } else {
@@ -69,6 +69,7 @@ export default function TaskManagement() {
         id_auditor: '',
         id_pt: '',
         data_prevista: new Date().toISOString().split('T')[0],
+        status: 'Pendente',
         checklist: []
       });
     }
@@ -103,6 +104,7 @@ export default function TaskManagement() {
         checklist: formData.checklist
       };
       if (formData.id_pt) payload.id_pt = formData.id_pt;
+      if (formData.id && formData.status) payload.status = formData.status;
 
       if (formData.id) {
         await api.put(`/tarefas/${formData.id}`, payload);
@@ -113,7 +115,7 @@ export default function TaskManagement() {
       setIsModalOpen(false);
       fetchDados();
     } catch (err) {
-      alert('Erro ao salvar tarefa');
+      alert(err.response?.data?.error || 'Erro ao salvar tarefa');
     }
   };
 
@@ -149,7 +151,7 @@ export default function TaskManagement() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h2 className="text-[#0f1c2c] text-3xl font-black uppercase tracking-tighter">Gestão de Tarefas</h2>
           <p className="text-sm font-bold text-[#747686] opacity-60 mt-1 uppercase tracking-widest">
@@ -158,7 +160,7 @@ export default function TaskManagement() {
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-[#0d3fd1] text-white px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-xl shadow-[#0d3fd1]/10"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 bg-[#0d3fd1] text-white px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-xl shadow-[#0d3fd1]/10"
         >
           <Plus className="w-5 h-5" />
           Nova Tarefa
@@ -166,7 +168,7 @@ export default function TaskManagement() {
       </div>
 
       {/* TABS */}
-      <div className="flex gap-2 border-b border-[#c4c5d7]/20">
+      <div className="flex gap-2 border-b border-[#c4c5d7]/20 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('all')}
           className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
@@ -212,106 +214,269 @@ export default function TaskManagement() {
         {loading ? (
           <div className="p-10 text-center text-[#747686] font-bold">Carregando tarefas...</div>
         ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Data Prevista</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">GPS / Mapa</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Estado</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center w-1/6">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#c4c5d7]/10">
-              {tarefasFiltradas.map((tarefa, i) => (
-                <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors`}>
-                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
-                    <div className="space-y-1">
-                      <p className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">{tarefa.titulo}</p>
-                      {tarefa.id_pt && (
-                        <p className="text-xs text-[#0d3fd1] font-bold bg-[#0d3fd1]/5 inline-flex p-1 rounded">
-                          <MapPin className="w-3 h-3 mr-1 inline" /> PT: {tarefa.id_pt}
-                        </p>
-                      )}
-                      {tarefa.pt?.subestacao?.proprietario && (
-                        <p className="text-[10px] font-black uppercase text-[#444655]">
-                          Proprietário: {tarefa.pt.subestacao.proprietario}
-                        </p>
-                      )}
-                      {tarefa.pt?.subestacao?.municipio && (
-                        <p className="text-[10px] font-bold uppercase text-[#747686]">
-                          Localidade: {tarefa.pt.subestacao.municipio}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[#e1e4ef] flex items-center justify-center text-[#444655] font-black text-xs">
-                        {tarefa.auditor?.nome?.charAt(0) || 'U'}
+          <>
+            {/* Mobile: cards */}
+            <div className="md:hidden divide-y divide-[#c4c5d7]/10">
+              {tarefasFiltradas.map((tarefa) => (
+                <div key={tarefa.id} className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight truncate">{tarefa.titulo}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {getStatusBadge(tarefa.status)}
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#747686] bg-[#f8faff] border border-[#c4c5d7]/20 px-2 py-1 rounded-md">
+                          {new Date(tarefa.data_prevista).toLocaleDateString('pt-PT')}
+                        </span>
                       </div>
-                      <span className="font-bold text-[#444655] text-sm">{tarefa.auditor?.nome}</span>
                     </div>
-                  </td>
-                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center font-mono text-sm text-[#747686]">
-                    {new Date(tarefa.data_prevista).toLocaleDateString('pt-PT')}
-                  </td>
-                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
-                    {tarefa.pt?.gps ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] font-black text-[#0d3fd1] uppercase hover:underline"
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => setDetailTarefa(tarefa)}
+                        className="p-2 text-[#0d3fd1] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#eff4ff] transition-all"
+                        title="Ver detalhes"
                       >
-                        {tarefa.pt.gps}
-                      </a>
-                    ) : (
-                      <span className="text-[10px] font-bold text-[#747686] uppercase">Sem GPS</span>
-                    )}
-                  </td>
-                  <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
-                    {getStatusBadge(tarefa.status)}
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="flex justify-center gap-3">
-                      {tarefa.id_pt && tarefa.pt?.subestacao?.id && (
-                        <button
-                          onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
-                          className="p-2 text-[#0d3fd1] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#eff4ff] transition-all"
-                          title="Abrir auditoria do PT"
-                        >
-                          <AlertCircle className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button onClick={() => handleOpenModal(tarefa)} className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#f8faff] hover:text-[#0d3fd1] transition-all" title="Editar">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenModal(tarefa)}
+                        className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#f8faff] hover:text-[#0d3fd1] transition-all"
+                        title="Editar"
+                      >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(tarefa.id)} className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all" title="Eliminar">
+                      <button
+                        onClick={() => handleDelete(tarefa.id)}
+                        className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all"
+                        title="Eliminar"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2">
+                    <div className="flex items-center justify-between gap-3 bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#747686]">Técnico</span>
+                      <span className="text-xs font-bold text-[#444655] truncate">{tarefa.auditor?.nome || '—'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT</span>
+                      <span className="text-xs font-bold text-[#0d3fd1] truncate">{tarefa.id_pt || '—'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#747686]">GPS</span>
+                      {tarefa.pt?.gps ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-black text-[#0d3fd1] hover:underline truncate max-w-[60%]"
+                        >
+                          {tarefa.pt.gps}
+                        </a>
+                      ) : (
+                        <span className="text-xs font-bold text-[#747686]">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
               {tarefasFiltradas.length === 0 && !loading && (
-                <tr>
-                  <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
-                    {activeTab === 'completed' ? 'Nenhuma tarefa concluída' : 'Nenhuma tarefa atribuída'}
-                  </td>
-                </tr>
+                <div className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                  {activeTab === 'completed' ? 'Nenhuma tarefa concluída' : 'Nenhuma tarefa atribuída'}
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[980px]">
+                <thead>
+                  <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Data Prevista</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">GPS / Mapa</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Estado</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center w-1/6">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#c4c5d7]/10">
+                  {tarefasFiltradas.map((tarefa, i) => (
+                    <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors`}>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
+                        <div className="space-y-1">
+                          <p className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">{tarefa.titulo}</p>
+                          {tarefa.id_pt && (
+                            <p className="text-xs text-[#0d3fd1] font-bold bg-[#0d3fd1]/5 inline-flex p-1 rounded">
+                              <MapPin className="w-3 h-3 mr-1 inline" /> PT: {tarefa.id_pt}
+                            </p>
+                          )}
+                          {tarefa.pt?.subestacao?.proprietario && (
+                            <p className="text-[10px] font-black uppercase text-[#444655]">
+                              Proprietário: {tarefa.pt.subestacao.proprietario}
+                            </p>
+                          )}
+                          {tarefa.pt?.subestacao?.municipio && (
+                            <p className="text-[10px] font-bold uppercase text-[#747686]">
+                              Localidade: {tarefa.pt.subestacao.municipio}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[#e1e4ef] flex items-center justify-center text-[#444655] font-black text-xs">
+                            {tarefa.auditor?.nome?.charAt(0) || 'U'}
+                          </div>
+                          <span className="font-bold text-[#444655] text-sm">{tarefa.auditor?.nome}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center font-mono text-sm text-[#747686]">
+                        {new Date(tarefa.data_prevista).toLocaleDateString('pt-PT')}
+                      </td>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
+                        {tarefa.pt?.gps ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] font-black text-[#0d3fd1] uppercase hover:underline"
+                          >
+                            {tarefa.pt.gps}
+                          </a>
+                        ) : (
+                          <span className="text-[10px] font-bold text-[#747686] uppercase">Sem GPS</span>
+                        )}
+                      </td>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10 text-center">
+                        {getStatusBadge(tarefa.status)}
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => setDetailTarefa(tarefa)}
+                            className="p-2 text-[#0d3fd1] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#eff4ff] transition-all"
+                            title="Ver detalhes da tarefa"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleOpenModal(tarefa)} className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:bg-[#f8faff] hover:text-[#0d3fd1] transition-all" title="Editar">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(tarefa.id)} className="p-2 text-[#444655] bg-white border border-[#c4c5d7]/30 rounded-lg hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all" title="Eliminar">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {tarefasFiltradas.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                        {activeTab === 'completed' ? 'Nenhuma tarefa concluída' : 'Nenhuma tarefa atribuída'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
+
+      {detailTarefa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white max-w-3xl w-full rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="bg-[#f8faff] p-6 sm:p-8 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Detalhes da Tarefa</span>
+                <h3 className="text-[#0f1c2c] text-xl font-black uppercase tracking-tighter leading-tight">{detailTarefa.titulo}</h3>
+              </div>
+              <button onClick={() => setDetailTarefa(null)} className="p-2 bg-white rounded-lg border border-[#c4c5d7]/30 text-[#747686] hover:bg-red-50 hover:text-red-500 transition-all">
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-5 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Estado</p>
+                  <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.status}</p>
+                </div>
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Data Prevista</p>
+                  <p className="text-sm font-black text-[#0f1c2c]">{new Date(detailTarefa.data_prevista).toLocaleDateString('pt-PT')}</p>
+                </div>
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Auditor</p>
+                  <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.auditor?.nome || 'N/A'}</p>
+                </div>
+              </div>
+
+              {detailTarefa.descricao && (
+                <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Descrição</p>
+                  <p className="text-sm font-medium text-[#444655]">{detailTarefa.descricao}</p>
+                </div>
+              )}
+
+              <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT / Subestação</p>
+                <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem PT associada'}</p>
+                {detailTarefa.pt?.subestacao?.nome && <p className="text-xs font-bold text-[#444655]">Subestação: {detailTarefa.pt.subestacao.nome}</p>}
+                {detailTarefa.pt?.subestacao?.proprietario && <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.subestacao.proprietario}</p>}
+                {detailTarefa.pt?.subestacao?.municipio && <p className="text-xs font-bold text-[#444655]">Localidade: {detailTarefa.pt.subestacao.municipio}</p>}
+              </div>
+
+              <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-[#0d3fd1]" /> Checklist ( / )
+                </h4>
+                {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 && (
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-3">
+                    {detailTarefa.checklist.filter((item) => item.checked).length}/{detailTarefa.checklist.length} marcados
+                  </p>
+                )}
+                {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 ? (
+                  <div className="space-y-2">
+                    {detailTarefa.checklist.map((item) => (
+                      <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${item.checked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                        <span className="text-sm font-bold text-[#444655]">{item.label}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${item.checked ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {item.checked ? <CheckCircle className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                          {item.checked ? '' : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white rounded-lg border border-dashed border-[#c4c5d7] text-center">
+                    <span className="text-xs font-bold text-[#747686]">Sem checklist associada.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-end">
+              <button
+                onClick={() => setDetailTarefa(null)}
+                className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CRIAR/EDITAR */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white max-w-2xl w-full rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="px-10 py-8 border-b border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff] rounded-t-[2rem]">
+            <div className="px-6 sm:px-10 py-6 sm:py-8 border-b border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff] rounded-t-[2rem] gap-4">
               <div>
                 <h3 className="text-[#0f1c2c] text-xl font-black uppercase tracking-tighter">
                   {formData.id ? 'Editar Tarefa' : 'Nova Tarefa Diária'}
@@ -322,7 +487,7 @@ export default function TaskManagement() {
               </button>
             </div>
 
-            <div className="p-10 overflow-y-auto space-y-6">
+            <div className="p-6 sm:p-10 overflow-y-auto space-y-6">
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Título / Assunto</label>
@@ -336,7 +501,7 @@ export default function TaskManagement() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Auditor Atribuído</label>
                     <div className="relative">
@@ -365,6 +530,20 @@ export default function TaskManagement() {
                       <Calendar className="w-5 h-5 absolute left-4 top-4 text-[#c4c5d7]" />
                     </div>
                   </div>
+                  {formData.id && (
+                    <div>
+                      <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Estado</label>
+                      <select
+                        className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-4 text-sm font-bold text-[#0f1c2c]"
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      >
+                        <option value="Pendente">Pendente (Reabrir)</option>
+                        <option value="Em Andamento">Em Andamento</option>
+                        <option value="Concluída">Concluída</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div>
