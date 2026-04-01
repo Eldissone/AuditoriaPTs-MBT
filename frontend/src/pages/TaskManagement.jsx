@@ -24,6 +24,7 @@ export default function TaskManagement() {
   });
   const [novoChecklistItem, setNovoChecklistItem] = useState('');
   const [detailTarefa, setDetailTarefa] = useState(null);
+  const [localidadeModal, setLocalidadeModal] = useState('');
 
   const fetchDados = async () => {
     try {
@@ -50,6 +51,7 @@ export default function TaskManagement() {
   }, []);
 
   const handleOpenModal = (tarefa = null) => {
+    setLocalidadeModal('');
     if (tarefa) {
       setFormData({
         id: tarefa.id,
@@ -76,6 +78,20 @@ export default function TaskManagement() {
     setNovoChecklistItem('');
     setIsModalOpen(true);
   };
+
+  const localidades = React.useMemo(() => {
+    const items = (pts || [])
+      .map((p) => p.subestacao?.municipio || p.municipio)
+      .filter(Boolean)
+      .map((x) => String(x).trim())
+      .filter(Boolean);
+    return [...new Set(items)].sort((a, b) => a.localeCompare(b, 'pt-PT'));
+  }, [pts]);
+
+  const ptsFiltradosModal = React.useMemo(() => {
+    if (!localidadeModal) return pts;
+    return (pts || []).filter((p) => (p.subestacao?.municipio || p.municipio) === localidadeModal);
+  }, [pts, localidadeModal]);
 
   const handleAddChecklist = () => {
     if (!novoChecklistItem.trim()) return;
@@ -549,13 +565,33 @@ export default function TaskManagement() {
                 <div>
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Posto de Transformação (Opcional)</label>
                   <div className="relative">
+                    <div className="mb-3">
+                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block ml-1">Filtrar por Localidade</label>
+                      <select
+                        className="w-full appearance-none bg-white border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
+                        value={localidadeModal}
+                        onChange={(e) => {
+                          setLocalidadeModal(e.target.value);
+                          setFormData((prev) => ({ ...prev, id_pt: '' }));
+                        }}
+                      >
+                        <option value="">Todas as localidades</option>
+                        {localidades.map((loc) => (
+                          <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                      </select>
+                    </div>
                     <select
                       className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
                       value={formData.id_pt}
                       onChange={(e) => setFormData({...formData, id_pt: e.target.value})}
                     >
                       <option value="">Nenhum (Tarefa Geral)</option>
-                      {pts.map(p => <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.nome}</option>)}
+                      {ptsFiltradosModal.map((p) => (
+                        <option key={p.id_pt} value={p.id_pt}>
+                          {p.id_pt} — {(p.subestacao?.proprietario || p.proprietario || 'Sem proprietário')} — {(p.subestacao?.nome || 'Sem subestação')}
+                        </option>
+                      ))}
                     </select>
                     <MapPin className="w-5 h-5 absolute left-4 top-4 text-[#c4c5d7]" />
                   </div>

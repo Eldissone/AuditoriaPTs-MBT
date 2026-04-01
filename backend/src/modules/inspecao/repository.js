@@ -49,20 +49,95 @@ class InspecaoRepository {
       ...baseData
     } = data;
 
-    return prisma.inspecao.create({
-      data: {
-        ...baseData,
-        data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : new Date(),
-        conformidade: conformidade ? { upsert: { create: { ...conformidade, id_pt: baseData.id_pt }, update: conformidade } } : undefined,
-        transformadores: transformadores ? { create: (Array.isArray(transformadores) ? transformadores : [transformadores]).map(t => ({ ...t, id_pt: baseData.id_pt })) } : undefined,
-        media_tensao: media_tensao ? { upsert: { create: { ...media_tensao, id_pt: baseData.id_pt }, update: media_tensao } } : undefined,
-        baixa_tensao: baixa_tensao ? { upsert: { create: { ...baixa_tensao, id_pt: baseData.id_pt }, update: baixa_tensao } } : undefined,
-        seguranca: seguranca ? { upsert: { create: { ...seguranca, id_pt: baseData.id_pt }, update: seguranca } } : undefined,
-        infraestrutura: infraestrutura ? { upsert: { create: { ...infraestrutura, id_pt: baseData.id_pt }, update: infraestrutura } } : undefined,
-        monitorizacao: monitorizacao ? { upsert: { create: { ...monitorizacao, id_pt: baseData.id_pt }, update: monitorizacao } } : undefined,
-        manutencao: manutencao ? { upsert: { create: { ...manutencao, id_pt: baseData.id_pt }, update: manutencao } } : undefined,
-        riscos: riscos ? { create: (Array.isArray(riscos) ? riscos : [riscos]).map(r => ({ ...r, id_pt: baseData.id_pt })) } : undefined,
+    // Alguns módulos (ex.: Conformidade/Seguranca/Infraestrutura/...) têm `id_pt` único.
+    // Fazer upsert "aninhado" em relações listadas pode falhar no Prisma. Por isso:
+    // 1) criamos a inspeção
+    // 2) fazemos upsert desses módulos por `id_pt`, associando ao `id_inspecao`
+    return prisma.$transaction(async (tx) => {
+      const inspecao = await tx.inspecao.create({
+        data: {
+          ...baseData,
+          data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : new Date(),
+        },
+      });
+
+      const id_pt = baseData.id_pt;
+      const id_inspecao = inspecao.id;
+
+      // Criar listas via modelos diretamente (evita depender de writes relacionais no prisma client)
+      if (transformadores) {
+        const list = (Array.isArray(transformadores) ? transformadores : [transformadores]).map((t) => ({
+          ...t,
+          id_pt,
+          id_inspecao,
+        }));
+        // createMany não aceita nested/undefined; fazemos create individual para compatibilidade máxima
+        for (const item of list) {
+          await tx.transformador.create({ data: item });
+        }
       }
+      if (riscos) {
+        const list = (Array.isArray(riscos) ? riscos : [riscos]).map((r) => ({
+          ...r,
+          id_pt,
+          id_inspecao,
+        }));
+        for (const item of list) {
+          await tx.risco.create({ data: item });
+        }
+      }
+
+      if (conformidade) {
+        await tx.conformidade.upsert({
+          where: { id_pt },
+          create: { ...conformidade, id_pt, id_inspecao },
+          update: { ...conformidade, id_inspecao },
+        });
+      }
+      if (media_tensao) {
+        await tx.mediaTensao.upsert({
+          where: { id_pt },
+          create: { ...media_tensao, id_pt, id_inspecao },
+          update: { ...media_tensao, id_inspecao },
+        });
+      }
+      if (baixa_tensao) {
+        await tx.baixaTensao.upsert({
+          where: { id_pt },
+          create: { ...baixa_tensao, id_pt, id_inspecao },
+          update: { ...baixa_tensao, id_inspecao },
+        });
+      }
+      if (seguranca) {
+        await tx.seguranca.upsert({
+          where: { id_pt },
+          create: { ...seguranca, id_pt, id_inspecao },
+          update: { ...seguranca, id_inspecao },
+        });
+      }
+      if (infraestrutura) {
+        await tx.infraestrutura.upsert({
+          where: { id_pt },
+          create: { ...infraestrutura, id_pt, id_inspecao },
+          update: { ...infraestrutura, id_inspecao },
+        });
+      }
+      if (monitorizacao) {
+        await tx.monitorizacao.upsert({
+          where: { id_pt },
+          create: { ...monitorizacao, id_pt, id_inspecao },
+          update: { ...monitorizacao, id_inspecao },
+        });
+      }
+      if (manutencao) {
+        await tx.manutencao.upsert({
+          where: { id_pt },
+          create: { ...manutencao, id_pt, id_inspecao },
+          update: { ...manutencao, id_inspecao },
+        });
+      }
+
+      return inspecao;
     });
   }
 
@@ -87,27 +162,91 @@ class InspecaoRepository {
     // Use the new id_pt if provided, else existing
     const id_pt = baseData.id_pt || existing.id_pt;
 
-    return prisma.inspecao.update({
-      where: { id: Number(id) },
-      data: {
-        ...baseData,
-        data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : undefined,
-        conformidade: conformidade ? { upsert: { create: { ...conformidade, id_pt }, update: conformidade } } : undefined,
-        transformadores: transformadores ? { 
-          deleteMany: {},
-          create: (Array.isArray(transformadores) ? transformadores : [transformadores]).map(t => ({ ...t, id_pt }))
-        } : undefined,
-        media_tensao: media_tensao ? { upsert: { create: { ...media_tensao, id_pt }, update: media_tensao } } : undefined,
-        baixa_tensao: baixa_tensao ? { upsert: { create: { ...baixa_tensao, id_pt }, update: baixa_tensao } } : undefined,
-        seguranca: seguranca ? { upsert: { create: { ...seguranca, id_pt }, update: seguranca } } : undefined,
-        infraestrutura: infraestrutura ? { upsert: { create: { ...infraestrutura, id_pt }, update: infraestrutura } } : undefined,
-        monitorizacao: monitoramento ? { upsert: { create: { ...monitorizacao, id_pt }, update: monitorizacao } } : undefined,
-        manutencao: manutencao ? { upsert: { create: { ...manutencao, id_pt }, update: manutencao } } : undefined,
-        riscos: riscos ? {
-          deleteMany: {},
-          create: (Array.isArray(riscos) ? riscos : [riscos]).map(r => ({ ...r, id_pt }))
-        } : undefined,
+    return prisma.$transaction(async (tx) => {
+      const inspecao = await tx.inspecao.update({
+        where: { id: Number(id) },
+        data: {
+          ...baseData,
+          data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : undefined,
+        },
+      });
+
+      const id_inspecao = inspecao.id;
+
+      if (transformadores) {
+        await tx.transformador.deleteMany({ where: { id_inspecao } });
+        const list = (Array.isArray(transformadores) ? transformadores : [transformadores]).map((t) => ({
+          ...t,
+          id_pt,
+          id_inspecao,
+        }));
+        for (const item of list) {
+          await tx.transformador.create({ data: item });
+        }
       }
+      if (riscos) {
+        await tx.risco.deleteMany({ where: { id_inspecao } });
+        const list = (Array.isArray(riscos) ? riscos : [riscos]).map((r) => ({
+          ...r,
+          id_pt,
+          id_inspecao,
+        }));
+        for (const item of list) {
+          await tx.risco.create({ data: item });
+        }
+      }
+
+      if (conformidade) {
+        await tx.conformidade.upsert({
+          where: { id_pt },
+          create: { ...conformidade, id_pt, id_inspecao },
+          update: { ...conformidade, id_inspecao },
+        });
+      }
+      if (media_tensao) {
+        await tx.mediaTensao.upsert({
+          where: { id_pt },
+          create: { ...media_tensao, id_pt, id_inspecao },
+          update: { ...media_tensao, id_inspecao },
+        });
+      }
+      if (baixa_tensao) {
+        await tx.baixaTensao.upsert({
+          where: { id_pt },
+          create: { ...baixa_tensao, id_pt, id_inspecao },
+          update: { ...baixa_tensao, id_inspecao },
+        });
+      }
+      if (seguranca) {
+        await tx.seguranca.upsert({
+          where: { id_pt },
+          create: { ...seguranca, id_pt, id_inspecao },
+          update: { ...seguranca, id_inspecao },
+        });
+      }
+      if (infraestrutura) {
+        await tx.infraestrutura.upsert({
+          where: { id_pt },
+          create: { ...infraestrutura, id_pt, id_inspecao },
+          update: { ...infraestrutura, id_inspecao },
+        });
+      }
+      if (monitorizacao) {
+        await tx.monitorizacao.upsert({
+          where: { id_pt },
+          create: { ...monitorizacao, id_pt, id_inspecao },
+          update: { ...monitorizacao, id_inspecao },
+        });
+      }
+      if (manutencao) {
+        await tx.manutencao.upsert({
+          where: { id_pt },
+          create: { ...manutencao, id_pt, id_inspecao },
+          update: { ...manutencao, id_inspecao },
+        });
+      }
+
+      return inspecao;
     });
   }
 

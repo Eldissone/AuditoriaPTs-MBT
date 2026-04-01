@@ -33,7 +33,11 @@ class InspecaoController {
       const result = await service.createInspecao(data);
       res.status(201).json(result);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({
+        error: error?.message || 'Erro ao criar inspeção.',
+        code: error?.code,
+        meta: error?.meta,
+      });
     }
   }
 

@@ -132,6 +132,31 @@ export default function PTAudits() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const handleSelectTask = (taskId) => {
+    const normalized = taskId ? Number(taskId) : null;
+    if (!normalized) {
+      setFormData((prev) => ({ ...prev, id_tarefa: '' }));
+      return;
+    }
+
+    const task = allTasks.find((t) => Number(t.id) === normalized);
+    setFormData((prev) => ({
+      ...prev,
+      id_tarefa: String(normalized),
+      // Se a tarefa tiver PT associado, preenche automaticamente a auditoria
+      id_pt: task?.id_pt || prev.id_pt,
+    }));
+  };
+
+  // Se o utilizador mudar o PT manualmente e a tarefa selecionada não for desse PT, limpa a associação
+  useEffect(() => {
+    if (!formData.id_tarefa) return;
+    const task = allTasks.find((t) => String(t.id) === String(formData.id_tarefa));
+    if (task && formData.id_pt && task.id_pt && task.id_pt !== formData.id_pt) {
+      setFormData((prev) => ({ ...prev, id_tarefa: '' }));
+    }
+  }, [formData.id_pt, formData.id_tarefa, allTasks]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -141,11 +166,12 @@ export default function PTAudits() {
       return;
     }
     
+    let payload;
     try {
       // Formating data for nested Prisma create/update
-      const payload = {
+      payload = {
         ...formData,
-        id_tarefa: formData.id_tarefa || undefined,
+        id_tarefa: formData.id_tarefa ? Number(formData.id_tarefa) : undefined,
         transformadores: [formData.transformador], // Repository expects array
         riscos: [formData.risco]
       };
@@ -162,7 +188,15 @@ export default function PTAudits() {
       setStep(1);
       setSelectedAuditId(null);
     } catch (err) {
-      alert('Erro ao processar auditoria: ' + (err.response?.data?.error || err.message));
+      console.error('Erro /inspecoes payload:', payload);
+      console.error('Erro /inspecoes resposta:', err.response?.data);
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Erro desconhecido';
+      const code = err.response?.data?.code ? ` [${err.response.data.code}]` : '';
+      alert(`Erro ao processar auditoria${code}: ${msg}`);
     }
   };
 
@@ -184,7 +218,7 @@ export default function PTAudits() {
       
       setFormData({
         id_pt: fullAudit.id_pt || '',
-        id_tarefa: fullAudit.tarefa?.id || '',
+        id_tarefa: fullAudit.tarefa?.id ? String(fullAudit.tarefa.id) : '',
         tipo: fullAudit.tipo,
         data_inspecao: fullAudit.data_inspecao.split('T')[0],
         observacoes: fullAudit.observacoes || '',
@@ -208,6 +242,7 @@ export default function PTAudits() {
       
       setFormData({
         id_pt: fullAudit.id_pt,
+        id_tarefa: fullAudit.tarefa?.id ? String(fullAudit.tarefa.id) : '',
         tipo: fullAudit.tipo,
         data_inspecao: fullAudit.data_inspecao.split('T')[0],
         observacoes: fullAudit.observacoes || '',
@@ -785,6 +820,26 @@ export default function PTAudits() {
           {step === 1 && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Tarefa Associada (Opcional)</label>
+                  <select
+                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
+                    value={formData.id_tarefa || ''}
+                    onChange={(e) => handleSelectTask(e.target.value)}
+                  >
+                    <option value="">Nenhuma tarefa associada</option>
+                    {(formData.id_pt ? allTasks.filter((t) => t.id_pt === formData.id_pt) : allTasks.filter((t) => t.id_pt)).map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.titulo} {task.id_pt ? `(${task.id_pt})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!formData.id_pt && (
+                    <p className="text-[10px] font-bold text-[#747686] uppercase tracking-widest opacity-70">
+                      Dica: selecione uma tarefa para preencher automaticamente o PT.
+                    </p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Selecionar Posto (PT)</label>
                   <select
@@ -808,19 +863,6 @@ export default function PTAudits() {
                   >
                     <option value="Preventiva">Preventiva</option>
                     <option value="Corretiva">Corretiva</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Tarefa Associada (Opcional)</label>
-                  <select
-                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
-                    value={formData.id_tarefa || ''}
-                    onChange={(e) => setFormData({ ...formData, id_tarefa: e.target.value })}
-                  >
-                    <option value="">Nenhuma tarefa associada</option>
-                    {allTasks.filter(t => t.id_pt === formData.id_pt).map(task => (
-                      <option key={task.id} value={task.id}>{task.titulo}</option>
-                    ))}
                   </select>
                 </div>
               </div>
