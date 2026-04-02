@@ -13,7 +13,9 @@ import {
   ArrowUpDown,
   CheckCircle2,
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
 import ExcelImportModal from '../components/ExcelImportModal';
@@ -28,12 +30,13 @@ export default function SubstationManagement() {
   const [potencia, setPotencia] = useState('');
   const [categoriaTarifa, setCategoriaTarifa] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({});
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const limit = 30;
+  const limit = 5000;
 
   const tableRef = useRef(null);
   const navigate = useNavigate();
@@ -116,6 +119,17 @@ export default function SubstationManagement() {
     return localidadeSelecionada
       ? `?localidade=${encodeURIComponent(localidadeSelecionada)}`
       : '';
+  };
+
+  const groupedSubestacoes = subestacoes.reduce((acc, sub) => {
+    const groupName = sub.municipio ? `Subestação de ${sub.municipio}` : (sub.nome ? `Subestação de ${sub.nome}` : 'Subestação Desconhecida');
+    if (!acc[groupName]) acc[groupName] = [];
+    acc[groupName].push(sub);
+    return acc;
+  }, {});
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }));
   };
 
   return (
@@ -219,7 +233,7 @@ export default function SubstationManagement() {
           <table className="w-full text-left border-collapse min-w-[1500px]">
             <thead>
               <tr className="bg-[#243141] text-white">
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Subestação (Município)</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Localidade</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Conta Contrato</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">PT (Proprietário)</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Instalação</th>
@@ -240,56 +254,72 @@ export default function SubstationManagement() {
                     Nenhuma subestação encontrada.
                   </td>
                 </tr>
-              ) : subestacoes.map((sub) => (
-                <tr key={sub.id} className="hover:bg-[#f8faff] transition-colors group text-[#0f1c2c] text-[11px]">
-                  <td className="px-5 py-4 font-bold text-[#0d3fd1]">{sub.municipio || '---'}</td>
-                  <td className="px-5 py-4 font-mono font-black text-[#0d3fd1]">{sub.conta_contrato || '---'}</td>
-                  <td className="px-5 py-4 font-bold uppercase">{sub.proprietario || sub.nome}</td>
-                  <td className="px-5 py-4 text-[#444655] font-medium">{sub.instalacao || '---'}</td>
-                  <td className="px-5 py-4 text-[#444655] font-medium">{sub.equipamento || '---'}</td>
-                  <td className="px-5 py-4 text-[#444655] font-medium">{sub.parceiro_negocios || '---'}</td>
-                  <td className="px-5 py-4 text-center">
-                    <span className="bg-[#243141]/5 px-2 py-0.5 rounded text-[9px] font-black text-[#243141]">{sub.categoria_tarifa || '---'}</span>
-                  </td>
-                  <td className="px-5 py-4 text-[#444655] font-bold uppercase">{sub.txt_categoria_tarifa || '---'}</td>
-                  <td className="px-5 py-4 text-center font-black">
-                    {sub.potencia_total_kva?.toLocaleString()} <span className="text-[9px] opacity-40">kVA</span>
-                  </td>
-                  <td className="px-5 py-4 text-[#444655] uppercase">{sub.distrito_comuna || '---'}</td>
-                  <td className="px-5 py-4 text-[#444655] uppercase">{sub.bairro || '---'}</td>
-                  <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => navigate(`/subestacoes/${sub.id}/auditoria${getLocalidadeQuery(sub)}`)}
-                        className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                        title="Auditoria"
-                      >
-                        <BarChart3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/pts${getLocalidadeQuery(sub)}`)}
-                        className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
-                        title="Relatório"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
-                        className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                        title="Editar"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(sub.id, sub.codigo)}
-                        className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+              ) : Object.entries(groupedSubestacoes).map(([groupName, items]) => (
+                <React.Fragment key={groupName}>
+                  <tr 
+                    onClick={() => toggleGroup(groupName)}
+                    className="bg-[#eff4ff] border-y border-[#c4c5d7]/20 cursor-pointer hover:bg-[#e6edff] transition-colors"
+                  >
+                    <td colSpan="12" className="px-5 py-3 font-black uppercase tracking-widest text-[#0d3fd1] text-xs">
+                      <div className="flex items-center gap-2">
+                        {expandedGroups[groupName] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        {groupName} 
+                        <span className="text-[#0d3fd1] text-[10px] ml-2 font-bold bg-[#d1dffe] px-2 py-0.5 rounded-full">{items.length} ativos</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedGroups[groupName] && items.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-[#f8faff] transition-colors group text-[#0f1c2c] text-[11px]">
+                      <td className="px-5 py-4 font-bold text-[#747686] pl-10 border-l-[3px] border-[#0d3fd1]">{sub.municipio || '---'}</td>
+                      <td className="px-5 py-4 font-mono font-black text-[#0d3fd1]">{sub.conta_contrato || '---'}</td>
+                      <td className="px-5 py-4 font-bold uppercase">{sub.proprietario || sub.nome}</td>
+                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.instalacao || '---'}</td>
+                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.equipamento || '---'}</td>
+                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.parceiro_negocios || '---'}</td>
+                      <td className="px-5 py-4 text-center">
+                        <span className="bg-[#243141]/5 px-2 py-0.5 rounded text-[9px] font-black text-[#243141]">{sub.categoria_tarifa || '---'}</span>
+                      </td>
+                      <td className="px-5 py-4 text-[#444655] font-bold uppercase">{sub.txt_categoria_tarifa || '---'}</td>
+                      <td className="px-5 py-4 text-center font-black">
+                        {sub.potencia_total_kva?.toLocaleString()} <span className="text-[9px] opacity-40">kVA</span>
+                      </td>
+                      <td className="px-5 py-4 text-[#444655] uppercase">{sub.distrito_comuna || '---'}</td>
+                      <td className="px-5 py-4 text-[#444655] uppercase">{sub.bairro || '---'}</td>
+                      <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => navigate(`/subestacoes/${sub.id}/auditoria${getLocalidadeQuery(sub)}`)}
+                            className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
+                            title="Auditoria"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/pts${getLocalidadeQuery(sub)}`)}
+                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
+                            title="Relatório"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
+                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
+                            title="Editar"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(sub.id, sub.codigo)}
+                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
