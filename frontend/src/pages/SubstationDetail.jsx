@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle } from 'lucide-react';
+import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -20,7 +20,8 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   });
 
   const somaPotenciasPTs = useMemo(() => {
-    return localPts.reduce((acc, pt) => acc + Number(pt.potencia_kva || pt.potencia_total_kva || 0), 0);
+    // Usar APENAS potencia_kva para os PTs individuais, garantindo independência do teto da subestação
+    return localPts.reduce((acc, pt) => acc + Number(pt.potencia_kva || 0), 0);
   }, [localPts]);
 
   const handleFilterPts = useCallback(() => {
@@ -100,6 +101,25 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
     return set.size;
   }, [localPts]);
 
+  const { capacidadeSubestacao, sobrecargaPct, isSobrecarga, overloadClass } = useMemo(() => {
+    // Capacidade "Real" registrada (Soma de todas as Subestações da Localidade)
+    const cap = Number(substation.sum_potencia || substation.potencia_total_kva || 0);
+    const sumPTs = somaPotenciasPTs;
+    const pct = cap > 0 ? (sumPTs / cap) * 100 : 0;
+    const isOverload = pct > 100;
+
+    let overloadColor = '#005229'; // Normal
+    if (pct >= 80 && pct <= 100) overloadColor = '#f59e0b'; // Warning
+    if (pct > 100) overloadColor = '#dc2626'; // Critical
+
+    return {
+      capacidadeSubestacao: cap,
+      sobrecargaPct: pct,
+      isSobrecarga: isOverload,
+      overloadClass: overloadColor
+    };
+  }, [substation.sum_potencia, substation.potencia_total_kva, somaPotenciasPTs]);
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -121,68 +141,6 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
         </div>
 
         <div className="p-5 sm:p-6 space-y-6">
-          {/* Main Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-[#0d3fd1]/10 to-[#5fff9b]/10 rounded-xl p-4 border border-[#0d3fd1]/20">
-              <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-2">Código</p>
-              <p className="text-xl font-black text-[#0f1c2c]">{substation.codigo}</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-[#5fff9b]/10 to-[#0dd114]/10 rounded-xl p-4 border border-[#5fff9b]/20">
-              <p className="text-[10px] font-black text-[#005229] uppercase tracking-widest mb-2">Município</p>
-              <p className="text-xl font-black text-[#005229]">{substation.municipio || 'N/D'}</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-[#243141]/10 to-[#0f1c2c]/10 rounded-xl p-4 border border-[#243141]/20">
-              <p className="text-[10px] font-black text-[#243141] uppercase tracking-widest mb-2">Capacidade Suportada (Subst.)</p>
-              <p className="text-lg font-black text-[#0f1c2c] bg-white border border-[#c4c5d7]/20 rounded-md px-2 py-1 inline-block mb-2">{(substation.sum_potencia || substation.potencia_total_kva || 0).toLocaleString()} <span className="text-[10px] font-bold">kVA</span></p>
-              <div className="pt-2 border-t border-[#243141]/10">
-                <p className="text-[9px] font-black text-[#243141]/70 uppercase tracking-widest leading-tight">Soma dos PTs associados</p>
-                <p className="text-base font-black text-[#0d3fd1]">{somaPotenciasPTs.toLocaleString()} <span className="text-[9px] font-bold">kVA</span></p>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-[#f59e0b]/10 to-[#dc2626]/10 rounded-xl p-4 border border-[#f59e0b]/20">
-              <p className="text-[10px] font-black text-[#7c2d12] uppercase tracking-widest mb-2">Proprietários (Localidade)</p>
-              <p className="text-xl font-black text-[#dc2626]">{proprietariosLocalidadeCount}</p>
-            </div>
-          </div>
-
-          {/* PT Status Distribution */}
-          <div className="bg-[#f8f9ff] rounded-2xl p-6">
-            <h3 className="font-black text-[#0f1c2c] text-lg mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-[#0d3fd1]" />
-              Propriétários (PTs) por Estado
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              <div className="bg-white rounded-xl p-3 border border-[#c4c5d7]/20">
-                <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">PTs na Localidade</p>
-                <p className="text-xl font-black text-[#0f1c2c]">{localPts.length}</p>
-              </div>
-              <div className="bg-white rounded-xl p-3 border border-[#c4c5d7]/20">
-                <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Proprietários Únicos</p>
-                <p className="text-xl font-black text-[#0d3fd1]">{proprietariosLocalidadeCount}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-xl p-4 border-l-4 border-green-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Operacional</p>
-                <p className="text-2xl font-black text-green-600">{statusCounts.operacional}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-red-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Crítico</p>
-                <p className="text-2xl font-black text-red-600">{statusCounts.critico}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Manutenção</p>
-                <p className="text-2xl font-black text-yellow-600">{statusCounts.manutencao}</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-gray-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Fora de Serviço</p>
-                <p className="text-2xl font-black text-gray-600">{statusCounts.fora}</p>
-              </div>
-            </div>
-          </div>
 
           {/* Detailed Info */}
           <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 p-6 space-y-4">
@@ -193,20 +151,14 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Tipo</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.tipo || 'N/D'}</p>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Substação</label>
+                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.municipio || 'N/D'}</p>
               </div>
+
+             
               <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Distrito</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.distrito || 'N/D'}</p>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Tensão (kV)</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.tensao_nominal || 'N/D'}</p>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Transformadores</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.num_transformadores || 'N/D'}</p>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de PTs</label>
+                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{localPts.length}</p>
               </div>
             </div>
 
@@ -226,6 +178,76 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Main Info Grid */}
+          <div className="w-100 sm:grid-cols-2 lg:grid-cols-5 gap-4 ">
+            <div className="bg-gradient-to-br from-[#243141]/10 to-[#0f1c2c]/10 rounded-xl p-4 border border-[#243141]/20 lg:col-span-2 relative overflow-hidden">
+              {isSobrecarga && (
+                <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black uppercase px-3 py-1 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Excesso de Carga
+                </div>
+              )}
+              <p className="text-[10px] font-black text-[#243141] uppercase tracking-widest mb-3">Análise de Sobrecarga (Nominal)</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                  <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Capacidade Instalada</p>
+                  <p className="text-xl font-black text-[#0f1c2c]">{capacidadeSubestacao.toLocaleString()} <span className="text-[10px] font-bold text-[#747686]">kVA</span></p>
+                </div>
+                <div className="hidden sm:block w-px h-10 bg-[#c4c5d7]/30"></div>
+                <div>
+                  <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Carga Exigida</p>
+                  <p className="text-xl font-black" style={{ color: overloadClass }}>
+                    {somaPotenciasPTs.toLocaleString()} <span className="text-[10px] font-bold opacity-60 relative -top-1">kVA</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {capacidadeSubestacao > 0 ? (
+                <div className="w-full bg-white/50 rounded-full h-2 mb-1 overflow-hidden pointer-events-none ring-1 ring-black/5 mt-auto">
+                  <div
+                    className="h-2 rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${Math.min(sobrecargaPct, 100)}%`, backgroundColor: overloadClass }}
+                  ></div>
+                </div>
+              ) : (
+                <p className="text-[9px] font-bold text-red-500 uppercase mt-auto bg-red-50 p-2 rounded-lg border border-red-100">⚠ Capacidade base da Subestação não informada no registo (0 kVA)</p>
+              )}
+              {capacidadeSubestacao > 0 && (
+                <div className="flex justify-between items-center text-[9px] font-bold mt-1">
+                  <span className="opacity-60 uppercase">0%</span>
+                  <span style={{ color: overloadClass }}>{sobrecargaPct.toFixed(1)}% de nível de saturação</span>
+                  <span className="opacity-60 uppercase">100% LIMITE</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* PT Status Distribution */}
+          <div className="bg-[#f8f9ff] rounded-2xl p-6">
+            <h3 className="font-black text-[#0f1c2c] text-lg mb-4 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[#0d3fd1]" />
+              Estados dos (PTs)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white rounded-xl p-4 border-l-4 border-green-500">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Operacional</p>
+                <p className="text-2xl font-black text-green-600">{statusCounts.operacional}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-red-500">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Crítico</p>
+                <p className="text-2xl font-black text-red-600">{statusCounts.critico}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Manutenção</p>
+                <p className="text-2xl font-black text-yellow-600">{statusCounts.manutencao}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-gray-500">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Fora de Serviço</p>
+                <p className="text-2xl font-black text-gray-600">{statusCounts.fora}</p>
+              </div>
+            </div>
           </div>
 
           {/* Image Gallery */}
@@ -330,12 +352,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           */}
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#c4c5d7]/10">
-            <button
+            {/* <button
               onClick={handleFilterPts}
               className="w-full sm:flex-1 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] text-white font-black py-3 rounded-xl hover:shadow-lg transition-all uppercase text-sm tracking-wider"
             >
               Ver Todos os PTs ({localPts.length})
-            </button>
+            </button> */}
             <button
               onClick={onClose}
               className="w-full sm:flex-1 bg-[#f8f9ff] text-[#0d3fd1] font-black py-3 rounded-xl hover:bg-[#eff4ff] transition-all uppercase text-sm tracking-wider border border-[#c4c5d7]/20"

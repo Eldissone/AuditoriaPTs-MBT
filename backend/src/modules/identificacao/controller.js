@@ -24,16 +24,27 @@ class IdentificacaoController {
       const result = await service.createPT(req.body);
       res.status(201).json(result);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      console.error('Erro ao Criar PT:', error);
+      res.status(400).json({ 
+        message: 'Erro ao criar PT', 
+        error: error.message,
+        details: error.meta 
+      });
     }
   }
 
   async update(req, res) {
     try {
-      const result = await service.updatePT(req.params.id_pt, req.body);
-      res.json(result);
+      const { id_pt } = req.params;
+      const pt = await service.updatePT(id_pt, req.body);
+      res.json(pt);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      console.error('Erro ao Atualizar PT:', error);
+      res.status(400).json({ 
+        message: 'Erro ao atualizar PT', 
+        error: error.message,
+        details: error.meta
+      });
     }
   }
 

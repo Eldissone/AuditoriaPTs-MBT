@@ -65,7 +65,10 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
             equipamento: findVal(['Equipamento']),
             categoria_tarifa: findVal(['Categoria de tarifa', 'Categoria Tarifa', 'Cat Tarifa', 'Cod Tarifa']),
             txt_categoria_tarifa: findVal(['Txt categoria tarifa', 'Texto Categoria', 'Tipo Tarifa', 'Desc Tarifa', 'Descrição Tarifa', 'Desc. Tarifa', 'Txt Categoria', 'Txt. Cat.']),
-            potencia_total_kva: parseFloat(findVal(['potência', 'potencia', 'kva', 'total kva'])) || 0,
+            // Capacidade da Subestação (Teto Geral) deve ser manual ou de coluna específica
+            potencia_total_kva: 0, 
+            // Potência Individual do PT
+            potencia_kva: parseFloat(findVal(['potência', 'potencia', 'kva', 'unidade kva', 'pot.'])) || 0,
             municipio: findVal(['Município', 'Municipio']),
             distrito_comuna: findVal(['Distrito', 'Comuna']),
             bairro: findVal(['Bairro']),

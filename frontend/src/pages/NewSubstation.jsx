@@ -52,11 +52,12 @@ export default function NewSubstation() {
 
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
-    // 1. Identificação Geral
     nome: '',
     codigo: '',
     localizacao: '',
     gps: '',
+    municipio: '',
+    potencia_total_kva: '',
     tipo: '',
     proprietario: '',
     operador: '',
@@ -454,6 +455,11 @@ export default function NewSubstation() {
                       <option value="Elevadora">Elevadora</option>
                       <option value="Abaixadora">Abaixadora</option>
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-red-600 uppercase tracking-widest ml-1">Capacidade Instalada Base (kVA)</label>
+                    <input type="number" placeholder="Ex: 20000" className="w-full bg-red-50 border border-red-200 rounded-xl py-4 px-6 text-sm font-bold text-red-900 focus:border-red-500 transition-all font-mono shadow-sm" value={formData.potencia_total_kva} onChange={(e) => setFormData({ ...formData, potencia_total_kva: e.target.value })} />
+                    <p className="text-[8px] font-bold text-[#747686] ml-1 mt-1">Define o tecto máximo da infraestrutura. Necessário para Dashboard.</p>
                   </div>
                 </div>
               )}
