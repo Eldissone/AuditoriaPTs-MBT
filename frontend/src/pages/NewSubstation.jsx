@@ -1,21 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Save, 
-  Edit3, 
-  Trash2, 
-  Calendar, 
-  Info, 
-  Zap, 
-  Settings, 
-  ShieldCheck, 
-  Activity,
-  ArrowRight,
-  Database,
-  ArrowLeft,
-  Plus
+  Save, Edit3, Trash2, Calendar, Info, Zap, Settings, ShieldCheck, Activity,
+  ArrowRight, Database, ArrowLeft, Plus, MapPin
 } from 'lucide-react';
 import api from '../services/api';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { getGpsForMunicipio } from '../utils/angolaGps';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+}
+
+function DraggableMarker({ position, setPosition }) {
+  const markerRef = useRef(null);
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        const marker = markerRef.current;
+        if (marker != null) {
+          setPosition(marker.getLatLng());
+        }
+      },
+    }),
+    [setPosition]
+  );
+  return position === null ? null : (
+    <Marker draggable={true} eventHandlers={eventHandlers} position={position} ref={markerRef}>
+      <Popup minWidth={90}><span>Pino Movível. Arraste-me!</span></Popup>
+    </Marker>
+  );
+}
 
 export default function NewSubstation() {
   const { id } = useParams();
@@ -119,6 +147,26 @@ export default function NewSubstation() {
   });
 
   const [loading, setLoading] = useState(isEdit);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('Geolocalização não é suportada pelo seu navegador');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = `${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`;
+        setFormData(prev => ({ ...prev, gps: coords }));
+        setIsLocating(false);
+      },
+      () => {
+        alert('Não foi possível obter a sua localização');
+        setIsLocating(false);
+      }
+    );
+  }, []);
 
   useEffect(() => {
     if (isEdit) {
@@ -166,6 +214,43 @@ export default function NewSubstation() {
       fetchSubstation();
     }
   }, [id, isEdit, navigate]);
+
+  // Map state derived from formData
+  const mapCenter = useMemo(() => {
+    if (formData.gps) {
+       const parts = formData.gps.split(',');
+       if (parts.length === 2) {
+          const lat = parseFloat(parts[0]);
+          const lng = parseFloat(parts[1]);
+          if (!isNaN(lat) && !isNaN(lng)) return [lat, lng];
+       }
+    }
+    const fallback = getGpsForMunicipio(formData.municipio);
+    if (fallback) {
+       const parts = fallback.split(',');
+       return [parseFloat(parts[0]), parseFloat(parts[1])];
+    }
+    return [-11.2027, 17.8739]; // Default Angola
+  }, [formData.gps, formData.municipio]);
+
+  const markerPos = useMemo(() => {
+    if (formData.gps) {
+       const parts = formData.gps.split(',');
+       if (parts.length === 2) {
+          const lat = parseFloat(parts[0]);
+          const lng = parseFloat(parts[1]);
+          if (!isNaN(lat) && !isNaN(lng)) return {lat, lng};
+       }
+    }
+    const fallback = getGpsForMunicipio(formData.municipio);
+    if (fallback) {
+       const parts = fallback.split(',');
+       return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+    }
+    return { lat: -8.8383, lng: 13.2344 }; // Default to Luanda
+  }, [formData.gps, formData.municipio]);
+
+  const mapZoom = formData.gps ? 16 : (formData.municipio ? 11 : 6);
 
   const tabs = [
     { id: 1, name: '1. Identificação Geral', icon: Info },
@@ -287,6 +372,44 @@ export default function NewSubstation() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Localização</label>
                     <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.localizacao} onChange={(e) => setFormData({ ...formData, localizacao: e.target.value })} />
+                  </div>
+                  <div className="space-y-4 md:col-span-2 bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#0d3fd1]/5 rounded-bl-[100px] pointer-events-none"></div>
+                    <div className="flex items-center gap-3 mb-6 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-[#c4c5d7]/20 shadow-sm">
+                        <MapPin className="w-5 h-5 text-[#0d3fd1]" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-[#0f1c2c] uppercase tracking-wider">Geolocalização do Ativo</h4>
+                        <p className="text-[10px] text-[#747686] font-semibold">Arraste o pino no mapa para obter as coordenadas com máxima precisão</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row gap-6 relative z-10">
+                      <div className="w-full md:w-1/3 flex flex-col gap-4">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest pl-1">Latitude & Longitude</label>
+                          <input type="text" placeholder="Ex: -8.8390, 13.2894" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-5 text-sm font-bold text-[#0d3fd1] font-mono shadow-sm transition-all focus:border-[#0d3fd1]" value={formData.gps} onChange={(e) => setFormData({ ...formData, gps: e.target.value })} />
+                          <button 
+                            type="button" 
+                            onClick={handleCurrentLocation}
+                            disabled={isLocating}
+                            className="w-full flex items-center justify-center gap-2 mt-2 py-3 px-4 bg-[#eff4ff] text-[#0d3fd1] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#0d3fd1] hover:text-white transition-all disabled:opacity-50"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            {isLocating ? 'A Obter Localização...' : 'Usar a Minha Localização'}
+                          </button>
+                          <p className="text-[9px] text-[#747686] font-medium leading-relaxed pl-1 mt-3">Dica: Selecione o &quot;Município&quot; para centrar o mapa perto da sua zona. O mapa fará uma aproximação automática à província.</p>
+                        </div>
+                      </div>
+                      <div className="w-full md:w-2/3 h-72 rounded-2xl overflow-hidden border-2 border-white shadow-xl shadow-black/5 relative z-0">
+                        <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }}>
+                          <ChangeView center={mapCenter} zoom={mapZoom} />
+                          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                          <DraggableMarker position={markerPos} setPosition={(pos) => setFormData({...formData, gps: `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`})} />
+                        </MapContainer>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município (Obrigatório)</label>

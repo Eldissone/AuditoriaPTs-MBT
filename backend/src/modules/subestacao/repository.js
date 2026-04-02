@@ -63,19 +63,59 @@ class SubestacaoRepository {
   }
 
   async create(data) {
+    // Strip unknown relation fields that belong to Identificacao/PT but might be sent by the frontend
+    const { 
+      media_tensao, baixa_tensao, transformadores, seguranca, 
+      infraestrutura, monitorizacao, manutencao, risco, pts,
+      id: subId, criado_em, atualizado_em, _count,
+      ...safeData 
+    } = data;
+
+    // Handle Dates: convert empty string to null, otherwise instantiate Date
+    if (safeData.ano_construcao) {
+      safeData.ano_construcao = new Date(safeData.ano_construcao);
+    } else {
+      safeData.ano_construcao = null;
+    }
+
+    if (safeData.entrada_operacao) {
+      safeData.entrada_operacao = new Date(safeData.entrada_operacao);
+    } else {
+      safeData.entrada_operacao = null;
+    }
+
+    if (safeData.potencia_total_kva !== undefined) safeData.potencia_total_kva = Number(safeData.potencia_total_kva) || 0;
+
     return prisma.subestacao.create({ 
-      data: {
-        ...data,
-        ano_construcao: data.ano_construcao ? new Date(data.ano_construcao) : null,
-        entrada_operacao: data.entrada_operacao ? new Date(data.entrada_operacao) : null,
-      }
+      data: safeData
     });
   }
 
   async update(id, data) {
-    const updateData = { ...data };
-    if (updateData.ano_construcao) updateData.ano_construcao = new Date(updateData.ano_construcao);
-    if (updateData.entrada_operacao) updateData.entrada_operacao = new Date(updateData.entrada_operacao);
+    // Strip unknown relation fields that belong to Identificacao/PT but might be sent by the frontend
+    const { 
+      media_tensao, baixa_tensao, transformadores, seguranca, 
+      infraestrutura, monitorizacao, manutencao, risco, pts,
+      id: subId, criado_em, atualizado_em, _count,
+      ...safeData 
+    } = data;
+
+    const updateData = { ...safeData };
+    
+    // Convert empty strings to null for DateTime fields to appease Prisma validation
+    if (updateData.ano_construcao) {
+      updateData.ano_construcao = new Date(updateData.ano_construcao);
+    } else {
+      updateData.ano_construcao = null;
+    }
+
+    if (updateData.entrada_operacao) {
+      updateData.entrada_operacao = new Date(updateData.entrada_operacao);
+    } else {
+      updateData.entrada_operacao = null;
+    }
+
+    if (updateData.potencia_total_kva !== undefined) updateData.potencia_total_kva = Number(updateData.potencia_total_kva) || 0;
 
     return prisma.subestacao.update({
       where: { id },

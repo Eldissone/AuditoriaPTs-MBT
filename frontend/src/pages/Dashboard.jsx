@@ -18,6 +18,7 @@ import SubstationDetail from './SubstationDetail';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { getGpsForMunicipio } from '../utils/angolaGps';
 
 // Fix for default marker icons in React Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -256,7 +257,11 @@ export default function Dashboard() {
           // Store original elements if needed
           items: [sub]
         };
-        if (!acc[key].gps) acc[key].gps = getFallbackGps(key);
+        // Try to get real coordinate first, fallback to deterministic hash if completely unknown
+        if (!acc[key].gps) {
+          const realGps = getGpsForMunicipio(sub.municipio) || getGpsForMunicipio(sub.nome);
+          acc[key].gps = realGps || getFallbackGps(key);
+        }
       } else {
         if (!acc[key].gps && sub.gps) acc[key].gps = sub.gps;
         acc[key].num_ativos += 1;
@@ -287,10 +292,18 @@ export default function Dashboard() {
   }, [filters, subestacoes, pts, tasks]);
 
   // Memoized filter options
-  const{ municipios, bairros } = useMemo(() => ({
+  const { municipios, bairros } = useMemo(() => ({
     municipios: [...new Set(pts.map(p => p.municipio))].filter(Boolean),
     bairros: [...new Set(pts.map(p => p.bairro))].filter(Boolean)
   }), [pts]);
+
+  // Adjust PTs strictly to use real coords if missing so they appear near their parent
+  const ptsWithGps = useMemo(() => {
+    return pts.map(pt => ({
+      ...pt,
+      gps: pt.gps || getGpsForMunicipio(pt.municipio) || getGpsForMunicipio(pt.localizacao)
+    }));
+  }, [pts]);
 
   const handleCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -342,8 +355,8 @@ export default function Dashboard() {
     if (!selectedSubstation) return [];
     if (zoom < 12) return [];
     // Show PTs matching the substation's municipality instead of id
-    return pts.filter((p) => p.municipio === selectedSubstation.municipio || p.localizacao === selectedSubstation.municipio);
-  }, [pts, selectedSubstation, zoom]);
+    return ptsWithGps.filter((p) => p.municipio === selectedSubstation.municipio || p.localizacao === selectedSubstation.municipio);
+  }, [ptsWithGps, selectedSubstation, zoom]);
 
   // Contar PTs por subestação
   const getPtsCountBySubstation = useCallback((substationId) => {

@@ -1,5 +1,5 @@
-// GPS coordinates for Angola Municipalities
-const ANGOLA_GPS = {
+// Coordenadas GPS dos Municípios de Angola para visualização realista no Mapa
+export const ANGOLA_GPS = {
   // Luanda Province
   'luanda': '-8.8383,13.2344',
   'viana': '-8.9035,13.3710',
@@ -165,22 +165,10 @@ const ANGOLA_GPS = {
   'virei': '-16.0167,13.4167',
 };
 
-/**
- * Returns GPS coordinates string for a given municipality name.
- * Searches by exact match, then partial match.
- * @param {string} municipio
- * @returns {string|null} GPS "lat,lng" or null
- */
-function getGpsForMunicipio(municipio) {
+export function getGpsForMunicipio(municipio) {
   if (!municipio) return null;
   const key = municipio.toLowerCase().trim();
-  
-  // Exact match
   if (ANGOLA_GPS[key]) return ANGOLA_GPS[key];
-  
-  // Partial match (starts with or contains)
   const found = Object.keys(ANGOLA_GPS).find(k => key.includes(k) || k.includes(key));
   return found ? ANGOLA_GPS[found] : null;
 }
-
-module.exports = { getGpsForMunicipio };
