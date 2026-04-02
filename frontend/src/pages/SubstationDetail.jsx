@@ -8,17 +8,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   const [imagensLocais, setImagensLocais] = useState([]);
   const [imagemAtiva, setImagemAtiva] = useState(null);
 
-  // Fetch PTs for this substation
-  const { data: subPts = [] } = useQuery({
-    queryKey: ['pts', { id_subestacao: substation.id }],
-    queryFn: async () => {
-      const res = await api.get('/pts', { params: { id_subestacao: substation.id } });
-      return res.data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch PTs for same localidade (municipio) to count proprietários únicos
+  // Fetch PTs for same localidade (municipio) treating them as the substation's PTs
   const { data: localPts = [] } = useQuery({
     queryKey: ['pts', { localidade: substation.municipio }],
     queryFn: async () => {
@@ -29,8 +19,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  const somaPotenciasPTs = useMemo(() => {
+    return localPts.reduce((acc, pt) => acc + Number(pt.potencia_kva || pt.potencia_total_kva || 0), 0);
+  }, [localPts]);
+
   const handleFilterPts = useCallback(() => {
-    onFilterPts(substation.id.toString());
+    onFilterPts(substation.id ? substation.id.toString() : '');
   }, [substation.id, onFilterPts]);
 
   useEffect(() => {
@@ -88,12 +82,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   // Count PTs by operational status
   const statusCounts = React.useMemo(() => {
     return {
-      operacional: subPts.filter(p => p.estado_operacional === 'Operacional').length,
-      critico: subPts.filter(p => p.estado_operacional === 'Crítico').length,
-      manutencao: subPts.filter(p => p.estado_operacional === 'Manutenção').length,
-      fora: subPts.filter(p => p.estado_operacional === 'Fora de Serviço').length,
+      operacional: localPts.filter(p => p.estado_operacional === 'Operacional').length,
+      critico: localPts.filter(p => p.estado_operacional === 'Crítico').length,
+      manutencao: localPts.filter(p => p.estado_operacional === 'Manutenção').length,
+      fora: localPts.filter(p => p.estado_operacional === 'Fora de Serviço').length,
     };
-  }, [subPts]);
+  }, [localPts]);
 
   const proprietariosLocalidadeCount = useMemo(() => {
     if (!localPts || localPts.length === 0) return 0;
@@ -140,8 +134,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
             </div>
 
             <div className="bg-gradient-to-br from-[#243141]/10 to-[#0f1c2c]/10 rounded-xl p-4 border border-[#243141]/20">
-              <p className="text-[10px] font-black text-[#243141] uppercase tracking-widest mb-2">Potência Total</p>
-              <p className="text-lg font-black text-[#0f1c2c]">{(substation.potencia_total_kva / 1000).toFixed(1)}K <span className="text-[10px] font-bold">kVA</span></p>
+              <p className="text-[10px] font-black text-[#243141] uppercase tracking-widest mb-2">Capacidade Suportada (Subst.)</p>
+              <p className="text-lg font-black text-[#0f1c2c] bg-white border border-[#c4c5d7]/20 rounded-md px-2 py-1 inline-block mb-2">{(substation.sum_potencia || substation.potencia_total_kva || 0).toLocaleString()} <span className="text-[10px] font-bold">kVA</span></p>
+              <div className="pt-2 border-t border-[#243141]/10">
+                <p className="text-[9px] font-black text-[#243141]/70 uppercase tracking-widest leading-tight">Soma dos PTs associados</p>
+                <p className="text-base font-black text-[#0d3fd1]">{somaPotenciasPTs.toLocaleString()} <span className="text-[9px] font-bold">kVA</span></p>
+              </div>
             </div>
 
             <div className="bg-gradient-to-br from-[#f59e0b]/10 to-[#dc2626]/10 rounded-xl p-4 border border-[#f59e0b]/20">
@@ -336,7 +334,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
               onClick={handleFilterPts}
               className="w-full sm:flex-1 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] text-white font-black py-3 rounded-xl hover:shadow-lg transition-all uppercase text-sm tracking-wider"
             >
-              Ver Todos os PTs ({subPts.length})
+              Ver Todos os PTs ({localPts.length})
             </button>
             <button
               onClick={onClose}

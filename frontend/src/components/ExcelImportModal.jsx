@@ -69,6 +69,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
             municipio: findVal(['Município', 'Municipio']),
             distrito_comuna: findVal(['Distrito', 'Comuna']),
             bairro: findVal(['Bairro']),
+            gps: findVal(['GPS', 'Coordenadas', 'Lat/Lng', 'Latitude/Longitude']),
             localizacao: findVal(['Localização', 'Localizacao']) || findVal(['Município']) || 'N/A'
           };
         });

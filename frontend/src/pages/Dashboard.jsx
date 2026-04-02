@@ -231,15 +231,50 @@ export default function Dashboard() {
     }, 500);
   }, []);
 
+  // Group subestacoes just like management page
+  const groupedSubestacoes = useMemo(() => {
+    const getFallbackGps = (str) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      // Spread them around Angola (center approx -11.2, 17.8)
+      const lat = -11.2 + ((hash % 100) / 100) * 8 - 4;
+      const lng = 17.8 + (((hash >> 8) % 100) / 100) * 8 - 4;
+      return `${lat}, ${lng}`;
+    };
+
+    const groups = subestacoes.reduce((acc, sub) => {
+      const key = sub.municipio ? `Subestação de ${sub.municipio}` : (sub.nome ? `Subestação de ${sub.nome}` : 'Subestação Desconhecida');
+      if (!acc[key]) {
+        // Create an aggregated substation record
+        acc[key] = { 
+          ...sub, 
+          nome: key, // Override name to be the group name
+          num_ativos: 1, 
+          sum_potencia: Number(sub.potencia_total_kva || 0),
+          // Store original elements if needed
+          items: [sub]
+        };
+        if (!acc[key].gps) acc[key].gps = getFallbackGps(key);
+      } else {
+        if (!acc[key].gps && sub.gps) acc[key].gps = sub.gps;
+        acc[key].num_ativos += 1;
+        acc[key].sum_potencia += Number(sub.potencia_total_kva || 0);
+        acc[key].items.push(sub);
+      }
+      return acc;
+    }, {});
+    return Object.values(groups);
+  }, [subestacoes]);
+
   // Memoized stats calculation
   const stats = useMemo(() => {
     const displayedSubs = filters.id_subestacao
-      ? subestacoes.filter(s => s.id === Number(filters.id_subestacao))
-      : subestacoes;
+      ? groupedSubestacoes.filter(s => s.id === Number(filters.id_subestacao))
+      : groupedSubestacoes;
 
-    const uniqueLocais = new Set(
-      pts.map(p => p.municipio || p.localizacao || 'Luanda')
-    ).size;
+    const uniqueLocais = displayedSubs.length;
 
     const completedTasks = tasks.filter(t => t.status === 'Concluída' || t.status === 'Concluído' || t.status === 'completed' || t.status === 'done').length;
 
@@ -295,7 +330,7 @@ export default function Dashboard() {
   const onSelectSubstation = useCallback((subId, sub) => {
     setSelectedSubstation(sub);
     setSelectedPtId(null);
-    handleFilterChange({ ...filters, id_subestacao: subId });
+    handleFilterChange({ ...filters, municipio: sub.municipio }); // Filter pts by municipality instead since it's grouped
   }, [filters, handleFilterChange]);
 
   const onSelectPt = useCallback((ptId) => {
@@ -306,7 +341,8 @@ export default function Dashboard() {
     // Mostrar mais detalhe só quando zoom está alto e uma subestação está selecionada
     if (!selectedSubstation) return [];
     if (zoom < 12) return [];
-    return pts.filter((p) => p.id_subestacao === selectedSubstation.id);
+    // Show PTs matching the substation's municipality instead of id
+    return pts.filter((p) => p.municipio === selectedSubstation.municipio || p.localizacao === selectedSubstation.municipio);
   }, [pts, selectedSubstation, zoom]);
 
   // Contar PTs por subestação
@@ -406,11 +442,11 @@ export default function Dashboard() {
                   onClick={() => {
                     setSelectedSubstation(null);
                     setSelectedPtId(null);
-                    handleFilterChange({ ...filters, id_subestacao: '' });
+                    handleFilterChange({ ...filters, municipio: '' });
                   }}
                   className="bg-yellow-50 text-yellow-600 px-4 py-2 rounded-lg text-[10px] font-bold uppercase hover:bg-yellow-100 transition-all border border-yellow-100"
                 >
-                  Limpar Subestação
+                  Limpar Foco Subestação
                 </button>
               )}
             </div>
@@ -431,9 +467,9 @@ export default function Dashboard() {
               />
 
               {/* Substation Markers */}
-              {Array.isArray(subestacoes) && subestacoes.map((sub) => (
+              {groupedSubestacoes.map((sub, index) => (
                 <SubstationMarker
-                  key={`sub-${sub.id}`}
+                  key={`sub-group-${index}`}
                   sub={sub}
                   parseGps={parseGps}
                   iconSize={iconSizes.subSize}
@@ -467,12 +503,11 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Substation Detail Modal */}
       {selectedSubstation && (
         <SubstationDetail
           substation={selectedSubstation}
           onClose={() => setSelectedSubstation(null)}
-          onFilterPts={(subId) => handleFilterChange({ ...filters, id_subestacao: subId })}
+          onFilterPts={(subId) => handleFilterChange({ ...filters, municipio: selectedSubstation.municipio })}
         />
       )}
     </div>
