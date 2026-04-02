@@ -992,20 +992,112 @@ export default function PTAudits() {
 
           {step === 5 && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-              <div className="bg-[#eff4ff] p-8 rounded-3xl border border-[#0d3fd1]/10">
-                <h4 className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight mb-6">Resumo da Inspeção</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Posto Alvo</span>
-                    <p className="text-sm font-black text-[#0f1c2c]">{formData.id_pt || 'Não selecionado'}</p>
+              <div className="bg-[#eff4ff] p-8 rounded-3xl border border-[#0d3fd1]/10 space-y-8">
+                <div>
+                  <h4 className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight mb-6">Resumo da Inspeção</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-6 border-b border-[#0d3fd1]/10">
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Posto Alvo</span>
+                      <p className="text-sm font-black text-[#0f1c2c]">{formData.id_pt || 'Não selecionado'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Tipo Protocolo</span>
+                      <p className="text-sm font-black text-[#0f1c2c]">{formData.tipo}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Data</span>
+                      <p className="text-sm font-black text-[#0f1c2c]">{formData.data_inspecao}</p>
+                    </div>
+                    {formData.id_tarefa && (
+                      <div className="space-y-1 md:col-span-3">
+                        <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Tarefa Associada</span>
+                        <p className="text-sm font-black text-[#0f1c2c]">
+                          {allTasks.find(t => String(t.id) === String(formData.id_tarefa))?.titulo || formData.id_tarefa}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Tipo Protocolo</span>
-                    <p className="text-sm font-black text-[#0f1c2c]">{formData.tipo}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                  {/* Conformidade */}
+                  <div className="space-y-4">
+                    <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg inline-block shadow-sm">Conformidade</h5>
+                    <ul className="space-y-3 bg-white/40 p-5 rounded-2xl border border-white/50">
+                      {[
+                        { key: 'licenciamento', label: 'Licença DGE' },
+                        { key: 'projeto_aprovado', label: 'Projeto Aprovado' },
+                        { key: 'diagramas_unifilares', label: 'Diagramas Unifilares' },
+                        { key: 'plano_manutencao', label: 'Plano Manutenção' },
+                        { key: 'registos_inspecao', label: 'Registos de Inspeção' },
+                        { key: 'normas_iec', label: 'Normas IEC' },
+                        { key: 'normas_ieee', label: 'Normas IEEE' },
+                        { key: 'normas_locais', label: 'Normas Locais' }
+                      ].map((item) => (
+                        <li key={item.key} className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">{item.label}</span>
+                          <span className={`font-black uppercase text-[9px] px-2 py-1 rounded-md ${formData.conformidade[item.key] ? 'bg-[#5fff9b]/30 text-[#005229]' : 'bg-red-100/80 text-red-700'}`}>
+                            {formData.conformidade[item.key] ? 'SIM' : 'NÃO'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Data</span>
-                    <p className="text-sm font-black text-[#0f1c2c]">{formData.data_inspecao}</p>
+
+                  <div className="space-y-8">
+                    {/* Transformador */}
+                    <div className="space-y-4">
+                      <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg inline-block shadow-sm">Transformador</h5>
+                      <ul className="space-y-3 bg-white/40 p-5 rounded-2xl border border-white/50">
+                        <li className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Potência</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.transformador.potencia_kva} kVA</span>
+                        </li>
+                        <li className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Isolamento</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.transformador.tipo_isolamento}</span>
+                        </li>
+                        <li className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Estado do Óleo</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.transformador.estado_oleo}</span>
+                        </li>
+                        <li className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Temp. Operação</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.transformador.temperatura_operacao} ºC</span>
+                        </li>
+                        <li className="flex justify-between items-center text-xs border-t border-[#0d3fd1]/10 pt-3 mt-1">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Sinais de Fugas</span>
+                          <span className={`font-black uppercase text-[9px] px-2 py-1 rounded-md ${formData.transformador.fugas ? 'bg-red-100/80 text-red-700' : 'bg-[#5fff9b]/30 text-[#005229]'}`}>
+                            {formData.transformador.fugas ? 'SIM' : 'NÃO'}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Segurança */}
+                    <div className="space-y-4">
+                      <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg inline-block shadow-sm">Segurança</h5>
+                      <ul className="space-y-3 bg-white/40 p-5 rounded-2xl border border-white/50">
+                        <li className="flex justify-between items-center text-xs border-b border-[#0d3fd1]/10 pb-3 mb-1">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Res. Terra</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.seguranca.resistencia_terra} Ω</span>
+                        </li>
+                        {[
+                          { key: 'protecao_raios', label: 'Proteção Raios' },
+                          { key: 'spd', label: 'Descarregadores (SPD)' },
+                          { key: 'sinalizacao', label: 'Sinalização Perigo' },
+                          { key: 'combate_incendio', label: 'Extintores/CO2' },
+                          { key: 'distancias_seguranca', label: 'Distâncias Seguras' }
+                        ].map((item) => (
+                          <li key={item.key} className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-[#444655] uppercase tracking-wide">{item.label}</span>
+                            <span className={`font-black uppercase text-[9px] px-2 py-1 rounded-md ${formData.seguranca[item.key] ? 'bg-[#5fff9b]/30 text-[#005229]' : 'bg-red-100/80 text-red-700'}`}>
+                              {formData.seguranca[item.key] ? 'SIM' : 'NÃO'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>

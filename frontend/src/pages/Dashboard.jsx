@@ -241,7 +241,7 @@ export default function Dashboard() {
       pts.map(p => p.municipio || p.localizacao || 'Luanda')
     ).size;
 
-    const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'done').length;
+    const completedTasks = tasks.filter(t => t.status === 'Concluída' || t.status === 'Concluído' || t.status === 'completed' || t.status === 'done').length;
 
     return {
       subestacoes: displayedSubs.length,
