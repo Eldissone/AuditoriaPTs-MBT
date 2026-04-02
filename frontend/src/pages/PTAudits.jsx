@@ -642,11 +642,10 @@ export default function PTAudits() {
                 <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">PT ID</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Data da Auditoria</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico/Auditor</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Data</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Localidade</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Tarefa</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] text-center">Ações</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c5d7]/10">
@@ -658,17 +657,14 @@ export default function PTAudits() {
                     <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-[#c4c5d7]/10">
                       {audit.pt?.proprietario || 'N/A'}
                     </td>
-                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono">
+                    <td className="px-8 py-5 text-sm font-black text-[#0d3fd1] border-r border-[#c4c5d7]/10 uppercase tracking-tight">
+                      {audit.auditor?.nome || 'N/A'}
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono text-center">
                       {new Date(audit.data_inspecao).toLocaleDateString('pt-PT')}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
                       {audit.pt?.subestacao?.nome || 'Sekele'}
-                    </td>
-                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 uppercase">
-                      {audit.pt?.municipio || audit.pt?.subestacao?.municipio || 'N/A'}
-                    </td>
-                    <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10">
-                      {audit.tarefa?.titulo || 'N/A'}
                     </td>
                     <td className="px-8 py-5 print-hide">
                       <div className="flex justify-center gap-2 print-hide">
@@ -1004,9 +1000,17 @@ export default function PTAudits() {
                       <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Tipo Protocolo</span>
                       <p className="text-sm font-black text-[#0f1c2c]">{formData.tipo}</p>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Data</span>
-                      <p className="text-sm font-black text-[#0f1c2c]">{formData.data_inspecao}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                        <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-1">Técnico Responsável</p>
+                        <p className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight">
+                          {selectedAuditId ? (audits.find(a => a.id === selectedAuditId)?.auditor?.nome || 'N/A') : user?.nome}
+                        </p>
+                      </div>
+                      <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                        <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-1">Data da Auditoria</p>
+                        <p className="text-sm font-black text-[#0f1c2c]">{formData.data_inspecao}</p>
+                      </div>
                     </div>
                     {formData.id_tarefa && (
                       <div className="space-y-1 md:col-span-3">

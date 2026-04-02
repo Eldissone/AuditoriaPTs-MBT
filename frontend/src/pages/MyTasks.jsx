@@ -270,8 +270,8 @@ export default function MyTasks() {
             <div className="p-6 sm:p-8 space-y-5 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Estado</p>
-                  <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.status}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Técnico Responsável</p>
+                  <p className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight">{detailTarefa.auditor?.nome || 'N/A'}</p>
                 </div>
                 <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Data Prevista</p>
