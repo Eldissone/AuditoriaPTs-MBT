@@ -56,6 +56,15 @@ class IdentificacaoController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async bulkStore(req, res) {
+    try {
+      const result = await service.bulkImport(req.body);
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new IdentificacaoController();

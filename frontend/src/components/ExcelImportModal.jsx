@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-// ─── Campos do sistema a mapear ──────────────────────────────────────────────
-const SYSTEM_FIELDS = [
+// ─── Campos do sistema a mapear (Padrão para Clientes/PTs) ────────────────────
+const DEFAULT_CLIENT_FIELDS = [
   {
     key: 'parceiro_negocios',
     label: 'Parceiro de Negócios',
@@ -79,6 +79,24 @@ const SYSTEM_FIELDS = [
     keywords: ['gps', 'coordenadas', 'lat/lng', 'latitude', 'longitude', 'lat lng'],
     required: false,
   },
+  {
+    key: 'concessionaria',
+    label: 'Concessionária',
+    keywords: ['concessionária', 'concessionaria', 'empresa'],
+    required: false,
+  },
+  {
+    key: 'zona',
+    label: 'Zona / Área',
+    keywords: ['zona', 'área', 'area', 'região', 'regiao'],
+    required: false,
+  },
+  {
+    key: 'operador',
+    label: 'Operador',
+    keywords: ['operador', 'técnico', 'tecnico', 'responsável'],
+    required: false,
+  },
 ];
 
 const IGNORE_KEY = '__IGNORE__';
@@ -131,11 +149,11 @@ function levenshtein(a, b) {
  * Para um conjunto de cabeçalhos reais, devolve o melhor match por campo do sistema.
  * Retorna: { campo_key: { header: string, score: 0-3 } | null }
  */
-function autoDetectMapping(headers) {
+function autoDetectMapping(headers, fields) {
   const mapping = {};
   const usedHeaders = new Set();
 
-  for (const field of SYSTEM_FIELDS) {
+  for (const field of fields) {
     let bestHeader = null;
     let bestScore = 0;
 
@@ -161,20 +179,19 @@ function autoDetectMapping(headers) {
 /**
  * Aplica o mapeamento a uma lista de linhas raw do Excel.
  */
-function applyMapping(rawRows, columnMap) {
+function applyMapping(rawRows, columnMap, fields) {
   return rawRows.map(row => {
     const result = {};
-    for (const field of SYSTEM_FIELDS) {
+    for (const field of fields) {
       const mappedHeader = columnMap[field.key];
       const val = mappedHeader && mappedHeader !== IGNORE_KEY ? row[mappedHeader] : null;
       result[field.key] = val !== undefined ? val : null;
     }
-    // Potência: garantir número
-    result.potencia_kva = parseFloat(result.potencia_kva) || 0;
-    result.potencia_total_kva = result.potencia_kva;
-    // Localização fallback
-    result.localizacao = result.municipio || 'N/A';
-    result.nome = result.municipio;
+    
+    // Fallbacks genéricos básicos
+    if (result.municipio && !result.localizacao) result.localizacao = result.municipio;
+    if (result.municipio && !result.nome) result.nome = result.municipio;
+    
     return result;
   });
 }
@@ -204,7 +221,16 @@ function ScoreBadge({ score }) {
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
-export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
+export default function ExcelImportModal({ 
+  isOpen, 
+  onClose, 
+  onImportSuccess, 
+  fields: propFields, 
+  apiUrl = '/clientes/bulk',
+  title: propTitle
+}) {
+  const fields = propFields || DEFAULT_CLIENT_FIELDS;
+  
   const [step, setStep] = useState(1);            // 1=upload, 2=mapping, 3=preview
   const [file, setFile] = useState(null);
   const [rawHeaders, setRawHeaders] = useState([]); // cabeçalhos reais do Excel
@@ -249,12 +275,12 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
         setRawRows(jsonRows);
 
         // Auto-detetar mapeamento
-        const detected = autoDetectMapping(headers);
+        const detected = autoDetectMapping(headers, fields);
         setAutoMatch(detected);
 
         // Inicializar columnMap com o melhor match (ou IGNORE_KEY)
         const initMap = {};
-        for (const field of SYSTEM_FIELDS) {
+        for (const field of fields) {
           initMap[field.key] = detected[field.key]?.header ?? IGNORE_KEY;
         }
         setColumnMap(initMap);
@@ -275,7 +301,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
   };
 
   const handleApplyMapping = () => {
-    const data = applyMapping(rawRows, columnMap);
+    const data = applyMapping(rawRows, columnMap, fields);
     setMappedData(data);
     setError(null);
     setStep(3);
@@ -287,7 +313,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
       setLoading(true);
       setError(null);
       setImportResult(null);
-      const { data } = await api.post('/subestacoes/bulk', mappedData);
+      const { data } = await api.post(apiUrl, mappedData);
       setImportResult(data); // { subestacoes, pts, skipped, errors[] }
       setSuccess(true);
       // Só dispara o callback se algo foi realmente importado
@@ -317,7 +343,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
 
   // ── Contagem de campos mapeados ────────────────────────────────────────────
   const mappedCount = Object.values(columnMap).filter(v => v && v !== IGNORE_KEY).length;
-  const requiredMapped = SYSTEM_FIELDS
+  const requiredMapped = fields
     .filter(f => f.required)
     .every(f => columnMap[f.key] && columnMap[f.key] !== IGNORE_KEY);
 
@@ -334,7 +360,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
             </div>
             <div>
               <h3 className="text-[#0f1c2c] text-base font-black uppercase tracking-tight">
-                Importação em Lote (Excel)
+                {propTitle || 'Importação em Lote (Excel)'}
               </h3>
               <p className="text-[10px] text-[#747686] font-bold uppercase tracking-wider opacity-60 mt-0.5">
                 {step === 1 && 'Selecione o ficheiro Excel'}
@@ -419,7 +445,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-wider">{mappedCount}/{SYSTEM_FIELDS.length}</p>
+                  <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-wider">{mappedCount}/{fields.length}</p>
                   <p className="text-[8px] font-bold text-[#747686] uppercase opacity-60">campos mapeados</p>
                 </div>
               </div>
@@ -435,7 +461,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
 
               {/* Grid de mapeamento */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {SYSTEM_FIELDS.map((field) => {
+                {fields.map((field) => {
                   const detected = autoMatch[field.key];
                   const selected = columnMap[field.key];
                   const score = detected?.header === selected ? detected.score : (selected && selected !== IGNORE_KEY ? 2 : 0);
@@ -486,7 +512,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
               {!requiredMapped && (
                 <div className="flex items-center gap-3 bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 text-[10px] font-bold uppercase tracking-wider">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  O campo <strong>Município / Nome</strong> é obrigatório. Selecione a coluna correspondente.
+                  Campos obrigatórios em falta: <strong>{fields.filter(f => f.required && (!columnMap[f.key] || columnMap[f.key] === IGNORE_KEY)).map(f => f.label).join(', ')}</strong>. Selecione as colunas correspondentes.
                 </div>
               )}
             </div>
@@ -501,7 +527,7 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                   <Wand2 className="w-3.5 h-3.5" /> Mapeamento Aplicado
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {SYSTEM_FIELDS.map((field) => {
+                  {fields.map((field) => {
                     const h = columnMap[field.key];
                     if (!h || h === IGNORE_KEY) return null;
                     return (
@@ -525,32 +551,19 @@ export default function ExcelImportModal({ isOpen, onClose, onImportSuccess }) {
                   <table className="w-full text-left text-[10px] border-collapse min-w-[900px]">
                     <thead className="bg-[#fcfdff] sticky top-0 z-10">
                       <tr className="border-b border-[#c4c5d7]/10">
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Contrato</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Município</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Equipamento</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Potência</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase text-center">Cat. Tarifa</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Bairro</th>
-                        <th className="px-4 py-3 font-black text-[#747686] uppercase">Proprietário</th>
+                        {fields.filter(f => columnMap[f.key] && columnMap[f.key] !== IGNORE_KEY).map(f => (
+                          <th key={f.key} className="px-4 py-3 font-black text-[#747686] uppercase">{f.label}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#c4c5d7]/10 font-bold text-[#0f1c2c]">
                       {mappedData.slice(0, 50).map((row, i) => (
                         <tr key={i} className="hover:bg-[#f8faff] transition-colors">
-                          <td className="px-4 py-2.5 text-[#0d3fd1] font-mono text-[9px]">{row.conta_contrato || '—'}</td>
-                          <td className="px-4 py-2.5 uppercase text-[9px]">{row.municipio || '—'}</td>
-                          <td className="px-4 py-2.5 text-[#444655] text-[9px]">{row.equipamento || '—'}</td>
-                          <td className="px-4 py-2.5 font-black text-center text-[9px]">
-                            {row.potencia_kva > 0 ? row.potencia_kva : '—'}{' '}
-                            {row.potencia_kva > 0 && <span className="text-[7px] opacity-40 uppercase">kVA</span>}
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <span className="bg-[#eff4ff] text-[#0d3fd1] px-2 py-0.5 rounded text-[8px] font-black uppercase">
-                              {row.categoria_tarifa || '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-[9px]">{row.bairro || '—'}</td>
-                          <td className="px-4 py-2.5 text-[9px] text-[#747686] uppercase">{row.proprietario || '—'}</td>
+                          {fields.filter(f => columnMap[f.key] && columnMap[f.key] !== IGNORE_KEY).map(f => (
+                             <td key={f.key} className="px-4 py-2.5 text-[9px] truncate max-w-[150px]">
+                               {row[f.key]?.toString() || '—'}
+                             </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>

@@ -34,7 +34,7 @@ export default function TechnicalSheet() {
         setLoading(true);
         if (!id_pt) throw new Error('ID do PT não fornecido');
         const [ptRes, insRes] = await Promise.all([
-          api.get(`/pts/${id_pt}`),
+          api.get(`/clientes/${id_pt}`),
           api.get('/inspecoes', { params: { id_pt } })
         ]);
         setPt(ptRes.data);
@@ -64,7 +64,7 @@ export default function TechnicalSheet() {
     setLoading(true);
     // Simulate data refresh
     setTimeout(() => {
-      api.get(`/pts/${id_pt || 'PT-DEFAULT'}`).then(res => setPt(res.data));
+      api.get(`/clientes/${id_pt || 'PT-DEFAULT'}`).then(res => setPt(res.data));
       api.get('/inspecoes', { params: { id_pt: id_pt || 'PT-DEFAULT' } }).then(res => {
         setInspections(res.data);
         setLoading(false);
@@ -193,7 +193,7 @@ export default function TechnicalSheet() {
 
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-6">
-          <Link to="/pts" className="p-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[#444655] hover:bg-[#eff4ff] transition-all">
+          <Link to="/gestao-clientes" className="p-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[#444655] hover:bg-[#eff4ff] transition-all">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>

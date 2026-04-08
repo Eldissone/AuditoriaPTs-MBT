@@ -32,7 +32,7 @@ export default function TaskManagement() {
       const [resTarefas, resAuditores, resPts] = await Promise.all([
         api.get('/tarefas'),
         api.get('/utilizadores'),
-        api.get('/pts')
+        api.get('/clientes')
       ]);
       setTarefas(resTarefas.data);
       // Filtrar para mostrar apenas quem tem role auditor (ou todos se preferir, aqui filtramos auditores)
@@ -213,7 +213,7 @@ export default function TaskManagement() {
           onChange={(e) => setPtFiltro(e.target.value)}
           className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
         >
-          <option value="">Filtrar por PT (Todos)</option>
+          <option value="">Filtrar por Cliente (Todos)</option>
           {pts.map((p) => (
             <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.proprietario || p.subestacao?.nome}</option>
           ))}
@@ -277,7 +277,7 @@ export default function TaskManagement() {
                     </div>
 
                     <div className="flex items-center justify-between gap-3 bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-3">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#747686]">Cliente</span>
                       <span className="text-xs font-bold text-[#0d3fd1] truncate">{tarefa.id_pt || '—'}</span>
                     </div>
 
@@ -327,7 +327,7 @@ export default function TaskManagement() {
                           <p className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">{tarefa.titulo}</p>
                           {tarefa.id_pt && (
                             <p className="text-xs text-[#0d3fd1] font-bold bg-[#0d3fd1]/5 inline-flex p-1 rounded">
-                              <MapPin className="w-3 h-3 mr-1 inline" /> PT: {tarefa.id_pt}
+                              <MapPin className="w-3 h-3 mr-1 inline" /> Cliente: {tarefa.id_pt}
                             </p>
                           )}
                           {tarefa.pt?.subestacao?.proprietario && (
@@ -440,8 +440,8 @@ export default function TaskManagement() {
               )}
 
               <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT / Subestação</p>
-                <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem PT associada'}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">Cliente / Subestação</p>
+                <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem Cliente associado'}</p>
                 {detailTarefa.pt?.subestacao?.nome && <p className="text-xs font-bold text-[#444655]">Subestação: {detailTarefa.pt.subestacao.nome}</p>}
                 {detailTarefa.pt?.subestacao?.proprietario && <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.subestacao.proprietario}</p>}
                 {detailTarefa.pt?.subestacao?.municipio && <p className="text-xs font-bold text-[#444655]">Localidade: {detailTarefa.pt.subestacao.municipio}</p>}
@@ -563,7 +563,7 @@ export default function TaskManagement() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Posto de Transformação (Opcional)</label>
+                  <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Cliente Associado (Opcional)</label>
                   <div className="relative">
                     <div className="mb-3">
                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block ml-1">Filtrar por Localidade</label>

@@ -49,7 +49,11 @@ export default function NewPT() {
       equipamento: '',
       parceiro_negocios: '',
       categoria_tarifa: '',
-      txt_categoria_tarifa: ''
+      txt_categoria_tarifa: '',
+      proprietario: '',
+      concessionaria: '',
+      zona: '',
+      operador: ''
     },
     conformidade: {
       licenciamento: false,
@@ -138,7 +142,7 @@ export default function NewPT() {
     if (isEdit) {
       async function fetchPT() {
         try {
-          const response = await api.get(`/pts/${id}`);
+          const response = await api.get(`/clientes/${id}`);
           const pt = response.data;
           
           const sanitize = (obj) => {
@@ -159,6 +163,7 @@ export default function NewPT() {
             identificacao: { 
               ...prev.identificacao, 
               ...sPt,
+              id_pt: sPt.id_pt || '', // Ensure id_pt is handled correctly if renamed in response
               ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : '' 
             },
             conformidade: { ...prev.conformidade, ...(sPt.conformidade || {}) },
@@ -199,11 +204,11 @@ export default function NewPT() {
     e.preventDefault();
     try {
       if (isEdit) {
-        await api.put(`/pts/${id}`, formData);
-        alert('PT atualizado com sucesso!');
+        await api.put(`/clientes/${id}`, formData);
+        alert('Cliente atualizado com sucesso!');
       } else {
-        await api.post('/pts', formData);
-        alert('PT registado com sucesso!');
+        await api.post('/clientes', formData);
+        alert('Cliente registado com sucesso!');
       }
       navigate(`/subestacoes/${subestacaoId}/auditoria`);
     } catch (err) {
@@ -227,7 +232,7 @@ export default function NewPT() {
           </button>
           <div>
             <h2 className="text-2xl font-black text-[#0f1c2c] uppercase tracking-tight">
-              {isEdit ? 'Editar PT' : 'Cadastrar PT'}
+              {isEdit ? 'Editar Cliente' : 'Cadastrar Cliente'}
             </h2>
           </div>
         </div>
@@ -281,7 +286,7 @@ export default function NewPT() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10 animate-in slide-in-from-right-4 duration-300">
                   {/* ID PT */}
                   <div className="lg:col-span-1 space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">ID PT (Posto de Transformação)</label>
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Código do Cliente (PT)</label>
                     <input
                       type="text"
                       className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none"
@@ -368,6 +373,23 @@ export default function NewPT() {
                   <div className="lg:col-span-3 space-y-2">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Regime de Exploração</label>
                     <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.regime_exploracao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, regime_exploracao: e.target.value } })} placeholder="Ex: Privado / Público" />
+                  </div>
+
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Proprietário</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.proprietario} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, proprietario: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concessionária</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.concessionaria} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concessionaria: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Zona / Área</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.zona} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, zona: e.target.value } })} />
+                  </div>
+                  <div className="space-y-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Operador</label>
+                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.operador} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, operador: e.target.value } })} />
                   </div>
 
                   <div className="lg:col-span-3 space-y-4">

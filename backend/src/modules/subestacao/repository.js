@@ -10,8 +10,8 @@ class SubestacaoRepository {
     if (filters.search) {
       where.OR = [
         { nome: { contains: filters.search, mode: 'insensitive' } },
-        { codigo: { contains: filters.search, mode: 'insensitive' } },
-        { localizacao: { contains: filters.search, mode: 'insensitive' } }
+        { codigo_operacional: { contains: filters.search, mode: 'insensitive' } },
+        { municipio: { contains: filters.search, mode: 'insensitive' } }
       ];
     }
 
@@ -19,20 +19,12 @@ class SubestacaoRepository {
       where.municipio = filters.municipio;
     }
 
-    if (filters.estado) {
-      where.estado = filters.estado;
+    if (filters.status) {
+      where.status = filters.status;
     }
 
-    if (filters.categoria_tarifa) {
-      where.categoria_tarifa = filters.categoria_tarifa;
-    }
-
-    if (filters.potencia) {
-      // Filtrar por potência exata ou próxima (convertendo para float)
-      const p = parseFloat(filters.potencia);
-      if (!isNaN(p)) {
-        where.potencia_total_kva = p;
-      }
+    if (filters.tipo) {
+      where.tipo = filters.tipo;
     }
 
     const [data, total] = await Promise.all([
@@ -63,28 +55,22 @@ class SubestacaoRepository {
   }
 
   async create(data) {
-    // Strip unknown relation fields that belong to Identificacao/PT but might be sent by the frontend
     const { 
-      media_tensao, baixa_tensao, transformadores, seguranca, 
-      infraestrutura, monitorizacao, manutencao, risco, pts,
-      id: subId, criado_em, atualizado_em, _count,
+      pts, id: subId, criado_em, atualizado_em, _count,
       ...safeData 
     } = data;
 
-    // Handle Dates: convert empty string to null, otherwise instantiate Date
-    if (safeData.ano_construcao) {
-      safeData.ano_construcao = new Date(safeData.ano_construcao);
+    if (safeData.data_instalacao) {
+      safeData.data_instalacao = new Date(safeData.data_instalacao);
     } else {
-      safeData.ano_construcao = null;
+      safeData.data_instalacao = null;
     }
 
-    if (safeData.entrada_operacao) {
-      safeData.entrada_operacao = new Date(safeData.entrada_operacao);
-    } else {
-      safeData.entrada_operacao = null;
-    }
-
-    if (safeData.potencia_total_kva !== undefined) safeData.potencia_total_kva = Number(safeData.potencia_total_kva) || 0;
+    if (safeData.tensao_kv_entrada !== undefined) safeData.tensao_kv_entrada = parseFloat(safeData.tensao_kv_entrada) || 0;
+    if (safeData.tensao_kv_saida !== undefined) safeData.tensao_kv_saida = parseFloat(safeData.tensao_kv_saida) || 0;
+    if (safeData.capacidade_total_mva !== undefined) safeData.capacidade_total_mva = parseFloat(safeData.capacidade_total_mva) || 0;
+    if (safeData.latitude !== undefined) safeData.latitude = parseFloat(safeData.latitude) || null;
+    if (safeData.longitude !== undefined) safeData.longitude = parseFloat(safeData.longitude) || null;
 
     return prisma.subestacao.create({ 
       data: safeData
@@ -92,30 +78,24 @@ class SubestacaoRepository {
   }
 
   async update(id, data) {
-    // Strip unknown relation fields that belong to Identificacao/PT but might be sent by the frontend
     const { 
-      media_tensao, baixa_tensao, transformadores, seguranca, 
-      infraestrutura, monitorizacao, manutencao, risco, pts,
-      id: subId, criado_em, atualizado_em, _count,
+      pts, id: subId, criado_em, atualizado_em, _count,
       ...safeData 
     } = data;
 
     const updateData = { ...safeData };
     
-    // Convert empty strings to null for DateTime fields to appease Prisma validation
-    if (updateData.ano_construcao) {
-      updateData.ano_construcao = new Date(updateData.ano_construcao);
+    if (updateData.data_instalacao) {
+      updateData.data_instalacao = new Date(updateData.data_instalacao);
     } else {
-      updateData.ano_construcao = null;
+      updateData.data_instalacao = null;
     }
 
-    if (updateData.entrada_operacao) {
-      updateData.entrada_operacao = new Date(updateData.entrada_operacao);
-    } else {
-      updateData.entrada_operacao = null;
-    }
-
-    if (updateData.potencia_total_kva !== undefined) updateData.potencia_total_kva = Number(updateData.potencia_total_kva) || 0;
+    if (updateData.tensao_kv_entrada !== undefined) updateData.tensao_kv_entrada = parseFloat(updateData.tensao_kv_entrada) || 0;
+    if (updateData.tensao_kv_saida !== undefined) updateData.tensao_kv_saida = parseFloat(updateData.tensao_kv_saida) || 0;
+    if (updateData.capacidade_total_mva !== undefined) updateData.capacidade_total_mva = parseFloat(updateData.capacidade_total_mva) || 0;
+    if (updateData.latitude !== undefined) updateData.latitude = parseFloat(updateData.latitude) || null;
+    if (updateData.longitude !== undefined) updateData.longitude = parseFloat(updateData.longitude) || null;
 
     return prisma.subestacao.update({
       where: { id },
@@ -137,42 +117,30 @@ class SubestacaoRepository {
   }
 
   async getMetadata() {
-    // Buscar todos os valores únicos para os filtros
-    const [municipios, categorias, potencias] = await Promise.all([
+    const [municipios, tipos, capacidades] = await Promise.all([
       prisma.subestacao.findMany({
         distinct: ['municipio'],
         select: { municipio: true },
-        where: { 
-          AND: [
-            { municipio: { not: null } },
-            { municipio: { not: '' } }
-          ]
-        },
+        where: { municipio: { not: null } },
         orderBy: { municipio: 'asc' }
       }),
       prisma.subestacao.findMany({
-        distinct: ['categoria_tarifa'],
-        select: { categoria_tarifa: true },
-        where: { 
-          AND: [
-            { categoria_tarifa: { not: null } },
-            { categoria_tarifa: { not: '' } }
-          ]
-        },
-        orderBy: { categoria_tarifa: 'asc' }
+        distinct: ['tipo'],
+        select: { tipo: true },
+        orderBy: { tipo: 'asc' }
       }),
       prisma.subestacao.findMany({
-        distinct: ['potencia_total_kva'],
-        select: { potencia_total_kva: true },
-        where: { potencia_total_kva: { gt: 0 } },
-        orderBy: { potencia_total_kva: 'asc' }
+        distinct: ['capacidade_total_mva'],
+        select: { capacidade_total_mva: true },
+        where: { capacidade_total_mva: { gt: 0 } },
+        orderBy: { capacidade_total_mva: 'asc' }
       })
     ]);
 
     return {
       municipios: municipios.map(m => m.municipio),
-      categorias: categorias.map(c => c.categoria_tarifa),
-      potencias: potencias.map(p => p.potencia_total_kva)
+      tipos: tipos.map(t => t.tipo),
+      capacidades: capacidades.map(c => c.capacidade_total_mva)
     };
   }
 }

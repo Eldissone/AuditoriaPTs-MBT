@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Save, Edit3, Trash2, Calendar, Info, Zap, Settings, ShieldCheck, Activity,
-  ArrowRight, Database, ArrowLeft, Plus, MapPin
+  Save, ArrowLeft, MapPin, Zap, Database, Activity, Calendar, Info
 } from 'lucide-react';
 import api from '../services/api';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getGpsForMunicipio } from '../utils/angolaGps';
@@ -50,124 +49,22 @@ export default function NewSubstation() {
   const navigate = useNavigate();
   const isEdit = !!id;
 
-  const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({
     nome: '',
-    codigo: '',
-    localizacao: '',
-    gps: '',
+    codigo_operacional: '',
+    tipo: 'Distribuição',
+    tensao_kv_entrada: '',
+    tensao_kv_saida: '',
+    capacidade_total_mva: '',
     municipio: '',
-    potencia_total_kva: '',
-    tipo: '',
-    proprietario: '',
-    operador: '',
-    ano_construcao: '',
-    entrada_operacao: '',
-    estado: 'Ativa',
-    conta_contrato: '',
-    instalacao: '',
-    equipamento: '',
-    parceiro_negocios: '',
-    categoria_tarifa: '',
-    txt_categoria_tarifa: '',
-    distrito_comuna: '',
-    bairro: '',
-
-    // 2 & 4. Media/Baixa Tensão (Características Elétricas)
-    media_tensao: {
-      tipo_celas: '',
-      estado_disjuntores: '',
-      estado_seccionadores: '',
-      reles_protecao: '',
-      coordenacao_protecoes: false,
-      aterramento_mt: false
-    },
-    baixa_tensao: {
-      estado_qgbt: '',
-      barramentos: '',
-      disjuntores: '',
-      balanceamento_cargas: false,
-      corrente_fase_a: 0,
-      corrente_fase_b: 0,
-      corrente_fase_c: 0,
-      tensao: 400,
-      fator_potencia: 0.95
-    },
-
-    // 3. Transformadores
-    transformadores: [
-      { num: 1, potencia: 630, tensao_p: 15, tensao_s: 0.4, tipo: 'Óleo', estado_oleo: 'Bom', fugas: false }
-    ],
-
-    // 6 & 10. Segurança
-    seguranca: {
-      resistencia_terra: 0.5,
-      protecao_raios: true,
-      spd: true,
-      sinalizacao: true,
-      combate_incendio: true,
-      distancias_seguranca: true
-    },
-
-    // 9. Infraestrutura
-    infraestrutura: {
-      estado_cabine: 'Bom',
-      ventilacao: true,
-      drenagem: true,
-      iluminacao: true,
-      controlo_acesso: true
-    },
-
-    // 7. Medição e Controle
-    monitorizacao: {
-      scada: true,
-      sensores_temperatura: true,
-      sensores_corrente: true,
-      sensores_vibracao: false,
-      registo_eventos: true,
-      comunicacao: 'GPRS/4G'
-    },
-
-    // 11. Manutenção
-    manutencao: {
-      historico_falhas: '',
-      mtbf: 5000,
-      mttr: 4,
-      plano_preventivo: true,
-      plano_preditivo: false,
-      sobressalentes: true
-    },
-
-    // 10. Risco
-    risco: {
-      nivel_risco_geral: 'Baixo',
-      sobrecarga: false,
-      desequilibrio_fases: false,
-      redundancia: true
-    }
+    latitude: '',
+    longitude: '',
+    status: 'Ativa',
+    data_instalacao: ''
   });
 
   const [loading, setLoading] = useState(isEdit);
   const [isLocating, setIsLocating] = useState(false);
-
-  const handleCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      alert('Geolocalização não é suportada pelo seu navegador');
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = `${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`;
-        setFormData(prev => ({ ...prev, gps: coords }));
-        setIsLocating(false);
-      },
-      () => {
-        alert('Não foi possível obter a sua localização');
-        setIsLocating(false);
-      }
-    );
-  }, []);
 
   useEffect(() => {
     if (isEdit) {
@@ -176,35 +73,19 @@ export default function NewSubstation() {
           const response = await api.get(`/subestacoes/${id}`);
           const sub = response.data;
           
-          // Função recursiva para transformar null em ''
-          const sanitize = (obj) => {
-            if (obj === null) return '';
-            if (typeof obj !== 'object') return obj;
-            if (Array.isArray(obj)) return obj.map(sanitize);
-            const newObj = {};
-            for (const key in obj) {
-              newObj[key] = sanitize(obj[key]);
-            }
-            return newObj;
-          };
-
-          const sSub = sanitize(sub);
-
-          // Mapeia os dados mantendo a estrutura padrão para campos inexistentes
-          setFormData(prev => ({
-            ...prev,
-            ...sSub,
-            ano_construcao: sSub.ano_construcao ? sSub.ano_construcao.split('T')[0] : '',
-            entrada_operacao: sSub.entrada_operacao ? sSub.entrada_operacao.split('T')[0] : '',
-            media_tensao: { ...prev.media_tensao, ...(sSub.media_tensao || {}) },
-            baixa_tensao: { ...prev.baixa_tensao, ...(sSub.baixa_tensao || {}) },
-            seguranca: { ...prev.seguranca, ...(sSub.seguranca || {}) },
-            infraestrutura: { ...prev.infraestrutura, ...(sSub.infraestrutura || {}) },
-            monitorizacao: { ...prev.monitorizacao, ...(sSub.monitorizacao || {}) },
-            manutencao: { ...prev.manutencao, ...(sSub.manutencao || {}) },
-            risco: { ...prev.risco, ...(sSub.risco || {}) },
-            transformadores: sSub.transformadores || prev.transformadores
-          }));
+          setFormData({
+            nome: sub.nome || '',
+            codigo_operacional: sub.codigo_operacional || '',
+            tipo: sub.tipo || 'Distribuição',
+            tensao_kv_entrada: sub.tensao_kv_entrada || '',
+            tensao_kv_saida: sub.tensao_kv_saida || '',
+            capacidade_total_mva: sub.capacidade_total_mva || '',
+            municipio: sub.municipio || '',
+            latitude: sub.latitude || '',
+            longitude: sub.longitude || '',
+            status: sub.status || 'Ativa',
+            data_instalacao: sub.data_instalacao ? sub.data_instalacao.split('T')[0] : ''
+          });
         } catch (error) {
           alert('Erro ao carregar dados da subestação.');
           navigate('/subestacoes');
@@ -216,15 +97,9 @@ export default function NewSubstation() {
     }
   }, [id, isEdit, navigate]);
 
-  // Map state derived from formData
   const mapCenter = useMemo(() => {
-    if (formData.gps) {
-       const parts = formData.gps.split(',');
-       if (parts.length === 2) {
-          const lat = parseFloat(parts[0]);
-          const lng = parseFloat(parts[1]);
-          if (!isNaN(lat) && !isNaN(lng)) return [lat, lng];
-       }
+    if (formData.latitude && formData.longitude) {
+      return [parseFloat(formData.latitude), parseFloat(formData.longitude)];
     }
     const fallback = getGpsForMunicipio(formData.municipio);
     if (fallback) {
@@ -232,40 +107,43 @@ export default function NewSubstation() {
        return [parseFloat(parts[0]), parseFloat(parts[1])];
     }
     return [-11.2027, 17.8739]; // Default Angola
-  }, [formData.gps, formData.municipio]);
+  }, [formData.latitude, formData.longitude, formData.municipio]);
 
   const markerPos = useMemo(() => {
-    if (formData.gps) {
-       const parts = formData.gps.split(',');
-       if (parts.length === 2) {
-          const lat = parseFloat(parts[0]);
-          const lng = parseFloat(parts[1]);
-          if (!isNaN(lat) && !isNaN(lng)) return {lat, lng};
-       }
+    if (formData.latitude && formData.longitude) {
+       return { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) };
     }
     const fallback = getGpsForMunicipio(formData.municipio);
     if (fallback) {
        const parts = fallback.split(',');
        return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
     }
-    return { lat: -8.8383, lng: 13.2344 }; // Default to Luanda
-  }, [formData.gps, formData.municipio]);
+    return { lat: -8.8383, lng: 13.2344 }; // Default Luanda
+  }, [formData.latitude, formData.longitude, formData.municipio]);
 
-  const mapZoom = formData.gps ? 16 : (formData.municipio ? 11 : 6);
+  const mapZoom = (formData.latitude && formData.longitude) ? 16 : (formData.municipio ? 11 : 6);
 
-  const tabs = [
-    { id: 1, name: '1. Identificação Geral', icon: Info },
-    { id: 2, name: '2. Características Elétricas', icon: Zap },
-    { id: 3, name: '3. Transformadores', icon: Settings },
-    { id: 4, name: '4. Equipamentos de Manobra', icon: ShieldCheck },
-    { id: 5, name: '5. Sistema de Barramentos', icon: Database },
-    { id: 6, name: '6. Sistema de Aterramento', icon: Activity },
-    { id: 7, name: '7. Medição e Controle', icon: Settings },
-    { id: 8, name: '8. Sistema Auxiliar', icon: Settings },
-    { id: 9, name: '9. Infraestrutura Física', icon: Settings },
-    { id: 10, name: '10. Segurança e Acesso', icon: ShieldCheck },
-    { id: 11, name: '11. Manutenção e Histórico', icon: History }
-  ];
+  const handleCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('Geolocalização não é suportada pelo seu navegador');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData(prev => ({ 
+          ...prev, 
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6)
+        }));
+        setIsLocating(false);
+      },
+      () => {
+        alert('Não foi possível obter a sua localização');
+        setIsLocating(false);
+      }
+    );
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -290,424 +168,186 @@ export default function NewSubstation() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Top Header Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div className="flex items-center gap-4">
+    <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-10">
+        <div className="flex items-center gap-6">
           <button 
             onClick={() => navigate('/subestacoes')}
-            className="p-3 bg-white border border-[#c4c5d7]/20 rounded-xl text-[#0f1c2c] hover:bg-[#eff4ff] transition-all"
+            className="p-4 bg-white border border-[#c4c5d7]/20 rounded-2xl text-[#0f1c2c] hover:bg-[#eff4ff] transition-all shadow-sm"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-2xl font-black text-[#0f1c2c] uppercase tracking-tight">
-              {isEdit ? 'Edição de Ativo Crítico' : 'Registo de Ativo Crítico'}
+            <h2 className="text-3xl font-black text-[#0f1c2c] uppercase tracking-tight">
+              {isEdit ? 'Editar Subestação' : 'Nova Subestação'}
             </h2>
-            <p className="text-sm text-[#747686] font-medium uppercase tracking-widest opacity-60">MBT Energia INDUSTRIAL</p>
+            <p className="text-xs text-[#747686] font-black uppercase tracking-[0.2em] opacity-60">Gestão de Infraestrutura de Rede</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm border border-[#c4c5d7]/20">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0d3fd1] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all" onClick={handleSubmit}>
-            <Save className="w-4 h-4 text-[#5fff9b]" />
-            {isEdit ? 'Atualizar' : 'Salvar'}
-          </button>
-          <button className="hidden xs:flex items-center gap-2 px-6 py-2.5 bg-white text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all">
-            <Edit3 className="w-4 h-4" />
-            Rascunho
-          </button>
-        </div>
+        <button onClick={handleSubmit} className="flex items-center gap-3 bg-[#00e47c] text-[#005229] px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#00c96d] transition-all shadow-xl shadow-[#00e47c]/10 active:scale-95">
+          <Save className="w-5 h-5" />
+          {isEdit ? 'Atualizar Dados' : 'Gravar Unidade'}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Sidebar Menu */}
-        <div className="w-full lg:w-72 flex-shrink-0">
-          <div className="bg-[#243141] rounded-3xl overflow-hidden shadow-2xl border border-white/5">
-            <div className="p-6 border-b text-center border-white/5 bg-[#1a2533]">
-              <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Módulos de Cadastro</h3>
-            </div>
-            <div className="p-2 space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-[13px] font-semibold transition-all text-left
-                    ${activeTab === tab.id
-                      ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/20 translate-x-1'
-                      : 'text-white/40 hover:text-white hover:bg-white/5'}
-                  `}
-                >
-                  <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-[#5fff9b]' : 'opacity-40'}`} />
-                  {tab.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Form Content Area */}
-        <div className="flex-grow">
-          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden p-8 md:p-12 min-h-[600px] flex flex-col">
-            <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#c4c5d7]/10">
-              <div className="w-12 h-12 bg-[#eff4ff] rounded-2xl flex items-center justify-center text-[#0d3fd1] shadow-inner">
-                {React.createElement(tabs[activeTab - 1].icon, { className: "w-6 h-6" })}
+      <div className="bg-white rounded-[2.5rem] border border-[#c4c5d7]/20 shadow-2xl overflow-hidden">
+        <div className="p-8 md:p-12">
+          <form onSubmit={handleSubmit} className="space-y-12">
+            
+            {/* Secção 1: Identificação Operacional */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#eff4ff] rounded-xl flex items-center justify-center text-[#0d3fd1]">
+                    <Info className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#0f1c2c] uppercase tracking-widest">Identificação</h3>
+                </div>
+                <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Dados core da subestação no sistema operativo.</p>
               </div>
-              <div>
-                <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Registo Técnico</h3>
-                <p className="text-[10px] font-bold text-[#747686] uppercase tracking-widest opacity-60">{tabs[activeTab-1].name}</p>
+              
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nome da Subestação</label>
+                  <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Ex: SE Viana I" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Código Operacional</label>
+                  <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] font-mono" value={formData.codigo_operacional} onChange={(e) => setFormData({ ...formData, codigo_operacional: e.target.value })} placeholder="Ex: SE-VIA1" required disabled={isEdit} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
+                  <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.municipio} onChange={(e) => setFormData({ ...formData, municipio: e.target.value })} placeholder="Ex: Viana" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Subestação</label>
+                  <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] cursor-pointer" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}>
+                    <option value="Distribuição">Distribuição</option>
+                    <option value="Transporte">Transporte</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {activeTab === 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nome da Unidade</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+            <hr className="border-[#c4c5d7]/10" />
+
+            {/* Secção 2: Especificações Técnicas */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#eff4ff] rounded-xl flex items-center justify-center text-[#0d3fd1]">
+                    <Zap className="w-5 h-5" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Código Identificador</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] font-mono" value={formData.codigo} onChange={(e) => setFormData({ ...formData, codigo: e.target.value })} required disabled={isEdit} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Localização</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.localizacao} onChange={(e) => setFormData({ ...formData, localizacao: e.target.value })} />
-                  </div>
-                  <div className="space-y-4 md:col-span-2 bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#0d3fd1]/5 rounded-bl-[100px] pointer-events-none"></div>
-                    <div className="flex items-center gap-3 mb-6 relative z-10">
-                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-[#c4c5d7]/20 shadow-sm">
-                        <MapPin className="w-5 h-5 text-[#0d3fd1]" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black text-[#0f1c2c] uppercase tracking-wider">Geolocalização do Ativo</h4>
-                        <p className="text-[10px] text-[#747686] font-semibold">Arraste o pino no mapa para obter as coordenadas com máxima precisão</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row gap-6 relative z-10">
-                      <div className="w-full md:w-1/3 flex flex-col gap-4">
-                        <div className="flex-1 space-y-2">
-                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest pl-1">Latitude & Longitude</label>
-                          <input type="text" placeholder="Ex: -8.8390, 13.2894" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-5 text-sm font-bold text-[#0d3fd1] font-mono shadow-sm transition-all focus:border-[#0d3fd1]" value={formData.gps} onChange={(e) => setFormData({ ...formData, gps: e.target.value })} />
-                          <button 
-                            type="button" 
-                            onClick={handleCurrentLocation}
-                            disabled={isLocating}
-                            className="w-full flex items-center justify-center gap-2 mt-2 py-3 px-4 bg-[#eff4ff] text-[#0d3fd1] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#0d3fd1] hover:text-white transition-all disabled:opacity-50"
-                          >
-                            <MapPin className="w-4 h-4" />
-                            {isLocating ? 'A Obter Localização...' : 'Usar a Minha Localização'}
-                          </button>
-                          <p className="text-[9px] text-[#747686] font-medium leading-relaxed pl-1 mt-3">Dica: Selecione o &quot;Município&quot; para centrar o mapa perto da sua zona. O mapa fará uma aproximação automática à província.</p>
-                        </div>
-                      </div>
-                      <div className="w-full md:w-2/3 h-72 rounded-2xl overflow-hidden border-2 border-white shadow-xl shadow-black/5 relative z-0">
-                        <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }}>
-                          <ChangeView center={mapCenter} zoom={mapZoom} />
-                          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                          <DraggableMarker position={markerPos} setPosition={(pos) => setFormData({...formData, gps: `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`})} />
-                        </MapContainer>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município (Obrigatório)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.municipio} onChange={(e) => setFormData({ ...formData, municipio: e.target.value })} required />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Comuna</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.distrito_comuna} onChange={(e) => setFormData({ ...formData, distrito_comuna: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Bairro</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Conta de Contrato</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.conta_contrato} onChange={(e) => setFormData({ ...formData, conta_contrato: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Instalação</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.instalacao} onChange={(e) => setFormData({ ...formData, instalacao: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Equipamento</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.equipamento} onChange={(e) => setFormData({ ...formData, equipamento: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px) font-black text-[#747686] uppercase tracking-widest ml-1">Parceiro de Negócios</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.parceiro_negocios} onChange={(e) => setFormData({ ...formData, parceiro_negocios: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Categoria de Tarifa</label>
-                    <input type="text" placeholder="Ex: AT_TI" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.categoria_tarifa} onChange={(e) => setFormData({ ...formData, categoria_tarifa: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Extenso Categoria Tarifa</label>
-                    <input type="text" placeholder="Ex: Indústria" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.txt_categoria_tarifa} onChange={(e) => setFormData({ ...formData, txt_categoria_tarifa: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Unidade</label>
-                    <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}>
-                      <option value="">Selecione...</option>
-                      <option value="Elevadora">Elevadora</option>
-                      <option value="Abaixadora">Abaixadora</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-red-600 uppercase tracking-widest ml-1">Capacidade Instalada Base (kVA)</label>
-                    <input type="number" placeholder="Ex: 20000" className="w-full bg-red-50 border border-red-200 rounded-xl py-4 px-6 text-sm font-bold text-red-900 focus:border-red-500 transition-all font-mono shadow-sm" value={formData.potencia_total_kva} onChange={(e) => setFormData({ ...formData, potencia_total_kva: e.target.value })} />
-                    <p className="text-[8px] font-bold text-[#747686] ml-1 mt-1">Define o tecto máximo da infraestrutura. Necessário para Dashboard.</p>
+                  <h3 className="text-sm font-black text-[#0f1c2c] uppercase tracking-widest">Características Técnicas</h3>
+                </div>
+                <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Parâmetros elétricos e capacidade nominal.</p>
+              </div>
+              
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Entrada (kV)</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none" value={formData.tensao_kv_entrada} onChange={(e) => setFormData({ ...formData, tensao_kv_entrada: e.target.value })} placeholder="60" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-[#0d3fd1]/40 uppercase tracking-widest">kV</span>
                   </div>
                 </div>
-              )}
-
-              {activeTab === 2 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Celas (MT)</label>
-                    <input type="text" placeholder="SF6, Ar, Óleo..." className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.media_tensao.tipo_celas} onChange={(e) => setFormData({ ...formData, media_tensao: {...formData.media_tensao, tipo_celas: e.target.value} })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado disjuntores MT</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.media_tensao.estado_disjuntores} onChange={(e) => setFormData({ ...formData, media_tensao: {...formData.media_tensao, estado_disjuntores: e.target.value} })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Nominal BT (V)</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.baixa_tensao.tensao} onChange={(e) => setFormData({ ...formData, baixa_tensao: {...formData.baixa_tensao, tensao: Number(e.target.value)} })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Fator de Potência Alvo</label>
-                    <input type="number" step="0.01" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.baixa_tensao.fator_potencia} onChange={(e) => setFormData({ ...formData, baixa_tensao: {...formData.baixa_tensao, fator_potencia: Number(e.target.value)} })} />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Saída (kV)</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none" value={formData.tensao_kv_saida} onChange={(e) => setFormData({ ...formData, tensao_kv_saida: e.target.value })} placeholder="15" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-[#0d3fd1]/40 uppercase tracking-widest">kV</span>
                   </div>
                 </div>
-              )}
-
-              {activeTab === 3 && (
-                <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-xs font-black text-[#0d3fd1] uppercase tracking-[0.2em]">Banco de Transformadores</h4>
-                    <button type="button" onClick={() => setFormData({...formData, transformadores: [...formData.transformadores, { num: formData.transformadores.length + 1, potencia: 630, tensao_p: 15, tensao_s: 0.4, tipo: 'Óleo', estado_oleo: 'Bom', fugas: false }]})} className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all">
-                      <Plus className="w-3 h-3" /> Adicionar Unidade
-                    </button>
-                  </div>
-                  {formData.transformadores.map((trafo, idx) => (
-                    <div key={idx} className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20 relative shadow-sm hover:shadow-md transition-all">
-                      <div className="absolute -top-3 -left-3 w-10 h-10 bg-[#243141] text-white rounded-xl flex items-center justify-center text-sm font-black shadow-lg">TR{trafo.num}</div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Potência Nominal (kVA)</label>
-                          <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-4 text-xs font-bold text-[#0f1c2c]" value={trafo.potencia} onChange={(e) => {
-                            const newTrafos = [...formData.transformadores];
-                            newTrafos[idx].potencia = Number(e.target.value);
-                            setFormData({...formData, transformadores: newTrafos});
-                          }} />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Tecnologia de Isolação</label>
-                          <select className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-4 text-xs font-bold text-[#0f1c2c]" value={trafo.tipo} onChange={(e) => {
-                            const newTrafos = [...formData.transformadores];
-                            newTrafos[idx].tipo = e.target.value;
-                            setFormData({...formData, transformadores: newTrafos});
-                          }}>
-                            <option value="Óleo">Óleo Mineral</option>
-                            <option value="Seco">Resina (Seco)</option>
-                            <option value="SF6">Gás SF6</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Tensão Primária (kV)</label>
-                          <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-4 text-xs font-bold text-[#0f1c2c]" value={trafo.tensao_p} onChange={(e) => {
-                            const newTrafos = [...formData.transformadores];
-                            newTrafos[idx].tensao_p = Number(e.target.value);
-                            setFormData({...formData, transformadores: newTrafos});
-                          }} />
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => setFormData({...formData, transformadores: formData.transformadores.filter((_, i) => i !== idx)})} className="absolute top-4 right-4 p-2 text-red-300 hover:text-red-500 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 6 || activeTab === 10 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-4 bg-[#f8faff] p-6 rounded-2xl border border-[#c4c5d7]/10">
-                    <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-4">Sistemas de Proteção Ativos</h4>
-                    {Object.entries(formData.seguranca).filter(([key]) => typeof formData.seguranca[key] === 'boolean').map(([key, val]) => (
-                      <label key={key} className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-xs font-bold text-[#444655] uppercase opacity-70 group-hover:opacity-100 transition-opacity">{key.replace('_', ' ')}</span>
-                        <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1] focus:ring-[#0d3fd1]" checked={val} onChange={(e) => setFormData({...formData, seguranca: {...formData.seguranca, [key]: e.target.checked}})} />
-                      </label>
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Resistência de Terra (Ω)</label>
-                    <input type="number" step="0.001" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.seguranca.resistencia_terra} onChange={(e) => setFormData({ ...formData, seguranca: {...formData.seguranca, resistencia_terra: Number(e.target.value)} })} />
-                    <p className="text-[9px] text-[#00c96d] font-bold uppercase mt-1">Conforme norma IEC 62305</p>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Capacidade (MVA)</label>
+                  <div className="relative">
+                    <input type="number" step="0.1" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none" value={formData.capacidade_total_mva} onChange={(e) => setFormData({ ...formData, capacidade_total_mva: e.target.value })} placeholder="40" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-[#0d3fd1]/40 uppercase tracking-widest">MVA</span>
                   </div>
                 </div>
-              ) : null}
-
-              {activeTab === 4 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-4 bg-[#f8faff] p-6 rounded-2xl border border-[#c4c5d7]/10">
-                    <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-4">Aparelhagem de Manobra (MT)</h4>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Estado dos Seccionadores</label>
-                        <select className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-4 text-xs font-bold text-[#0f1c2c]" value={formData.media_tensao.estado_seccionadores} onChange={(e) => setFormData({...formData, media_tensao: {...formData.media_tensao, estado_seccionadores: e.target.value}})}>
-                          <option value="Operacional">Operacional</option>
-                          <option value="Deficiente">Deficiente</option>
-                          <option value="Fora de Serviço">Fora de Serviço</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Relés de Proteção (Modelo/Série)</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-4 text-xs font-bold text-[#0f1c2c]" value={formData.media_tensao.reles_protecao} onChange={(e) => setFormData({...formData, media_tensao: {...formData.media_tensao, reles_protecao: e.target.value}})} />
-                      </div>
-                    </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Data de Instalação</label>
+                  <div className="relative">
+                    <input type="date" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none" value={formData.data_instalacao} onChange={(e) => setFormData({ ...formData, data_instalacao: e.target.value })} />
+                    <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0d3fd1]/20 pointer-events-none" />
                   </div>
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Status Operacional</label>
+                  <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] cursor-pointer" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                    <option value="Ativa">Ativa</option>
+                    <option value="Manutenção">Manutenção</option>
+                    <option value="Desativada">Desativada</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-[#c4c5d7]/10" />
+
+            {/* Secção 3: Localização e Mapa */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#eff4ff] rounded-xl flex items-center justify-center text-[#0d3fd1]">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#0f1c2c] uppercase tracking-widest">Localização GPS</h3>
+                </div>
+                <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Geolocalização precisa da infraestrutura.</p>
+                
+                <div className="mt-8 space-y-4">
+                  <button 
+                    type="button" 
+                    onClick={handleCurrentLocation}
+                    disabled={isLocating}
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-[#0d3fd1] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+                  >
+                    <MapPin className="w-4 h-4 text-[#5fff9b]" />
+                    {isLocating ? 'Obtendo GPS...' : 'Usar Localização Atual'}
+                  </button>
                   <div className="space-y-4">
-                    <label className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/20 rounded-xl cursor-pointer">
-                      <span className="text-xs font-bold text-[#444655] uppercase">Coordenação de Proteções Validada?</span>
-                      <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]" checked={formData.media_tensao.coordenacao_protecoes} onChange={(e) => setFormData({...formData, media_tensao: {...formData.media_tensao, coordenacao_protecoes: e.target.checked}})} />
-                    </label>
-                    <label className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/20 rounded-xl cursor-pointer">
-                      <span className="text-xs font-bold text-[#444655] uppercase">Aterramento MT Verificado?</span>
-                      <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]" checked={formData.media_tensao.aterramento_mt} onChange={(e) => setFormData({...formData, media_tensao: {...formData.media_tensao, aterramento_mt: e.target.checked}})} />
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 5 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tecnologia de Barramentos</label>
-                    <input type="text" placeholder="Cobre, Alumínio..." className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.baixa_tensao.barramentos} onChange={(e) => setFormData({...formData, baixa_tensao: {...formData.baixa_tensao, barramentos: e.target.value}})} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado do QGBT</label>
-                    <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.baixa_tensao.estado_qgbt} onChange={(e) => setFormData({...formData, baixa_tensao: {...formData.baixa_tensao, estado_qgbt: e.target.value}})}>
-                      <option value="Bom">Bom</option>
-                      <option value="Regular">Regular</option>
-                      <option value="Crítico">Crítico</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2 p-6 bg-[#fcfdff] rounded-2xl border border-[#c4c5d7]/10 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-black text-[#0f1c2c] uppercase tracking-tight">Equilíbrio de Fases</h4>
-                      <p className="text-[10px] text-[#747686] font-bold uppercase opacity-60">Verificação de carga simétrica</p>
-                    </div>
-                    <input type="checkbox" className="w-6 h-6 rounded-lg border-[#c4c5d7] text-[#0d3fd1]" checked={formData.baixa_tensao.balanceamento_cargas} onChange={(e) => setFormData({...formData, baixa_tensao: {...formData.baixa_tensao, balanceamento_cargas: e.target.checked}})} />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 7 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-4 bg-[#f8faff] p-6 rounded-2xl border border-[#c4c5d7]/10">
-                    <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-4">Medição e Monitorização (SCADA)</h4>
-                    {Object.entries(formData.monitorizacao).filter(([key]) => typeof formData.monitorizacao[key] === 'boolean').map(([key, val]) => (
-                      <label key={key} className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-xs font-bold text-[#444655] uppercase opacity-70 group-hover:opacity-100 transition-opacity">{key.replace('_', ' ')}</span>
-                        <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1] focus:ring-[#0d3fd1]" checked={val} onChange={(e) => setFormData({...formData, monitorizacao: {...formData.monitorizacao, [key]: e.target.checked}})} />
-                      </label>
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tecnologia de Comunicação</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.monitorizacao.comunicacao} onChange={(e) => setFormData({...formData, monitorizacao: {...formData.monitorizacao, comunicacao: e.target.value}})} />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 8 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="p-8 bg-[#f8faff] rounded-[2rem] border border-[#c4c5d7]/20 flex flex-col items-center justify-center text-center">
-                    <Zap className="w-12 h-12 text-[#0d3fd1] mb-4" />
-                    <h4 className="text-sm font-black text-[#0f1c2c] uppercase tracking-tight">Sistemas Auxiliares (DC/AC)</h4>
-                    <p className="text-[10px] text-[#747686] font-bold uppercase opacity-60 mt-2 tracking-widest">Banco de Baterias e Retificadores</p>
-                  </div>
-                  <div className="space-y-4">
-                     <div className="p-4 bg-white border border-[#c4c5d7]/10 rounded-xl">
-                       <span className="text-[9px] font-black text-[#747686] uppercase block mb-1">Status Carregadores</span>
-                       <span className="text-xs font-bold text-green-500">OPERACIONAL</span>
-                     </div>
-                     <div className="p-4 bg-white border border-[#c4c5d7]/10 rounded-xl">
-                       <span className="text-[9px] font-black text-[#747686] uppercase block mb-1">Autonomia Estimada</span>
-                       <span className="text-xs font-bold text-[#0f1c2c]">8 HORAS</span>
-                     </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 9 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Físico da Cabine</label>
-                    <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.infraestrutura.estado_cabine} onChange={(e) => setFormData({...formData, infraestrutura: {...formData.infraestrutura, estado_cabine: e.target.value}})}>
-                      <option value="Excelente">Excelente</option>
-                      <option value="Bom">Bom</option>
-                      <option value="Degradado">Degradado</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {['ventilacao', 'drenagem', 'iluminacao', 'controlo_acesso'].map((key) => (
-                      <label key={key} className="flex flex-col items-start gap-2 p-4 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:bg-[#eff4ff] transition-all">
-                        <span className="text-[9px] font-black text-[#747686] uppercase tracking-widest">{key.replace('_', ' ')}</span>
-                        <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]" checked={formData.infraestrutura[key]} onChange={(e) => setFormData({...formData, infraestrutura: {...formData.infraestrutura, [key]: e.target.checked}})} />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 11 && (
-                <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Histórico de Falhas e Intervenções</label>
-                    <textarea 
-                      className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-2xl py-4 px-6 text-sm font-medium text-[#0f1c2c] h-32 resize-none" 
-                      placeholder="Descreva as últimas ocorrências técnicas..."
-                      value={formData.manutencao.historico_falhas}
-                      onChange={(e) => setFormData({...formData, manutencao: {...formData.manutencao, historico_falhas: e.target.value}})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">MTBF (Horas)</label>
-                      <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.manutencao.mtbf} onChange={(e) => setFormData({...formData, manutencao: {...formData.manutencao, mtbf: Number(e.target.value)}})} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">MTTR (Horas)</label>
-                      <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.manutencao.mttr} onChange={(e) => setFormData({...formData, manutencao: {...formData.manutencao, mttr: Number(e.target.value)}})} />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Coordenadas (Lat, Lng)</label>
+                      <input 
+                        type="text" 
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0d3fd1] font-mono focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none transition-all" 
+                        value={formData.latitude && formData.longitude ? `${formData.latitude}, ${formData.longitude}` : ''} 
+                        placeholder="Ex: -8.8383, 13.2344"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const parts = val.split(',').map(p => p.trim());
+                          if (parts.length === 2) {
+                            setFormData(prev => ({ ...prev, latitude: parts[0], longitude: parts[1] }));
+                          } else if (val === '') {
+                            setFormData(prev => ({ ...prev, latitude: '', longitude: '' }));
+                          }
+                        }}
+                      />
+                      <p className="text-[8px] font-bold text-[#747686] ml-1 opacity-50 uppercase mt-1">Pode colar diretamente do Google Maps</p>
                     </div>
                   </div>
                 </div>
-              )}
-
-              <div className="mt-auto pt-12 flex justify-center">
-                <button type="submit" className="flex items-center gap-3 px-16 py-4 bg-[#00e47c] text-[#005229] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#00c96d] transition-all shadow-xl shadow-[#00e47c]/10 active:scale-95 group">
-                  {isEdit ? 'Finalizar Edição' : 'Confirmar Registo'}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
               </div>
-            </form>
-          </div>
+              
+              <div className="lg:col-span-2">
+                <div className="w-full h-80 rounded-[2rem] overflow-hidden border-4 border-[#f8faff] shadow-2xl relative z-0 group">
+                   <div className="absolute top-4 right-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-[#c4c5d7]/20 shadow-sm pointer-events-none group-hover:opacity-0 transition-opacity">
+                     <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Arraste o pino para refinar</p>
+                   </div>
+                   <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }}>
+                      <ChangeView center={mapCenter} zoom={mapZoom} />
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                      <DraggableMarker position={markerPos} setPosition={(pos) => setFormData({...formData, latitude: pos.lat.toFixed(6), longitude: pos.lng.toFixed(6)})} />
+                   </MapContainer>
+                </div>
+              </div>
+            </div>
+
+          </form>
         </div>
       </div>
     </div>
   );
-}
-
-function History(props) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
-  )
 }

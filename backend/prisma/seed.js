@@ -4,59 +4,39 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Limpar dados existentes (opcional, cuidado em prod)
-  // await prisma.inspecao.deleteMany();
-  // await prisma.identificacao.deleteMany();
-  // await prisma.subestacao.deleteMany();
-  // await prisma.utilizador.deleteMany();
-
   // 1. Criar Utilizador Auditor (se não existir)
   const passwordHash = await bcrypt.hashSync('admin123', 10);
   const auditor = await prisma.utilizador.upsert({
-    where: { email: 'mbt@mbtenergia.com' },
+    where: { email: 'admin@mbtenergia.com' },
     update: {},
     create: {
-      nome: 'Auditor MBT Energia',
-      email: 'mbt@mbtenergia.com',
+      nome: 'Administrador',
+      email: 'admin@mbtenergia.com',
       password_hash: passwordHash,
       role: 'admin',
-      municipio: 'Viana',
-      provincia: 'Luanda',
+      municipio: 'Humpata',
+      provincia: 'Huíla',
       ativo: true
     }
   });
 
   // 2. Criar Subestação MBT Energia (Mock Record)
   const subestacao = await prisma.subestacao.upsert({
-    where: { codigo: 'SUB-MBT-001' },
+    where: { codigo_operacional: 'SUB-MBT-001' },
     update: {},
     create: {
-      codigo: 'SUB-MBT-001',
+      codigo_operacional: 'SUB-MBT-001',
       nome: 'Subestação Central MBT',
-      localizacao: 'Cazenga, Luanda',
-      gps: '-8.8051, 13.2921',
       municipio: 'CACUACO',
-      provincia: 'Luanda',
       tipo: 'Abaixadora',
-      proprietario: 'MBT Energia',
-      operador: 'Equipa Alfa',
-      ano_construcao: new Date('2022-01-15'),
-      entrada_operacao: new Date('2022-06-01'),
-      tensao_alimentacao: '60kV',
-      potencia_total_kva: 10000,
-      concessionaria: 'ENDE',
-      estado: 'Ativa',
-      conta_contrato: '2002071151',
-      instalacao: '2000068573',
-      parceiro_negocios: '5000581927',
-      categoria_tarifa: 'AT_TI',
-      txt_categoria_tarifa: 'Indústria',
-      distrito_comuna: 'CACUACO',
-      bairro: 'CACUACO'
+      status: 'Ativa',
+      tensao_kv_entrada: 60,
+      tensao_kv_saida: 15,
+      capacidade_total_mva: 10,
     }
   });
 
-  // 3. Criar PTs (Postos de Transformação)
+  // 3. Criar Clientes (Postos de Transformação)
   const ptsData = [
     {
       id_pt: 'PT-MBT-VN1',
@@ -75,7 +55,8 @@ async function main() {
       instalacao: '2000054347',
       parceiro_negocios: '5000912891',
       categoria_tarifa: 'AT_TI',
-      txt_categoria_tarifa: 'Indústria'
+      txt_categoria_tarifa: 'Indústria',
+      proprietario: 'MBT Indústria'
     },
     {
       id_pt: 'PT-MBT-CZ2',
@@ -95,12 +76,13 @@ async function main() {
       equipamento: '900250207',
       parceiro_negocios: '5000581927',
       categoria_tarifa: 'MT_TCS',
-      txt_categoria_tarifa: 'Comércio e Serviços'
+      txt_categoria_tarifa: 'Comércio e Serviços',
+      proprietario: 'Centro Comercial MBT'
     }
   ];
 
   for (const pt of ptsData) {
-    const createdPT = await prisma.identificacao.upsert({
+    await prisma.cliente.upsert({
       where: { id_pt: pt.id_pt },
       update: {},
       create: {
@@ -135,35 +117,9 @@ async function main() {
         }
       }
     });
-
-    // 4. Criar Inspeções para cada PT
-    await prisma.inspecao.create({
-      data: {
-        id_pt: createdPT.id_pt,
-        id_auditor: auditor.id,
-        tipo: 'Preventiva',
-        data_inspecao: new Date(),
-        resultado: 'Conforme',
-        nivel_urgencia: 'Baixo',
-        observacoes: 'PT em excelentes condições de operação após manutenção preventiva.',
-        transformadores: {
-          create: [
-            {
-              id_pt: createdPT.id_pt,
-              num_transformador: 1,
-              potencia_kva: pt.potencia_kva,
-              tensao_primaria: pt.nivel_tensao.includes('15') ? 15 : 30,
-              tensao_secundaria: 0.4,
-              tipo_isolamento: 'Oleo',
-              temperatura_operacao: 42
-            }
-          ]
-        }
-      }
-    });
   }
 
-  console.log('Base de dados MBT Energia (Subestações, PTs e Inspeções) populada com sucesso!');
+  console.log('Base de dados MBT Energia populada com sucesso!');
 }
 
 main()

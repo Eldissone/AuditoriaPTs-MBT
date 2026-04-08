@@ -100,7 +100,7 @@ export default function PTAudits() {
       try {
         const ptsParams = localidadeFiltro ? { params: { localidade: localidadeFiltro } } : undefined;
         const [ptsRes, auditsRes, tarefasRes] = await Promise.all([
-          api.get('/pts', ptsParams),
+          api.get('/clientes', ptsParams),
           api.get('/inspecoes'),
           api.get('/tarefas').catch(() => ({ data: [] }))
         ]);
@@ -330,7 +330,7 @@ export default function PTAudits() {
       }
 
       const header = [
-        'PT ID',
+        'Código Cliente',
         'Proprietário',
         'Tipo',
         'Resultado',
@@ -378,7 +378,7 @@ export default function PTAudits() {
     const header = [
       'Auditor',
       'Tarefa',
-      'PT',
+      'Cliente',
       'Data de Início',
       'Data de Fim',
       'Checklist Validado'
@@ -466,7 +466,7 @@ export default function PTAudits() {
         `}</style>
 
         <div className="print-only mb-4 border border-[#d1d5db] p-4">
-          <h1 className="text-lg font-black text-[#0f1c2c] uppercase">Relatório Técnico de Auditorias PT</h1>
+          <h1 className="text-lg font-black text-[#0f1c2c] uppercase">Relatório Técnico de Auditorias de Clientes</h1>
           <div className="grid grid-cols-2 gap-2 mt-3 text-[11px]">
             <p><strong>Emitido em:</strong> {emissaoRelatorio}</p>
             <p><strong>Utilizador:</strong> {user?.nome || 'Operador'}</p>
@@ -495,7 +495,7 @@ export default function PTAudits() {
                 onClick={() => setSubView('inspecoes')}
                 className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'inspecoes' ? 'bg-white text-[#0d3fd1] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
               > <ClipboardList className="w-4 h-4" />
-                Inspeções
+                Inspeções de Clientes
               </button>
               <button 
                 onClick={() => setSubView('tarefas')}
@@ -598,7 +598,7 @@ export default function PTAudits() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por PT, proprietário, subestação ou tarefa..."
+            placeholder="Buscar por código cliente, proprietário, subestação ou tarefa..."
             className="md:col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-sm font-bold text-[#0f1c2c]"
           />
           <select
@@ -657,7 +657,7 @@ export default function PTAudits() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">PT ID</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Cód. Cliente</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Resultado</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center font-mono">Urgência</th>
@@ -742,7 +742,7 @@ export default function PTAudits() {
               <thead>
                 <tr className="bg-emerald-50 border-b border-emerald-100">
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Auditor</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Tarefa/PT</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Tarefa / Cliente</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Proprietário/Localidade</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Início</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Fim (Conclusão)</th>
@@ -756,7 +756,7 @@ export default function PTAudits() {
                       {tarefa.auditor?.nome || 'N/A'}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-emerald-50">
-                      {tarefa.titulo} {tarefa.id_pt && `(PT: ${tarefa.id_pt})`}
+                      {tarefa.titulo} {tarefa.id_pt && `(Cód: ${tarefa.id_pt})`}
                     </td>
                     <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50 uppercase">
                       {(tarefa.pt?.subestacao?.proprietario || 'N/A')} / {(tarefa.pt?.subestacao?.municipio || tarefa.pt?.municipio || 'N/A')}
@@ -773,7 +773,7 @@ export default function PTAudits() {
                           onClick={() => setAuditTarefa(tarefa)}
                           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md"
                         >
-                          Auditar PT
+                          Auditar Cliente
                         </button>
                         {tarefa.data_fim && (
                           <span className="flex items-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md">

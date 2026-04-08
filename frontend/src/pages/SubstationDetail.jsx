@@ -8,12 +8,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   const [imagensLocais, setImagensLocais] = useState([]);
   const [imagemAtiva, setImagemAtiva] = useState(null);
 
-  // Fetch PTs for same localidade (municipio) treating them as the substation's PTs
+  // Fetch Clientes for same localidade (municipio) treating them as the substation's Clientes
   const { data: localPts = [] } = useQuery({
-    queryKey: ['pts', { localidade: substation.municipio }],
+    queryKey: ['clientes', { localidade: substation.municipio }],
     queryFn: async () => {
       if (!substation.municipio) return [];
-      const res = await api.get('/pts', { params: { localidade: substation.municipio } });
+      const res = await api.get('/clientes', { params: { localidade: substation.municipio } });
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -155,9 +155,9 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.municipio || 'N/D'}</p>
               </div>
 
-             
+
               <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de PTs</label>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de Clientes</label>
                 <p className="text-sm font-bold text-[#0f1c2c] mt-1">{localPts.length}</p>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                   <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Capacidade Instalada</p>
-                  <p className="text-xl font-black text-[#0f1c2c]">{capacidadeSubestacao.toLocaleString()} <span className="text-[10px] font-bold text-[#747686]">kVA</span></p>
+                  <p className="text-xl font-black text-[#0f1c2c]">{sub.capacidade_total_mva}  <span className="text-[10px] font-bold text-[#747686]">MVA</span></p>
                 </div>
                 <div className="hidden sm:block w-px h-10 bg-[#c4c5d7]/30"></div>
                 <div>
@@ -228,7 +228,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           <div className="bg-[#f8f9ff] rounded-2xl p-6">
             <h3 className="font-black text-[#0f1c2c] text-lg mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-[#0d3fd1]" />
-              Estados dos (PTs)
+              Estados dos (Clientes)
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white rounded-xl p-4 border-l-4 border-green-500">

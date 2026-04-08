@@ -10,6 +10,7 @@ const SubstationManagement = React.lazy(() => import('../pages/SubstationManagem
 const NewSubstation = React.lazy(() => import('../pages/NewSubstation'));
 const SubstationAudit = React.lazy(() => import('../pages/SubstationAudit'));
 const NewPT = React.lazy(() => import('../pages/NewPT'));
+const ClientManagement = React.lazy(() => import('../pages/ClientManagement'));
 const PTAudits = React.lazy(() => import('../pages/PTAudits'));
 const TechnicalSheet = React.lazy(() => import('../pages/TechnicalSheet'));
 const UserManagement = React.lazy(() => import('../pages/UserManagement'));
@@ -91,7 +92,7 @@ export default function AppRoutes() {
           </PrivateRoute>
         } />
 
-        <Route path="/subestacoes/:subestacaoId/pts/novo" element={
+        <Route path="/subestacoes/:subestacaoId/clientes/novo" element={
           <PrivateRoute>
             <Suspense fallback={<PageLoader />}>
               <NewPT />
@@ -99,7 +100,7 @@ export default function AppRoutes() {
           </PrivateRoute>
         } />
 
-        <Route path="/subestacoes/:subestacaoId/pts/editar/:id" element={
+        <Route path="/subestacoes/:subestacaoId/clientes/editar/:id" element={
           <PrivateRoute>
             <Suspense fallback={<PageLoader />}>
               <NewPT />
@@ -107,10 +108,18 @@ export default function AppRoutes() {
           </PrivateRoute>
         } />
 
-        <Route path="/pts" element={
-          <PrivateRoute requiredPerm="/pts">
+        <Route path="/relatorios-clientes" element={
+          <PrivateRoute requiredPerm="/clientes">
             <Suspense fallback={<PageLoader />}>
               <PTAudits />
+            </Suspense>
+          </PrivateRoute>
+        } />
+
+        <Route path="/gestao-clientes" element={
+          <PrivateRoute requiredPerm="/clientes">
+            <Suspense fallback={<PageLoader />}>
+              <ClientManagement />
             </Suspense>
           </PrivateRoute>
         } />

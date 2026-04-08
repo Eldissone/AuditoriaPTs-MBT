@@ -21,13 +21,13 @@ export default function UserManagement() {
     role: 'auditor',
     password: '',
     ativo: true,
-    permissoes: ['/pts', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
+    permissoes: ['/clientes', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
   });
   
   const availablePermissions = [
     { id: '/', label: 'Painel Central' },
     { id: '/subestacoes', label: 'Subestações' },
-    { id: '/pts', label: 'Auditorias PT' },
+    { id: '/clientes', label: 'Auditorias Clientes' },
     { id: '/ficha-tecnica', label: 'Ficha Técnica' },
     { id: '/minhas-tarefas', label: 'Minhas Tarefas' },
   ];
@@ -63,7 +63,7 @@ export default function UserManagement() {
         role: 'auditor',
         password: '',
         ativo: true,
-        permissoes: ['/pts', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
+        permissoes: ['/clientes', '/subestacoes', '/ficha-tecnica', '/minhas-tarefas']
       });
     }
     setIsModalOpen(true);

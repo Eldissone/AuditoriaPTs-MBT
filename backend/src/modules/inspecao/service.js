@@ -14,11 +14,11 @@ class InspecaoService {
 
   async createInspecao(data) {
     // Validate that the PT exists
-    const ptExists = await prisma.identificacao.findUnique({
+    const ptExists = await prisma.cliente.findUnique({
       where: { id_pt: data.id_pt }
     });
     if (!ptExists) {
-      throw new Error('PT não encontrado.');
+      throw new Error('Cliente não encontrado.');
     }
     // Validate that the auditor exists
     const auditorExists = await prisma.utilizador.findUnique({
@@ -38,11 +38,11 @@ class InspecaoService {
     }
     // If id_pt is provided, validate that the PT exists
     if (data.id_pt) {
-      const ptExists = await prisma.identificacao.findUnique({
+      const ptExists = await prisma.cliente.findUnique({
         where: { id_pt: data.id_pt }
       });
       if (!ptExists) {
-        throw new Error('PT não encontrado.');
+        throw new Error('Cliente não encontrado.');
       }
     }
     return repository.update(id, data);

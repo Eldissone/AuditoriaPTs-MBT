@@ -123,7 +123,7 @@ export default function SubstationAudit() {
       try {
         const subRes = await api.get(`/subestacoes/${id}`);
         const localidadeEfetiva = localidadeFiltro || subRes.data?.municipio || '';
-        const ptsRes = await api.get('/pts', {
+        const ptsRes = await api.get('/clientes', {
           params: localidadeEfetiva ? { localidade: localidadeEfetiva } : {}
         });
 
@@ -144,7 +144,7 @@ export default function SubstationAudit() {
     if (!idPt) return;
     if (window.confirm(`Tem a certeza que deseja eliminar o PT com ID: ${idPt}?`)) {
       try {
-        await api.delete(`/pts/${idPt}`);
+        await api.delete(`/clientes/${idPt}`);
         setPts(pts.filter(p => p.id_pt !== idPt));
         if (selectedPt?.id_pt === idPt) setSelectedPt(pts[0] || null);
         alert('PT eliminado com sucesso.');
@@ -184,7 +184,7 @@ export default function SubstationAudit() {
             </button>
           )}
           <button
-            onClick={() => navigate(`/subestacoes/${id}/pts/novo`)}
+            onClick={() => navigate(`/subestacoes/${id}/clientes/novo`)}
             className="flex items-center gap-2 bg-[#0d3fd1] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
           >
             <Plus className="w-4 h-4" />
@@ -192,7 +192,7 @@ export default function SubstationAudit() {
           </button>
           <button
             className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all disabled:opacity-30"
-            onClick={() => selectedPt && navigate(`/subestacoes/${id}/pts/editar/${selectedPt.id_pt}`)}
+            onClick={() => selectedPt && navigate(`/subestacoes/${id}/clientes/editar/${selectedPt.id_pt}`)}
             disabled={!selectedPt}
           >
             <Edit2 className="w-4 h-4" />
@@ -221,13 +221,13 @@ export default function SubstationAudit() {
         {/* Sidebar - PT List */}
         <div className="w-80 flex flex-col bg-white rounded-3xl border border-[#c4c5d7]/20 overflow-hidden shadow-sm">
           <div className="p-4 bg-[#0d3fd1] text-white">
-            <h3 className="text-[16px] font-black text-center uppercase tracking-widest">PTS da Substação: {subestacao?.municipio}</h3>
+            <h3 className="text-[16px] font-black text-center uppercase tracking-widest">Clientes da Substação: {subestacao?.municipio}</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
             {proprietarios.length > 0 && (
               <div className="px-3 py-2 mb-2 bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl">
                 <p className="text-[9px] font-black text-[#747686] uppercase tracking-[0.15em] mb-2">
-                  Proprietários (pts) ({proprietarios.length})
+                  Proprietários (Clientes) ({proprietarios.length})
                 </p>
                 {/*<div className="space-y-1">
                   {proprietarios.map((prop) => (
@@ -311,7 +311,7 @@ export default function SubstationAudit() {
               <span className="text-2xl font-black text-[#0f1c2c]">{avgEfficiency}% <span className="text-xs text-[#00e47c] font-bold uppercase ml-1">ESTÁVEL</span></span>
             </div>
             <div className="bg-[#fcfdff] p-5 rounded-2xl border border-[#c4c5d7]/10 shadow-inner">
-              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Total de PTs</span>
+              <span className="text-[10px] font-black text-[#747686] uppercase tracking-widest block mb-1 opacity-60">Total de Clientes</span>
               <span className="text-2xl font-black text-[#0f1c2c]">{pts.length} <span className="text-xs text-[#747686] font-bold uppercase ml-1">UNIDADES</span></span>
             </div>
           </div>

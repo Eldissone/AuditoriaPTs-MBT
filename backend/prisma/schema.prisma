@@ -9,39 +9,23 @@ datasource db {
 }
 
 model Subestacao {
-  id                 Int             @id @default(autoincrement())
-  codigo             String          @unique @db.VarChar(50)
-  nome               String          @db.VarChar(200)
-  localizacao        String          @db.Text
-  gps                String?         // In Prisma, we often handle POINT as a string or custom type, using String for simplicity here or Json
-  morada             String?         @db.Text
-  municipio          String?         @db.Text
-  provincia          String?         @db.Text
-  pais               String          @default("Angola") @db.VarChar(100)
-  tensao_alimentacao String?         @db.VarChar(50)
-  potencia_total_kva Float?          
-  concessionaria     String?         @db.VarChar(200)
-  zona               String?         @db.VarChar(100)
-  tipo               String?         @db.VarChar(100)
-  proprietario       String?         @db.VarChar(200)
-  operador           String?         @db.VarChar(200)
-  ano_construcao     DateTime?       @db.Date
-  entrada_operacao   DateTime?       @db.Date
-  estado             String          @default("Ativa") @db.VarChar(50)
+  id                   Int             @id @default(autoincrement())
+  nome                 String          @db.VarChar(100)
+  codigo_operacional   String          @unique @db.VarChar(20)
+  tipo                 String          @db.VarChar(20) // Transporte ou Distribuição
+  tensao_kv_entrada    Float?          
+  tensao_kv_saida      Float?          
+  capacidade_total_mva Float?          
+  municipio            String?         @db.VarChar(50)
+  latitude             Float?          
+  longitude            Float?          
+  gps                  String?         
+  status               String          @default("Ativa") @db.VarChar(20)
+  data_instalacao      DateTime?       @db.Date
   
-  // Novos campos do anexo
-  conta_contrato     String?         @db.VarChar(50)
-  instalacao         String?         @db.VarChar(100)
-  equipamento        String?         @db.VarChar(100)
-  parceiro_negocios  String?         @db.VarChar(100)
-  categoria_tarifa   String?         @db.VarChar(50)
-  txt_categoria_tarifa String?       @db.VarChar(100)
-  distrito_comuna    String?         @db.VarChar(150)
-  bairro              String?         @db.VarChar(150)
-
-  criado_em          DateTime        @default(now())
-  atualizado_em      DateTime        @updatedAt
-  pts                Identificacao[]
+  criado_em            DateTime        @default(now())
+  atualizado_em        DateTime        @updatedAt
+  pts                  Cliente[]
 
   @@map("subestacao")
 }
@@ -62,14 +46,14 @@ model Utilizador {
   ultimo_acesso  DateTime?
   criado_em      DateTime        @default(now())
   atualizado_em  DateTime        @updatedAt
-  pts_responsaveis Identificacao[] @relation("Responsavel")
+  pts_responsaveis Cliente[] @relation("Responsavel")
   inspecoes      Inspecao[]
   tarefas        Tarefa[]
 
   @@map("utilizador")
 }
 
-model Identificacao {
+model Cliente {
   id                  Int             @id @default(autoincrement())
   id_pt               String          @unique @db.VarChar(50)
   id_subestacao       Int
@@ -90,7 +74,11 @@ model Identificacao {
   regime_exploracao   String?         @db.VarChar(100)
   estado_operacional  String          @default("Operacional") @db.VarChar(50)
   
-  // Novos campos do anexo (replicados no PT se necessário para visualização direta)
+  // Dados legados e operacionais
+  proprietario       String?         @db.VarChar(200)
+  concessionaria     String?         @db.VarChar(200)
+  zona               String?         @db.VarChar(100)
+  operador           String?         @db.VarChar(200)
   conta_contrato     String?         @db.VarChar(50)
   instalacao         String?         @db.VarChar(100)
   equipamento        String?         @db.VarChar(100)
@@ -114,13 +102,13 @@ model Identificacao {
   riscos              Risco[]
   tarefas             Tarefa[]
 
-  @@map("identificacao")
+  @@map("cliente")
 }
 
 model Inspecao {
   id               Int            @id @default(autoincrement())
   id_pt            String         @db.VarChar(50)
-  pt               Identificacao  @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt               Cliente        @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_auditor       Int
   auditor          Utilizador     @relation(fields: [id_auditor], references: [id])
   id_tarefa        Int?
@@ -151,7 +139,7 @@ model Inspecao {
 model Conformidade {
   id                   Int           @id @default(autoincrement())
   id_pt                String        @unique @db.VarChar(50)
-  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                   Cliente       @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao          Int?
   inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
   licenciamento        Boolean       @default(false)
@@ -172,7 +160,7 @@ model Conformidade {
 model Transformador {
   id                     Int           @id @default(autoincrement())
   id_pt                  String        @db.VarChar(50)
-  pt                     Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                     Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao            Int?
   inspecao               Inspecao?     @relation(fields: [id_inspecao], references: [id])
   num_transformador      Int           @default(1) @db.SmallInt
@@ -199,7 +187,7 @@ model Transformador {
 model MediaTensao {
   id                    Int           @id @default(autoincrement())
   id_pt                 String        @unique @db.VarChar(50)
-  pt                    Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                    Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao           Int?
   inspecao              Inspecao?     @relation(fields: [id_inspecao], references: [id])
   tipo_celas            String?       @db.VarChar(150)
@@ -218,7 +206,7 @@ model MediaTensao {
 model BaixaTensao {
   id                   Int           @id @default(autoincrement())
   id_pt                String        @unique @db.VarChar(50)
-  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                   Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao          Int?
   inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
   estado_qgbt          String?       @db.VarChar(100)
@@ -240,7 +228,7 @@ model BaixaTensao {
 model Seguranca {
   id                   Int           @id @default(autoincrement())
   id_pt                String        @unique @db.VarChar(50)
-  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                   Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao          Int?
   inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
   resistencia_terra    Float?
@@ -259,7 +247,7 @@ model Seguranca {
 model Infraestrutura {
   id              Int           @id @default(autoincrement())
   id_pt           String        @unique @db.VarChar(50)
-  pt              Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt              Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao     Int?
   inspecao        Inspecao?     @relation(fields: [id_inspecao], references: [id])
   estado_cabine   String?       @db.VarChar(100)
@@ -281,7 +269,7 @@ model Tarefa {
   id_auditor      Int
   auditor         Utilizador     @relation(fields: [id_auditor], references: [id])
   id_pt           String?        @db.VarChar(50)
-  pt              Identificacao? @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt              Cliente? @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   data_prevista   DateTime       @db.Date
   data_inicio     DateTime?
   data_fim        DateTime?
@@ -297,7 +285,7 @@ model Tarefa {
 model Monitorizacao {
   id                   Int           @id @default(autoincrement())
   id_pt                String        @unique @db.VarChar(50)
-  pt                   Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                   Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao          Int?
   inspecao             Inspecao?     @relation(fields: [id_inspecao], references: [id])
   scada                Boolean       @default(false)
@@ -316,7 +304,7 @@ model Monitorizacao {
 model Manutencao {
   id               Int           @id @default(autoincrement())
   id_pt            String        @unique @db.VarChar(50)
-  pt               Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt               Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao      Int?
   inspecao         Inspecao?     @relation(fields: [id_inspecao], references: [id])
   historico_falhas String?       @db.Text
@@ -335,7 +323,7 @@ model Manutencao {
 model Risco {
   id                    Int           @id @default(autoincrement())
   id_pt                 String        @db.VarChar(50)
-  pt                    Identificacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  pt                    Cliente @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_inspecao           Int?
   inspecao              Inspecao?     @relation(fields: [id_inspecao], references: [id])
   sobrecarga            Boolean       @default(false)

@@ -11,14 +11,10 @@ import {
   FileText,
   Filter,
   ArrowUpDown,
-  CheckCircle2,
-  AlertCircle,
-  FileSpreadsheet,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
-import ExcelImportModal from '../components/ExcelImportModal';
 
 export default function SubstationManagement() {
   const [subestacoes, setSubestacoes] = useState([]);
@@ -29,9 +25,11 @@ export default function SubstationManagement() {
   const [estado, setEstado] = useState('');
   const [potencia, setPotencia] = useState('');
   const [categoriaTarifa, setCategoriaTarifa] = useState('');
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
-  
+  const [expandedSubs, setExpandedSubs] = useState({});
+  const [subPts, setSubPts] = useState({});
+  const [loadingPts, setLoadingPts] = useState({});
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -40,7 +38,7 @@ export default function SubstationManagement() {
 
   const tableRef = useRef(null);
   const navigate = useNavigate();
- 
+
   useEffect(() => {
     fetchMetadata();
   }, []);
@@ -49,7 +47,7 @@ export default function SubstationManagement() {
     const delayDebounceFn = setTimeout(() => {
       fetchSubestacoes();
     }, 500);
- 
+
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, municipio, estado, currentPage, potencia, categoriaTarifa]);
 
@@ -66,7 +64,7 @@ export default function SubstationManagement() {
         limit
       };
       const response = await api.get('/subestacoes', { params });
-      
+
       // Handle paginated response structure
       if (response.data.data) {
         setSubestacoes(response.data.data);
@@ -77,7 +75,7 @@ export default function SubstationManagement() {
         setTotalPages(1); // If no pagination data, assume 1 page
         setTotalRecords(response.data.length);
       }
-      
+
       // Rolar para o topo da tabela após carregar
       if (tableRef.current) {
         tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -114,6 +112,27 @@ export default function SubstationManagement() {
     }
   }
 
+  async function fetchSubClientes(subId) {
+    try {
+      setLoadingPts(prev => ({ ...prev, [subId]: true }));
+      const response = await api.get('/clientes', { params: { id_subestacao: subId } });
+      setSubPts(prev => ({ ...prev, [subId]: response.data.data || response.data }));
+    } catch (error) {
+      console.error('Erro ao buscar clientes da subestação', error);
+    } finally {
+      setLoadingPts(prev => ({ ...prev, [subId]: false }));
+    }
+  }
+
+  const toggleSub = (subId) => {
+    const isExpanding = !expandedSubs[subId];
+    setExpandedSubs(prev => ({ ...prev, [subId]: isExpanding }));
+
+    if (isExpanding && !subPts[subId]) {
+      fetchSubClientes(subId);
+    }
+  };
+
   const getLocalidadeQuery = (sub) => {
     const localidadeSelecionada = municipio || sub.municipio;
     return localidadeSelecionada
@@ -140,13 +159,6 @@ export default function SubstationManagement() {
           <p className="text-sm text-[#747686] font-medium uppercase tracking-wider opacity-60">Inventário e controlo de ativos</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-2 bg-white border-2 border-[#0d3fd1] text-[#0d3fd1] px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#eff4ff] transition-all shadow-sm active:scale-95 uppercase"
-          >
-            <FileSpreadsheet className="w-5 h-5" />
-            Importar Excel
-          </button>
           <Link to="/subestacoes/nova">
             <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
               <Plus className="w-5 h-5" />
@@ -174,11 +186,11 @@ export default function SubstationManagement() {
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#747686] w-4.5 h-4.5 group-focus-within:text-[#0d3fd1]" />
           </div>
- 
+
           <div className="flex gap-3">
             <select
               value={municipio}
-              onChange={(e) => {setMunicipio(e.target.value); setCurrentPage(1);}}
+              onChange={(e) => { setMunicipio(e.target.value); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todos Municípios</option>
@@ -188,7 +200,7 @@ export default function SubstationManagement() {
             </select>
             <select
               value={estado}
-              onChange={(e) => {setEstado(e.target.value); setCurrentPage(1);}}
+              onChange={(e) => { setEstado(e.target.value); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todos Estados</option>
@@ -199,7 +211,7 @@ export default function SubstationManagement() {
 
             <select
               value={categoriaTarifa}
-              onChange={(e) => {setCategoriaTarifa(e.target.value); setCurrentPage(1);}}
+              onChange={(e) => { setCategoriaTarifa(e.target.value); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Todas Tarifas</option>
@@ -210,7 +222,7 @@ export default function SubstationManagement() {
 
             <select
               value={potencia}
-              onChange={(e) => {setPotencia(e.target.value); setCurrentPage(1);}}
+              onChange={(e) => { setPotencia(e.target.value); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
             >
               <option value="">Potência (Todas)</option>
@@ -219,7 +231,7 @@ export default function SubstationManagement() {
               ))}
             </select>
 
-            <button 
+            <button
               onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setPotencia(''); setCategoriaTarifa(''); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all"
             >
@@ -233,17 +245,15 @@ export default function SubstationManagement() {
           <table className="w-full text-left border-collapse min-w-[1500px]">
             <thead>
               <tr className="bg-[#243141] text-white">
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Localidade</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Conta Contrato</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">PT (Proprietário)</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Instalação</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Equipamento</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Parceiro de Negócios</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Cat. Tarifa</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Txt. categoria tarifa</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Potência</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Distrito/Comuna</th>
-                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Bairro</th>
+                <th className="px-5 py-4 w-10 text-center border-r border-white/5 whitespace-nowrap">#</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Município</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Código Operacional</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Nome da Subestação</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Tipo</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">V Entrada (kV)</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">V Saída (kV)</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Capacidade (MVA)</th>
+                <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Status</th>
                 <th className="px-5 py-4 text-[9px] font-black uppercase tracking-widest text-center sticky right-0 bg-[#243141] z-10">Ações</th>
               </tr>
             </thead>
@@ -256,68 +266,128 @@ export default function SubstationManagement() {
                 </tr>
               ) : Object.entries(groupedSubestacoes).map(([groupName, items]) => (
                 <React.Fragment key={groupName}>
-                  <tr 
+                  <tr
                     onClick={() => toggleGroup(groupName)}
                     className="bg-[#eff4ff] border-y border-[#c4c5d7]/20 cursor-pointer hover:bg-[#e6edff] transition-colors"
                   >
                     <td colSpan="12" className="px-5 py-3 font-black uppercase tracking-widest text-[#0d3fd1] text-xs">
                       <div className="flex items-center gap-2">
                         {expandedGroups[groupName] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                        {groupName} 
-                        <span className="text-[#0d3fd1] text-[10px] ml-2 font-bold bg-[#d1dffe] px-2 py-0.5 rounded-full">{items.length} ativos</span>
+                        {groupName}
+                        <span className="text-[#0d3fd1] text-[10px] ml-2 font-bold bg-[#d1dffe] px-2 py-0.5 rounded-full">{items.length} unidades</span>
                       </div>
                     </td>
                   </tr>
                   {expandedGroups[groupName] && items.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-[#f8faff] transition-colors group text-[#0f1c2c] text-[11px]">
-                      <td className="px-5 py-4 font-bold text-[#747686] pl-10 border-l-[3px] border-[#0d3fd1]">{sub.municipio || '---'}</td>
-                      <td className="px-5 py-4 font-mono font-black text-[#0d3fd1]">{sub.conta_contrato || '---'}</td>
-                      <td className="px-5 py-4 font-bold uppercase">{sub.proprietario || sub.nome}</td>
-                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.instalacao || '---'}</td>
-                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.equipamento || '---'}</td>
-                      <td className="px-5 py-4 text-[#444655] font-medium">{sub.parceiro_negocios || '---'}</td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="bg-[#243141]/5 px-2 py-0.5 rounded text-[9px] font-black text-[#243141]">{sub.categoria_tarifa || '---'}</span>
-                      </td>
-                      <td className="px-5 py-4 text-[#444655] font-bold uppercase">{sub.txt_categoria_tarifa || '---'}</td>
-                      <td className="px-5 py-4 text-center font-black">
-                        {sub.potencia_total_kva?.toLocaleString()} <span className="text-[9px] opacity-40">kVA</span>
-                      </td>
-                      <td className="px-5 py-4 text-[#444655] uppercase">{sub.distrito_comuna || '---'}</td>
-                      <td className="px-5 py-4 text-[#444655] uppercase">{sub.bairro || '---'}</td>
-                      <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
-                        <div className="flex justify-center gap-2">
+                    <React.Fragment key={sub.id}>
+                      <tr className={`${expandedSubs[sub.id] ? 'bg-[#fcfdff]' : 'hover:bg-[#f8faff]'} transition-colors group text-[#0f1c2c] text-[11px]`}>
+                        <td className="px-5 py-4 text-center border-r border-[#c4c5d7]/10">
                           <button
-                            onClick={() => navigate(`/subestacoes/${sub.id}/auditoria${getLocalidadeQuery(sub)}`)}
-                            className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                            title="Auditoria"
+                            onClick={() => toggleSub(sub.id)}
+                            className={`p-1 rounded transition-colors ${expandedSubs[sub.id] ? 'bg-[#0d3fd1] text-white' : 'hover:bg-[#0d3fd1]/10 text-[#0d3fd1]'}`}
                           >
-                            <BarChart3 className="w-3.5 h-3.5" />
+                            {expandedSubs[sub.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           </button>
-                          <button
-                            onClick={() => navigate(`/pts${getLocalidadeQuery(sub)}`)}
-                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
-                            title="Relatório"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
-                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(sub.id, sub.codigo)}
-                            className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-5 py-4 font-bold text-[#747686] border-l-[3px] border-[#0d3fd1]">{sub.municipio || '---'}</td>
+                        <td className="px-5 py-4 font-mono font-black text-[#0d3fd1]">{sub.codigo_operacional || '---'}</td>
+                        <td className="px-5 py-4 font-bold uppercase">{sub.nome}</td>
+                        <td className="px-5 py-4 text-center font-medium">{sub.tipo || '---'}</td>
+                        <td className="px-5 py-4 text-center text-[#444655] font-black">{sub.tensao_kv_entrada || '0'} <span className="text-[9px] opacity-40">kV</span></td>
+                        <td className="px-5 py-4 text-center text-[#444655] font-black">{sub.tensao_kv_saida || '0'} <span className="text-[9px] opacity-40">kV</span></td>
+                        <td className="px-5 py-4 text-center font-black">
+                          {sub.capacidade_total_mva || '0'} <span className="text-[9px] opacity-40">MVA</span>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${sub.status === 'Ativa' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>{sub.status || 'Ativa'}</span>
+                        </td>
+                        <td className="px-5 py-4 sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-[#f8faff] z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] transition-colors">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => navigate(`/subestacoes/${sub.id}/auditoria${getLocalidadeQuery(sub)}`)}
+                              className="p-2 bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
+                              title="Auditoria"
+                            >
+                              <BarChart3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/relatorios-clientes${getLocalidadeQuery(sub)}`)}
+                              className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
+                              title="Relatório"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
+                              className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(sub.id, sub.codigo)}
+                              className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedSubs[sub.id] && (
+                        <tr className="bg-[#fcfdff]">
+                          <td colSpan="11" className="px-0 py-0">
+                            <div className="p-6 bg-[#f8faff] border-y border-[#c4c5d7]/20 shadow-inner">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Zap className="w-4 h-4 text-[#0d3fd1]" />
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-[#243141]">Ativos (Clientes / Postos de Transformação) registrados nesta unidade</h4>
+                              </div>
+
+                              {loadingPts[sub.id] ? (
+                                <div className="flex items-center gap-3 p-4">
+                                  <div className="w-4 h-4 border-2 border-[#0d3fd1] border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-[9px] font-bold text-[#747686] uppercase">Carregando ativos técnicos...</span>
+                                </div>
+                              ) : subPts[sub.id]?.length > 0 ? (
+                                <div className="rounded-xl border border-[#c4c5d7]/20 overflow-hidden bg-white shadow-sm">
+                                  <table className="w-full text-left text-[10px]">
+                                    <thead>
+                                      <tr className="bg-[#243141] text-white">
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest">Cód. Cliente (PT)</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest">Proprietário</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest">Equipamento</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest">Instalação</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Potência</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Ações</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#c4c5d7]/10">
+                                      {subPts[sub.id].map(pt => (
+                                        <tr key={pt.id} className="hover:bg-[#fcfdff] transition-colors">
+                                          <td className="px-4 py-2 font-black text-[#0d3fd1]">{pt.id_pt}</td>
+                                          <td className="px-4 py-2 font-bold opacity-80 uppercase">{pt.proprietario || 'N/D'}</td>
+                                          <td className="px-4 py-2 font-mono">{pt.equipamento || '---'}</td>
+                                          <td className="px-4 py-2">{pt.instalacao || '---'}</td>
+                                          <td className="px-4 py-2 text-center font-black">{pt.potencia_kva} kVA</td>
+                                          <td className="px-4 py-2 text-center">
+                                            <Link to={`/ficha-tecnica/${pt.id_pt}`} className="text-[#0d3fd1] hover:underline font-black uppercase text-[8px]">Ver Ficha</Link>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className="p-8 text-center bg-white rounded-xl border-2 border-dashed border-[#c4c5d7]/20">
+                                  <p className="text-[10px] font-bold text-[#747686] uppercase tracking-widest opacity-40 italic">Nenhum Cliente (Ativo) vinculado a esta subestação até o momento.</p>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </React.Fragment>
               ))}
@@ -330,7 +400,7 @@ export default function SubstationManagement() {
             Mostrando <span className="text-[#0f1c2c]">{subestacoes.length}</span> de <span className="text-[#0f1c2c]">{totalRecords}</span> resultados
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
@@ -342,17 +412,16 @@ export default function SubstationManagement() {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex-shrink-0 ${
-                    currentPage === i + 1 
-                      ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/20' 
-                      : 'text-[#747686] hover:bg-[#eff4ff]'
-                  }`}
+                  className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex-shrink-0 ${currentPage === i + 1
+                    ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/20'
+                    : 'text-[#747686] hover:bg-[#eff4ff]'
+                    }`}
                 >
                   {i + 1}
                 </button>
               ))}
             </div>
-            <button 
+            <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
@@ -362,15 +431,6 @@ export default function SubstationManagement() {
           </div>
         </div>
       </div>
-
-      <ExcelImportModal 
-        isOpen={isImportModalOpen} 
-        onClose={() => setIsImportModalOpen(false)} 
-        onImportSuccess={() => {
-          fetchSubestacoes();
-          fetchMetadata();
-        }}
-      />
     </div>
   );
 }

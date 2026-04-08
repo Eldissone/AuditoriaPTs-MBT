@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   LogOut,
   ClipboardList,
-  CheckSquare
+  CheckSquare,
+  Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -32,8 +33,8 @@ export default function Navbar() {
   const searchRef = useRef(null);
 
   useEffect(() => {
-    // Fetch all PTs for searching
-    api.get('/pts').then(res => setAllPTs(res.data)).catch(console.error);
+    // Fetch all Clientes for searching
+    api.get('/clientes').then(res => setAllPTs(res.data)).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -76,14 +77,14 @@ export default function Navbar() {
   const allMenuItems = [
     { name: 'Painel Central', icon: LayoutDashboard, path: '/' },
     { name: 'Subestações', icon: MapPin, path: '/subestacoes' },
+    { name: 'Gestão', icon: Database, path: '/gestao-clientes' },
     { name: 'Minhas Tarefas', icon: CheckSquare, path: '/minhas-tarefas' },
-    { name: 'Auditorias PT', icon: FileText, path: '/pts' },
+    { name: 'Relatórios', icon: FileText, path: '/relatorios-clientes' },
     { name: 'Ficha Técnica', icon: History, path: '/ficha-tecnica' },
-    { name: 'Ajustes', icon: Settings, path: '/configuracoes' },
   ];
 
   if (user?.role === 'admin') {
-    allMenuItems.splice(5, 0, { name: 'Utilizadores', icon: ShieldAlert, path: '/usuarios' });
+    allMenuItems.splice(5, 0, { name: 'Utilizadores', icon: User, path: '/usuarios' });
     allMenuItems.splice(3, 0, { name: 'Tarefas (Gestão)', icon: ClipboardList, path: '/tarefas' });
   }
 
@@ -130,7 +131,7 @@ export default function Navbar() {
       </div>
 
       {/* Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
+      <div className="max-w-full mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
         {/* Horizontal Desktop Menu */}
         <nav className="hidden md:flex items-center gap-1">
           {menuItems.map((item) => (
@@ -153,7 +154,7 @@ export default function Navbar() {
         <div className="flex-grow md:flex-grow-0 max-w-sm ml-auto relative group" ref={searchRef}>
           <input
             type="text"
-            placeholder="Procurar PT..."
+            placeholder="Procurar Cliente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyPress}
@@ -183,7 +184,7 @@ export default function Navbar() {
                 ))
               ) : (
                 <div className="px-4 py-3 text-[10px] text-white/40 font-bold uppercase tracking-widest text-center">
-                  Nenhum PT encontrado
+                  Nenhum Cliente encontrado
                 </div>
               )}
             </div>
