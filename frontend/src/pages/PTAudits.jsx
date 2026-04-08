@@ -28,6 +28,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import QuickAuditModal from '../components/QuickAuditModal';
 
 export default function PTAudits() {
   const navigate = useNavigate();
@@ -47,11 +48,14 @@ export default function PTAudits() {
   const [ordenacaoRelatorio, setOrdenacaoRelatorio] = useState('recentes');
   const [modoRelatorio, setModoRelatorio] = useState(() => localStorage.getItem('@PTAS:ptaudits:modo') || 'completo');
   const [limiteExecutivo, setLimiteExecutivo] = useState(() => Number(localStorage.getItem('@PTAS:ptaudits:limiteExecutivo')) || 12);
+  const [auditTarefa, setAuditTarefa] = useState(null);
   const [formData, setFormData] = useState({
     id_pt: '',
     id_tarefa: '',
     tipo: 'Preventiva',
     data_inspecao: new Date().toISOString().split('T')[0],
+    resultado: 'Em Avaliação',
+    nivel_urgencia: 'Baixo',
     observacoes: '',
     conformidade: {
       licenciamento: false,
@@ -87,7 +91,8 @@ export default function PTAudits() {
       desequilibrio_fases: false,
       falhas_isolamento: false,
       redundancia: false
-    }
+    },
+    fotos: []
   });
 
   useEffect(() => {
@@ -226,7 +231,10 @@ export default function PTAudits() {
         observacoes: fullAudit.observacoes || '',
         conformidade: fullAudit.conformidade?.[0] || formData.conformidade,
         transformador: fullAudit.transformadores?.[0] || formData.transformador,
-        seguranca: fullAudit.seguranca?.[0] || formData.seguranca
+        seguranca: fullAudit.seguranca?.[0] || formData.seguranca,
+        resultado: fullAudit.resultado || 'Em Avaliação',
+        nivel_urgencia: fullAudit.nivel_urgencia || 'Baixo',
+        fotos: fullAudit.fotos || []
       });
       
       setSelectedAuditId(fullAudit.id);
@@ -250,7 +258,10 @@ export default function PTAudits() {
         observacoes: fullAudit.observacoes || '',
         conformidade: fullAudit.conformidade?.[0] || formData.conformidade,
         transformador: fullAudit.transformadores?.[0] || formData.transformador,
-        seguranca: fullAudit.seguranca?.[0] || formData.seguranca
+        seguranca: fullAudit.seguranca?.[0] || formData.seguranca,
+        resultado: fullAudit.resultado || 'Em Avaliação',
+        nivel_urgencia: fullAudit.nivel_urgencia || 'Baixo',
+        fotos: fullAudit.fotos || []
       });
       
       setSelectedAuditId(fullAudit.id);
@@ -322,6 +333,8 @@ export default function PTAudits() {
         'PT ID',
         'Proprietário',
         'Tipo',
+        'Resultado',
+        'Urgência',
         'Data da Auditoria',
         'Subestação',
         'Localidade',
@@ -334,6 +347,8 @@ export default function PTAudits() {
         audit.id_pt,
         audit.pt?.proprietario || '',
         audit.tipo || '',
+        audit.resultado || 'Em Avaliação',
+        audit.nivel_urgencia || 'N/A',
         audit.data_inspecao ? new Date(audit.data_inspecao).toLocaleDateString('pt-PT') : '',
         audit.pt?.subestacao?.nome || '',
         audit.pt?.municipio || audit.pt?.subestacao?.municipio || '',
@@ -536,6 +551,8 @@ export default function PTAudits() {
                   id_tarefa: '',
                   tipo: 'Preventiva',
                   data_inspecao: new Date().toISOString().split('T')[0],
+                  resultado: 'Em Avaliação',
+                  nivel_urgencia: 'Baixo',
                   observacoes: '',
                   conformidade: {
                     licenciamento: false,
@@ -641,30 +658,49 @@ export default function PTAudits() {
               <thead>
                 <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">PT ID</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Resultado</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Proprietário</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico/Auditor</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center font-mono">Urgência</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Data</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Subestação</th>
                   <th className="px-8 py-5 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c5d7]/10">
                 {auditsParaExibicao.map((audit, idx) => (
                   <tr key={audit.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors group`}>
-                    <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-[#c4c5d7]/10 text-center font-mono">
+                    <td className="px-8 py-5 text-sm font-bold text-[#0f1c2c] border-r border-[#c4c5d7]/10 text-center font-mono relative">
                       {audit.id_pt}
+                      {audit.fotos?.length > 0 && (
+                        <div className="absolute top-1 right-1">
+                          <Plus className="w-2.5 h-2.5 text-emerald-500" />
+                          <div className="bg-emerald-500 w-1.5 h-1.5 rounded-full absolute -top-0.5 -right-0.5 animate-pulse" />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
+                      <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${
+                        audit.resultado === 'Conforme' ? 'bg-emerald-500' :
+                        audit.resultado === 'Não Conforme' ? 'bg-amber-500' :
+                        audit.resultado === 'Urgente' ? 'bg-red-500' : 'bg-blue-500'
+                      }`}>
+                        {audit.resultado || 'N/D'}
+                      </span>
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-[#c4c5d7]/10">
                       {audit.pt?.proprietario || 'N/A'}
                     </td>
-                    <td className="px-8 py-5 text-sm font-black text-[#0d3fd1] border-r border-[#c4c5d7]/10 uppercase tracking-tight">
-                      {audit.auditor?.nome || 'N/A'}
+                    <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
+                      {audit.nivel_urgencia && (audit.resultado === 'Não Conforme' || audit.resultado === 'Urgente') ? (
+                         <span className={`inline-flex px-2 py-1 rounded-md text-[8px] font-black text-white uppercase ${
+                           audit.nivel_urgencia === 'Crítico' ? 'bg-red-700' :
+                           audit.nivel_urgencia === 'Alto' ? 'bg-orange-600' : 'bg-amber-600'
+                         }`}>
+                           {audit.nivel_urgencia}
+                         </span>
+                      ) : <span className="text-[#c4c5d7]">—</span>}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono text-center">
                       {new Date(audit.data_inspecao).toLocaleDateString('pt-PT')}
-                    </td>
-                    <td className="px-8 py-5 text-sm font-bold text-[#747686] capitalize tracking-tighter border-r border-[#c4c5d7]/10">
-                      {audit.pt?.subestacao?.nome || 'Sekele'}
                     </td>
                     <td className="px-8 py-5 print-hide">
                       <div className="flex justify-center gap-2 print-hide">
@@ -692,7 +728,7 @@ export default function PTAudits() {
                 ))}
                 {auditsParaExibicao.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                    <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
                       Nenhuma auditoria registada
                     </td>
                   </tr>
@@ -708,11 +744,9 @@ export default function PTAudits() {
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Auditor</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Tarefa/PT</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Proprietário/Localidade</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">GPS</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Início</th>
                   <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50">Fim (Conclusão)</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] border-r border-emerald-200/50 text-center">Relatório Tarefa</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] text-center">Fluxo PT</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-100/50">
@@ -727,18 +761,6 @@ export default function PTAudits() {
                     <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50 uppercase">
                       {(tarefa.pt?.subestacao?.proprietario || 'N/A')} / {(tarefa.pt?.subestacao?.municipio || tarefa.pt?.municipio || 'N/A')}
                     </td>
-                    <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50">
-                      {tarefa.pt?.gps ? (
-                        <a
-                          href={`https://www.google.com/maps?q=${encodeURIComponent(tarefa.pt.gps)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[#0d3fd1] hover:underline"
-                        >
-                          {tarefa.pt.gps}
-                        </a>
-                      ) : 'N/A'}
-                    </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-emerald-50 font-mono">
                       {tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '-'}
                     </td>
@@ -746,27 +768,25 @@ export default function PTAudits() {
                       {tarefa.data_fim ? new Date(tarefa.data_fim).toLocaleString('pt-PT') : '-'}
                     </td>
                     <td className="px-8 py-5">
-                       <span className="flex justify-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md max-w-max mx-auto">
-                        Validado Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
-                       </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      {tarefa.id_pt && tarefa.pt?.subestacao?.id ? (
+                      <div className="flex gap-2 justify-center">
                         <button
-                          onClick={() => navigate(`/subestacoes/${tarefa.pt.subestacao.id}/auditoria?localidade=${encodeURIComponent(tarefa.pt.subestacao.municipio || '')}`)}
-                          className="mx-auto flex items-center justify-center px-3 py-2 bg-white border border-emerald-200 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all"
+                          onClick={() => setAuditTarefa(tarefa)}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md"
                         >
                           Auditar PT
                         </button>
-                      ) : (
-                        <span className="text-[10px] font-bold text-[#747686] uppercase">N/A</span>
-                      )}
+                        {tarefa.data_fim && (
+                          <span className="flex items-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md">
+                            Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {tarefasParaExibicao.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
+                    <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
                       Nenhuma tarefa de auditoria concluída
                     </td>
                   </tr>
@@ -774,6 +794,18 @@ export default function PTAudits() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {auditTarefa && (
+          <QuickAuditModal
+            tarefa={auditTarefa}
+            onClose={() => setAuditTarefa(null)}
+            onDone={() => { 
+               setAuditTarefa(null); 
+               // Trigger refresh of data
+               setView('list'); 
+            }}
+          />
         )}
       </div>
     );
@@ -817,6 +849,53 @@ export default function PTAudits() {
         <form onSubmit={handleSubmit} className="p-10 flex-grow flex flex-col">
           {step === 1 && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              {/* Resultado & Urgencia no passo 1 */}
+              <div className="bg-[#fcfdff] border border-[#0d3fd1]/10 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                    <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Resultado da Auditoria *</label>
+                    <div className="flex gap-2">
+                       {['Conforme', 'Não Conforme', 'Urgente', 'Em Avaliação'].map(r => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setFormData({...formData, resultado: r})}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${
+                               formData.resultado === r 
+                               ? r === 'Conforme' ? 'bg-emerald-500 text-white border-transparent' :
+                                 r === 'Não Conforme' ? 'bg-amber-500 text-white border-transparent' :
+                                 r === 'Urgente' ? 'bg-red-500 text-white border-transparent' : 'bg-blue-500 text-white border-transparent'
+                               : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
+                            }`}
+                          >
+                             {r}
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+                 {['Não Conforme', 'Urgente', 'Em Avaliação'].includes(formData.resultado) && (
+                   <div>
+                      <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Nível de Urgência</label>
+                      <div className="flex gap-2">
+                        {['Baixo', 'Médio', 'Alto', 'Crítico'].map(u => (
+                           <button
+                             key={u}
+                             type="button"
+                             onClick={() => setFormData({...formData, nivel_urgencia: u})}
+                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${
+                               formData.nivel_urgencia === u 
+                               ? u === 'Crítico' ? 'bg-red-700 text-white border-transparent' :
+                                 u === 'Alto' ? 'bg-orange-600 text-white border-transparent' : 'bg-amber-600 text-white border-transparent'
+                               : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
+                             }`}
+                           >
+                              {u}
+                           </button>
+                        ))}
+                      </div>
+                   </div>
+                 )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Tarefa Associada (Opcional)</label>
@@ -1109,12 +1188,36 @@ export default function PTAudits() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Observações Finais</label>
                 <textarea
-                  className="w-full h-40 bg-[#f8faff] border border-[#c4c5d7]/20 rounded-2xl py-6 px-8 text-sm font-medium text-[#444655] resize-none"
+                  className="w-full h-24 bg-[#f8faff] border border-[#c4c5d7]/20 rounded-2xl py-6 px-8 text-sm font-medium text-[#444655] resize-none"
                   placeholder="Descreva as conclusões técnicas da auditoria..."
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                 />
               </div>
+
+              {/* Galeria de Fotos de Campo (se existirem) */}
+              {formData.fotos?.length > 0 && (
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-[#eff4ff] px-3 py-1.5 rounded-lg inline-block shadow-sm">
+                    Evidências Fotográficas ({formData.fotos.length})
+                  </h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {formData.fotos.map((foto, i) => (
+                      <div key={i} className="group relative bg-white p-2 rounded-2xl border border-[#c4c5d7]/10 shadow-sm hover:shadow-md transition-all">
+                        <img 
+                          src={foto.data} 
+                          alt={foto.label} 
+                          className="w-full h-32 object-cover rounded-xl cursor-pointer"
+                          onClick={() => window.open(foto.data, '_blank')}
+                        />
+                        <div className="absolute inset-x-2 bottom-2 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <p className="text-[8px] text-white font-black uppercase tracking-wider truncate">{foto.label}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-4 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
                 <AlertCircle className="w-6 h-6 text-yellow-600" />

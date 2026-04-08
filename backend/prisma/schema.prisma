@@ -130,6 +130,7 @@ model Inspecao {
   resultado        String?        @db.VarChar(50)
   nivel_urgencia   String?        @db.VarChar(20)
   observacoes      String?        @db.Text
+  fotos            Json?          // Array de { label, data (base64), tipo }
   proxima_inspecao DateTime?      @db.Date
   criado_em        DateTime       @default(now())
   atualizado_em    DateTime       @updatedAt

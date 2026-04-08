@@ -275,21 +275,27 @@ export default function Dashboard() {
 
   // Memoized stats calculation
   const stats = useMemo(() => {
-    const displayedSubs = filters.id_subestacao
-      ? groupedSubestacoes.filter(s => s.id === Number(filters.id_subestacao))
-      : groupedSubestacoes;
+    let displayedSubs = groupedSubestacoes;
+    
+    // Apply filters to stats calculation
+    if (filters.id_subestacao) {
+      displayedSubs = displayedSubs.filter(s => s.id === Number(filters.id_subestacao));
+    } else if (filters.municipio) {
+      displayedSubs = displayedSubs.filter(s => s.municipio === filters.municipio);
+    }
 
     const uniqueLocais = displayedSubs.length;
-
+    const totalPotencia = displayedSubs.reduce((acc, s) => acc + Number(s.sum_potencia || 0), 0);
     const completedTasks = tasks.filter(t => t.status === 'Concluída' || t.status === 'Concluído' || t.status === 'completed' || t.status === 'done').length;
 
     return {
       subestacoes: displayedSubs.length,
       pts: pts.length,
       locais: uniqueLocais,
+      totalPotencia: totalPotencia,
       tasksCompleted: completedTasks,
     };
-  }, [filters, subestacoes, pts, tasks]);
+  }, [filters, groupedSubestacoes, pts, tasks]);
 
   // Memoized filter options
   const { municipios, bairros } = useMemo(() => ({
@@ -336,6 +342,7 @@ export default function Dashboard() {
 
   const cards = useMemo(() => [
     { title: 'Subestações/Localidades', value: stats.locais, icon: Layers, color: '#0d3fd1', label: 'Distritos/Mun.' },
+    { title: 'Capacidade Instalada', value: `${stats.totalPotencia.toLocaleString()} kVA`, icon: Zap, color: '#fb923c', label: 'Base Gerativa' },
     { title: 'Proprietários (PT)', value: stats.pts, icon: Zap, color: '#5fff9b', label: filters.estado_operacional || 'Em Operação' },
     { title: 'Tarefas Realizadas', value: stats.tasksCompleted, icon: CheckCircle2, color: '#0dd114', label: 'Concluídas' }
   ], [stats, filters.estado_operacional]);
