@@ -76,6 +76,7 @@ export default function ClientManagement() {
       if (activeFilters.search) params.search = activeFilters.search;
       if (activeFilters.municipio) params.municipio = activeFilters.municipio;
       if (activeFilters.estado_operacional) params.estado_operacional = activeFilters.estado_operacional;
+      if (activeFilters.nivel_tensao) params.nivel_tensao = activeFilters.nivel_tensao;
 
       const response = await api.get('/clientes', { params });
 
@@ -101,8 +102,14 @@ export default function ClientManagement() {
   const handleFilterChange = useCallback((key, value) => {
     const updated = { ...filters, [key]: value };
     setFilters(updated);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setActiveFilters(updated), 400);
+
+    if (key === 'search') {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => setActiveFilters(updated), 500);
+    } else {
+      // Para selects, aplicamos imediatamente
+      setActiveFilters(updated);
+    }
   }, [filters]);
 
   const clearFilters = useCallback(() => {
@@ -344,7 +351,32 @@ export default function ClientManagement() {
             {/* BADGES + CLEAR */}
             {hasActiveFilters && (
               <div className="flex items-center gap-2 flex-wrap ml-2">
-                {/* teus badges aqui */}
+                {activeFilters.municipio && (
+                  <span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-[#0d3fd1]/10">
+                    <MapPin className="w-3 h-3" /> {activeFilters.municipio}
+                  </span>
+                )}
+                {activeFilters.estado_operacional && (
+                  <span className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1 rounded-lg border ${statusColor(activeFilters.estado_operacional)}`}>
+                    <Activity className="w-3 h-3" /> {activeFilters.estado_operacional}
+                  </span>
+                )}
+                {activeFilters.nivel_tensao && (
+                  <span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-purple-100">
+                    <Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}
+                  </span>
+                )}
+                {activeFilters.search && (
+                  <span className="flex items-center gap-1 bg-gray-50 text-gray-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-gray-100">
+                    <Search className="w-3 h-3" /> "{activeFilters.search}"
+                  </span>
+                )}
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 transition-all active:scale-95"
+                >
+                  <X className="w-3 h-3" /> Limpar
+                </button>
               </div>
             )}
 

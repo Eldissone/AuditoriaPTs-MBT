@@ -2,48 +2,46 @@ const prisma = require('../../database/client');
 
 class ClienteRepository {
   async getAll(filters = {}) {
-    const { search, municipio, localidade, id_subestacao, estado_operacional, page, limit } = filters;
-    const where = {};
+    const { search, municipio, localidade, id_subestacao, estado_operacional, nivel_tensao, page, limit } = filters;
+    const where = { AND: [] };
 
     if (id_subestacao) {
-      where.id_subestacao = Number(id_subestacao);
+      where.AND.push({ id_subestacao: Number(id_subestacao) });
     }
 
     if (estado_operacional) {
-      where.estado_operacional = estado_operacional;
+      where.AND.push({ estado_operacional: { equals: estado_operacional, mode: 'insensitive' } });
     }
 
     if (municipio) {
-      where.municipio = municipio;
+      where.AND.push({ municipio: { equals: municipio, mode: 'insensitive' } });
+    }
+
+    if (nivel_tensao) {
+      where.AND.push({ nivel_tensao: { equals: nivel_tensao, mode: 'insensitive' } });
     }
 
     if (localidade) {
-      where.OR = [
-        { municipio: localidade },
-        { subestacao: { municipio: localidade } },
-      ];
+      where.AND.push({
+        OR: [
+          { municipio: localidade },
+          { subestacao: { municipio: localidade } },
+        ]
+      });
     }
 
     if (search) {
-      const searchWhere = {
+      where.AND.push({
         OR: [
           { id_pt: { contains: search, mode: 'insensitive' } },
           { proprietario: { contains: search, mode: 'insensitive' } },
           { conta_contrato: { contains: search, mode: 'insensitive' } },
           { equipamento: { contains: search, mode: 'insensitive' } },
         ]
-      };
-
-      if (where.OR) {
-        where.AND = [
-          { OR: where.OR },
-          searchWhere
-        ];
-        delete where.OR;
-      } else {
-        Object.assign(where, searchWhere);
-      }
+      });
     }
+
+    if (where.AND.length === 0) delete where.AND;
 
     const orderBy = { id_pt: 'asc' };
     const include = { subestacao: true, responsavel: true };
