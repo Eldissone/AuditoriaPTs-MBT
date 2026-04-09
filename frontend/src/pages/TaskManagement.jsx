@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X, Camera, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 
 export default function TaskManagement() {
@@ -24,6 +24,8 @@ export default function TaskManagement() {
   });
   const [novoChecklistItem, setNovoChecklistItem] = useState('');
   const [detailTarefa, setDetailTarefa] = useState(null);
+  const [taskInspecoes, setTaskInspecoes] = useState([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null); // { src, label, index, total }
   const [localidadeModal, setLocalidadeModal] = useState('');
 
   const fetchDados = async () => {
@@ -49,6 +51,17 @@ export default function TaskManagement() {
   useEffect(() => {
     fetchDados();
   }, []);
+
+  // Fetch inspections when task detail opens
+  useEffect(() => {
+    if (!detailTarefa) { setTaskInspecoes([]); return; }
+    api.get('/inspecoes', { params: { id_tarefa: detailTarefa.id } })
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setTaskInspecoes(list);
+      })
+      .catch(() => setTaskInspecoes([]));
+  }, [detailTarefa]);
 
   const handleOpenModal = (tarefa = null) => {
     setLocalidadeModal('');
@@ -476,6 +489,47 @@ export default function TaskManagement() {
               </div>
             </div>
 
+            {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
+            {(() => {
+              const todasFotos = taskInspecoes.flatMap(ins =>
+                (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data: ins.data_inspecao }))
+              );
+              if (todasFotos.length === 0) return null;
+              return (
+                <div className="px-6 sm:px-8 pb-6">
+                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                    <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-[#0d3fd1]" />
+                      Evidências Fotográficas ({todasFotos.length})
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {todasFotos.map((foto, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setLightboxPhoto({ src: foto.data, label: foto.label, index: i, all: todasFotos })}
+                          className="relative group rounded-xl overflow-hidden aspect-square bg-[#f1f3f9] border border-[#c4c5d7]/20 hover:border-[#0d3fd1]/40 transition-all shadow-sm"
+                        >
+                          <img
+                            src={foto.data}
+                            alt={foto.label || `Foto ${i + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                            <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          {foto.label && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                              <p className="text-white text-[9px] font-bold truncate">{foto.label}</p>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-end">
               <button
                 onClick={() => setDetailTarefa(null)}
@@ -485,6 +539,47 @@ export default function TaskManagement() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Lightbox ────────────────────────────────────────────── */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); const prev = (lightboxPhoto.index - 1 + lightboxPhoto.all.length) % lightboxPhoto.all.length; const f = lightboxPhoto.all[prev]; setLightboxPhoto({ src: f.data, label: f.label, index: prev, all: lightboxPhoto.all }); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-3 rounded-full text-white transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          <div className="relative max-w-4xl max-h-[85vh] flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
+            <img
+              src={lightboxPhoto.src}
+              alt={lightboxPhoto.label}
+              className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-2xl"
+            />
+            <div className="flex items-center gap-4">
+              <p className="text-white text-sm font-bold">{lightboxPhoto.label || `Foto ${lightboxPhoto.index + 1}`}</p>
+              <span className="text-white/50 text-xs">{lightboxPhoto.index + 1} / {lightboxPhoto.all.length}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={e => { e.stopPropagation(); const next = (lightboxPhoto.index + 1) % lightboxPhoto.all.length; const f = lightboxPhoto.all[next]; setLightboxPhoto({ src: f.data, label: f.label, index: next, all: lightboxPhoto.all }); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-3 rounded-full text-white transition-all"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={() => setLightboxPhoto(null)}
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 p-2 rounded-full text-white transition-all"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       )}
 

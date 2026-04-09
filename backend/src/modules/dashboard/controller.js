@@ -3,7 +3,8 @@ const service = require('./service');
 class DashboardController {
   async getStats(req, res) {
     try {
-      const stats = await service.getStats();
+      const { municipio, status } = req.query;
+      const stats = await service.getStats({ municipio, status });
       res.json(stats);
     } catch (error) {
       console.error('Erro ao buscar estatísticas do dashboard:', error);

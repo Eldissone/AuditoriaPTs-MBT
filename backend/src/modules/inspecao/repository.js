@@ -56,8 +56,17 @@ class InspecaoRepository {
     return prisma.$transaction(async (tx) => {
       const inspecao = await tx.inspecao.create({
         data: {
-          ...baseData,
-          data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : new Date(),
+          id_pt:            baseData.id_pt,
+          id_auditor:       baseData.id_auditor   ? Number(baseData.id_auditor) : undefined,
+          id_tarefa:        baseData.id_tarefa     ? Number(baseData.id_tarefa)  : null,
+          tipo:             baseData.tipo          ?? 'Preventiva',
+          resultado:        baseData.resultado     ?? null,
+          nivel_urgencia:   baseData.nivel_urgencia ?? null,
+          observacoes:      baseData.observacoes   ?? null,
+          data_inspecao:    baseData.data_inspecao    ? new Date(baseData.data_inspecao)    : new Date(),
+          proxima_inspecao: baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
+          // fotos é um campo Json? — passa o array JS directamente ou null
+          fotos: Array.isArray(baseData.fotos) ? baseData.fotos : (baseData.fotos ?? null),
         },
       });
 
@@ -166,8 +175,18 @@ class InspecaoRepository {
       const inspecao = await tx.inspecao.update({
         where: { id: Number(id) },
         data: {
-          ...baseData,
-          data_inspecao: baseData.data_inspecao ? new Date(baseData.data_inspecao) : undefined,
+          id_pt:            baseData.id_pt           ?? existing.id_pt,
+          id_auditor:       baseData.id_auditor      ? Number(baseData.id_auditor) : existing.id_auditor,
+          id_tarefa:        baseData.id_tarefa !== undefined ? (baseData.id_tarefa ? Number(baseData.id_tarefa) : null) : existing.id_tarefa,
+          tipo:             baseData.tipo            ?? existing.tipo,
+          resultado:        baseData.resultado       !== undefined ? baseData.resultado       : existing.resultado,
+          nivel_urgencia:   baseData.nivel_urgencia  !== undefined ? baseData.nivel_urgencia  : existing.nivel_urgencia,
+          observacoes:      baseData.observacoes     !== undefined ? baseData.observacoes     : existing.observacoes,
+          data_inspecao:    baseData.data_inspecao    ? new Date(baseData.data_inspecao)    : undefined,
+          proxima_inspecao: baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
+          fotos: baseData.fotos !== undefined
+            ? (Array.isArray(baseData.fotos) ? baseData.fotos : baseData.fotos)
+            : existing.fotos,
         },
       });
 

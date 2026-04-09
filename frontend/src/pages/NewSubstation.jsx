@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Save, ArrowLeft, MapPin, Zap, Database, Activity, Calendar, Info
 } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function NewSubstation() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -155,6 +157,9 @@ export default function NewSubstation() {
         await api.post('/subestacoes', formData);
         alert('Subestação registada com sucesso!');
       }
+      // Invalidate dashboard cache so the map updates immediately with new coordinates
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-map'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       navigate('/subestacoes');
     } catch (err) {
       alert('Erro ao guardar: ' + (err.response?.data?.error || err.message));

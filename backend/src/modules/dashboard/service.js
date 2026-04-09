@@ -1,14 +1,27 @@
 const prisma = require('../../database/client');
 
 class DashboardService {
-  async getStats() {
+  async getStats(filters = {}) {
+    const { municipio, status } = filters;
+
+    const subWhere = {};
+    if (municipio) subWhere.municipio = municipio;
+    if (status) subWhere.status = status;
+
+    // Client (PT) filter: join through subestacao
+    const clientWhere = {};
+    if (municipio || status) {
+      clientWhere.subestacao = {};
+      if (municipio) clientWhere.subestacao.municipio = municipio;
+      if (status) clientWhere.subestacao.status = status;
+    }
+
     const [subTotal, clientTotal, capacitySum, tasksCompleted] = await Promise.all([
-      prisma.subestacao.count(),
-      prisma.cliente.count(),
+      prisma.subestacao.count({ where: subWhere }),
+      prisma.cliente.count({ where: clientWhere }),
       prisma.subestacao.aggregate({
-        _sum: {
-          capacidade_total_mva: true
-        }
+        where: subWhere,
+        _sum: { capacidade_total_mva: true }
       }),
       prisma.tarefa.count({
         where: {
@@ -33,6 +46,7 @@ class DashboardService {
         id: true,
         nome: true,
         municipio: true,
+        tipo: true,
         latitude: true,
         longitude: true,
         gps: true,
@@ -44,9 +58,7 @@ class DashboardService {
       }
     });
 
-    return {
-      subestacoes
-    };
+    return { subestacoes };
   }
 }
 
