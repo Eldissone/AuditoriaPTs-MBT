@@ -103,7 +103,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
   const { capacidadeSubestacao, sobrecargaPct, isSobrecarga, overloadClass } = useMemo(() => {
     // Capacidade "Real" registrada (Soma de todas as Subestações da Localidade)
-    const cap = Number(substation.sum_potencia || substation.potencia_total_kva || 0);
+    const cap = Number(substation.capacidade_total_mva || 0) * 1000;
     const sumPTs = somaPotenciasPTs;
     const pct = cap > 0 ? (sumPTs / cap) * 100 : 0;
     const isOverload = pct > 100;
@@ -118,7 +118,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
       isSobrecarga: isOverload,
       overloadClass: overloadColor
     };
-  }, [substation.sum_potencia, substation.potencia_total_kva, somaPotenciasPTs]);
+  }, [substation.capacidade_total_mva, somaPotenciasPTs]);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -192,7 +192,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                   <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Capacidade Instalada</p>
-                  <p className="text-xl font-black text-[#0f1c2c]">{sub.capacidade_total_mva}  <span className="text-[10px] font-bold text-[#747686]">MVA</span></p>
+                  <p className="text-xl font-black text-[#0f1c2c]">{substation.capacidade_total_mva || 0}  <span className="text-[10px] font-bold text-[#747686]">MVA</span></p>
                 </div>
                 <div className="hidden sm:block w-px h-10 bg-[#c4c5d7]/30"></div>
                 <div>

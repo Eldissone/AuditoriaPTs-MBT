@@ -28,11 +28,8 @@ export default function ClientManagement() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [expandedSubestacoes, setExpandedSubestacoes] = useState({});
   
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Pagination State (Removed)
   const [totalRecords, setTotalRecords] = useState(0);
-  const limit = 50; // Smaller limit for better performance in the list
 
   const navigate = useNavigate();
   
@@ -45,27 +42,23 @@ export default function ClientManagement() {
       fetchClientes();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, municipio, currentPage]);
+  }, [searchTerm, municipio]);
 
   async function fetchClientes() {
     try {
       setLoading(true);
       const params = {
         search: searchTerm,
-        municipio,
-        page: currentPage,
-        limit
+        municipio
       };
       
       const response = await api.get('/clientes', { params });
       
       if (response.data.data) {
         setClientes(response.data.data);
-        setTotalPages(Math.ceil(response.data.total / limit));
         setTotalRecords(response.data.total);
       } else {
         setClientes(response.data);
-        setTotalPages(1);
         setTotalRecords(response.data.length);
       }
     } catch (error) {
@@ -176,7 +169,7 @@ export default function ClientManagement() {
           <div className="flex gap-3">
             <select
               value={municipio}
-              onChange={(e) => {setMunicipio(e.target.value); setCurrentPage(1);}}
+              onChange={(e) => {setMunicipio(e.target.value);}}
               className="flex items-center gap-2 px-6 py-4 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none cursor-pointer"
             >
               <option value="">Todos Municípios</option>
@@ -185,7 +178,7 @@ export default function ClientManagement() {
               ))}
             </select>
             <button 
-              onClick={() => { setSearchTerm(''); setMunicipio(''); setCurrentPage(1); }}
+              onClick={() => { setSearchTerm(''); setMunicipio(''); }}
               className="flex items-center gap-2 px-6 py-4 bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#747686] hover:bg-[#eff4ff] transition-all"
             >
               <Filter className="w-4 h-4" />
@@ -287,41 +280,10 @@ export default function ClientManagement() {
           </table>
         </div>
         
-        {/* Pagination Controls */}
+        {/* Pagination Controls Removed */}
         <div className="bg-[#fcfdff] px-8 py-4 border-t border-[#c4c5d7]/10 flex items-center justify-between">
           <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest leading-none">
             Mostrando <span className="text-[#0f1c2c]">{clientes.length}</span> de <span className="text-[#0f1c2c]">{totalRecords}</span> registos
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
-            >
-              <ChevronRight className="w-4 h-4 rotate-180" />
-            </button>
-            <div className="flex gap-1 overflow-x-auto max-w-[200px] custom-scrollbar px-2">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex-shrink-0 ${
-                    currentPage === i + 1 
-                      ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/20' 
-                      : 'text-[#747686] hover:bg-[#eff4ff]'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <button 
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-[#c4c5d7] cursor-not-allowed' : 'text-[#0d3fd1] hover:bg-[#eff4ff]'}`}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>
