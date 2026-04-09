@@ -1,7 +1,17 @@
 const prisma = require('../../database/client');
 
 class InspecaoRepository {
-  async getAll(filters = {}) {
+  async getAll(rawFilters = {}) {
+    const filters = { ...rawFilters };
+
+    // Convert numeric strings to numbers for Prisma
+    if (filters.id_tarefa) {
+      filters.id_tarefa = Number(filters.id_tarefa);
+    }
+    if (filters.id_auditor) {
+      filters.id_auditor = Number(filters.id_auditor);
+    }
+
     return prisma.inspecao.findMany({
       where: filters,
       include: {

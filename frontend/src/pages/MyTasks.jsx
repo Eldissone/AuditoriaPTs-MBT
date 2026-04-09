@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Play, CheckCircle, X, Calendar, MapPin, ClipboardList,
-  CheckSquare, Eye, Zap, Clock, ChevronRight
+  CheckSquare, Eye, Zap, Clock, ChevronRight, Camera
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import QuickAuditModal from '../components/QuickAuditModal';
 
@@ -13,6 +14,17 @@ export default function MyTasks() {
   const [detailTarefa, setDetailTarefa] = useState(null);
   const [activeTarefa, setActiveTarefa] = useState(null); // Modal conclusão manual
   const [checklistAtual, setChecklistAtual] = useState([]);
+  const [lightboxImage, setLightboxImage] = useState(null);
+
+  const { data: taskInspecoes = [] } = useQuery({
+    queryKey: ['tarefaInspecoes', detailTarefa?.id],
+    queryFn: async () => {
+      if (!detailTarefa?.id) return [];
+      const res = await api.get('/inspecoes', { params: { id_tarefa: detailTarefa.id } });
+      return res.data;
+    },
+    enabled: !!detailTarefa?.id
+  });
 
   const fetchTarefas = async () => {
     try {
@@ -377,6 +389,41 @@ export default function MyTasks() {
                   </div>
                 </div>
               )}
+
+              {/* ── Evidências Fotográficas ────────────────────────────── */}
+              {(() => {
+                const todasFotos = taskInspecoes.flatMap(ins =>
+                  (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data_inspecao: ins.data_inspecao }))
+                );
+                if (todasFotos.length === 0) return null;
+                return (
+                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                    <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-[#0d3fd1]" />
+                      Evidências Fotográficas — {todasFotos.length} capturas
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {todasFotos.map((foto, idx) => (
+                        <div
+                          key={`${foto.inspecao_id}-${idx}`}
+                          className="group relative h-24 rounded-xl overflow-hidden shadow-sm border border-[#c4c5d7]/20 bg-white cursor-pointer"
+                          onClick={() => setLightboxImage(foto.data)}
+                        >
+                          <img
+                            src={foto.data}
+                            alt={foto.label}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-[7px] text-white font-black uppercase tracking-widest truncate">{foto.label}</p>
+                            <p className="text-[6px] text-white/70 font-bold uppercase">{new Date(foto.data_inspecao).toLocaleDateString('pt-PT')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="p-5 bg-white border-t border-[#c4c5d7]/20 flex justify-between gap-3">
               <button onClick={() => setDetailTarefa(null)} className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]">
@@ -391,6 +438,27 @@ export default function MyTasks() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Lightbox ────────────────────────────────────────────────────── */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Evidência Ampliada"
+              className="w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+            />
           </div>
         </div>
       )}

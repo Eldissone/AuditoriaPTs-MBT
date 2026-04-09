@@ -492,7 +492,7 @@ export default function TaskManagement() {
             {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
             {(() => {
               const todasFotos = taskInspecoes.flatMap(ins =>
-                (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data: ins.data_inspecao }))
+                (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data_inspecao: ins.data_inspecao }))
               );
               if (todasFotos.length === 0) return null;
               return (

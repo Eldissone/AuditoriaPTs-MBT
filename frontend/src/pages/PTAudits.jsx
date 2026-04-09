@@ -111,7 +111,7 @@ export default function PTAudits() {
             )
           : (auditsRes.data || []);
         setAudits(filteredAudits);
-        setTarefas(tarefasRes.data ? tarefasRes.data.filter(t => t.status === 'Concluída') : []);
+        setTarefas(tarefasRes.data ? tarefasRes.data.filter(t => t.status !== 'Concluída') : []);
       } catch (err) {
         console.error(err);
       }
@@ -905,7 +905,7 @@ export default function PTAudits() {
                     onChange={(e) => handleSelectTask(e.target.value)}
                   >
                     <option value="">Nenhuma tarefa associada</option>
-                    {(formData.id_pt ? allTasks.filter((t) => t.id_pt === formData.id_pt) : allTasks.filter((t) => t.id_pt)).map((task) => (
+                    {(formData.id_pt ? allTasks.filter((t) => t.id_pt === formData.id_pt && t.status !== 'Concluída') : allTasks.filter((t) => t.id_pt && t.status !== 'Concluída')).map((task) => (
                       <option key={task.id} value={task.id}>
                         {task.titulo} {task.id_pt ? `(${task.id_pt})` : ''}
                       </option>

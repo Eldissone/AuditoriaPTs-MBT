@@ -27,6 +27,17 @@ class InspecaoService {
     if (!auditorExists) {
       throw new Error('Auditor não encontrado.');
     }
+
+    // Validate if the task is already completed
+    if (data.id_tarefa) {
+      const tarefa = await prisma.tarefa.findUnique({ 
+        where: { id: Number(data.id_tarefa) } 
+      });
+      if (tarefa && tarefa.status === 'Concluída') {
+        throw new Error('Não é possível associar uma auditoria a uma tarefa já concluída.');
+      }
+    }
+
     return repository.create(data);
   }
 
