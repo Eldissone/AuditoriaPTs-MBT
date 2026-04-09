@@ -25,10 +25,10 @@ class IdentificacaoController {
       res.status(201).json(result);
     } catch (error) {
       console.error('Erro ao Criar PT:', error);
-      res.status(400).json({ 
-        message: 'Erro ao criar PT', 
+      res.status(400).json({
+        message: 'Erro ao criar PT',
         error: error.message,
-        details: error.meta 
+        details: error.meta
       });
     }
   }
@@ -40,8 +40,8 @@ class IdentificacaoController {
       res.json(pt);
     } catch (error) {
       console.error('Erro ao Atualizar PT:', error);
-      res.status(400).json({ 
-        message: 'Erro ao atualizar PT', 
+      res.status(400).json({
+        message: 'Erro ao atualizar PT',
         error: error.message,
         details: error.meta
       });

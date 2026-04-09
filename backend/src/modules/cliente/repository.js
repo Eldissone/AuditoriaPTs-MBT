@@ -4,26 +4,26 @@ class ClienteRepository {
   async getAll(filters = {}) {
     const { search, municipio, localidade, id_subestacao, estado_operacional, page, limit } = filters;
     const where = {};
-    
+
     if (id_subestacao) {
       where.id_subestacao = Number(id_subestacao);
     }
-    
+
     if (estado_operacional) {
       where.estado_operacional = estado_operacional;
     }
- 
+
     if (municipio) {
       where.municipio = municipio;
     }
- 
+
     if (localidade) {
       where.OR = [
         { municipio: localidade },
         { subestacao: { municipio: localidade } },
       ];
     }
- 
+
     if (search) {
       const searchWhere = {
         OR: [
@@ -33,7 +33,7 @@ class ClienteRepository {
           { equipamento: { contains: search, mode: 'insensitive' } },
         ]
       };
-      
+
       if (where.OR) {
         where.AND = [
           { OR: where.OR },
@@ -44,25 +44,25 @@ class ClienteRepository {
         Object.assign(where, searchWhere);
       }
     }
- 
+
     const orderBy = { id_pt: 'asc' };
     const include = { subestacao: true, responsavel: true };
- 
+
     if (page && limit) {
       const skip = (Number(page) - 1) * Number(limit);
       const take = Number(limit);
- 
+
       const [data, total] = await Promise.all([
         prisma.cliente.findMany({ where, include, orderBy, skip, take }),
         prisma.cliente.count({ where })
       ]);
- 
+
       return { data, total, page: Number(page), limit: Number(limit) };
     }
- 
+
     return prisma.cliente.findMany({ where, include, orderBy });
   }
- 
+
   async getByIdPt(id_pt) {
     return prisma.cliente.findUnique({
       where: { id_pt },
@@ -85,32 +85,32 @@ class ClienteRepository {
       },
     });
   }
- 
+
   async create(data) {
     console.log('Criando Cliente com dados:', JSON.stringify(data, null, 2));
-    const { 
-      cliente, 
-      conformidade, 
-      transformador, 
-      media_tensao, 
-      baixa_tensao, 
-      seguranca, 
-      infraestrutura, 
-      monitorizacao, 
-      manutencao, 
+    const {
+      cliente,
+      conformidade,
+      transformador,
+      media_tensao,
+      baixa_tensao,
+      seguranca,
+      infraestrutura,
+      monitorizacao,
+      manutencao,
       risco,
       ...restOfData
     } = data;
- 
+
     const rawBaseData = cliente || restOfData;
- 
+
     const getYear = (val) => {
       if (!val) return new Date().getFullYear();
       if (typeof val === 'number') return val;
       if (!isNaN(val) && !val.toString().includes('-')) return parseInt(val.toString());
       return new Date(val).getFullYear() || new Date().getFullYear();
     };
- 
+
     // 1. Base Cliente mapping
     const baseCliente = {
       id_pt: rawBaseData.id_pt,
@@ -138,26 +138,26 @@ class ClienteRepository {
       num_transformadores: Number(rawBaseData.num_transformadores || rawBaseData.num_transformador || 1),
       ano_instalacao: getYear(rawBaseData.ano_instalacao),
     };
- 
+
     // Explicit validaton before Prisma
     if (!baseCliente.id_pt || baseCliente.id_pt.trim() === '') {
       throw new Error('O ID do PT/Cliente é obrigatório.');
     }
- 
+
     if (isNaN(baseCliente.id_subestacao)) {
       throw new Error(`ID de subestação inválido: ${rawBaseData.id_subestacao}`);
     }
- 
+
     const subExists = await prisma.subestacao.findUnique({ where: { id: baseCliente.id_subestacao } });
     if (!subExists) {
       throw new Error(`A subestação com ID ${baseCliente.id_subestacao} não existe.`);
     }
- 
+
     const existingPT = await prisma.cliente.findUnique({ where: { id_pt: baseCliente.id_pt } });
     if (existingPT) {
       throw new Error(`O Cliente/PT "${baseCliente.id_pt}" já está cadastrado.`);
     }
- 
+
     // 2. Conformidade mapping
     const conformidadeData = conformidade ? {
       licenciamento: !!conformidade.licenciamento,
@@ -168,7 +168,7 @@ class ClienteRepository {
       normas_ieee: !!(conformidade.normas_ieee || conformidade.normas_iec_ieee),
       normas_locais: !!conformidade.normas_locais,
     } : undefined;
- 
+
     // 3. Transformador mapping (Array)
     const transformadoresArr = transformador ? (Array.isArray(transformador) ? transformador : [transformador]).map(t => ({
       num_transformador: Number(t.num_transformador || 1),
@@ -181,7 +181,7 @@ class ClienteRepository {
       estado_buchas: t.estado_buchas || 'Bom',
       temperatura_operacao: parseFloat(t.temperatura_operacao || t.temperatura_topo || 40) || 40,
     })) : undefined;
- 
+
     // 4. MT/BT mapping
     const mtData = media_tensao ? {
       tipo_celas: media_tensao.tipo_celas || '',
@@ -191,7 +191,7 @@ class ClienteRepository {
       coordenacao_protecoes: !!media_tensao.coordenacao_protecoes,
       aterramento_mt: !!media_tensao.aterramento_mt,
     } : undefined;
- 
+
     const btData = baixa_tensao ? {
       estado_qgbt: baixa_tensao.estado_qgbt || '',
       barramentos: baixa_tensao.barramentos || '',
@@ -203,7 +203,7 @@ class ClienteRepository {
       tensao: parseFloat(baixa_tensao.tensao) || 0,
       fator_potencia: parseFloat(baixa_tensao.fator_potencia) || 0,
     } : undefined;
- 
+
     // 5. Seguranca, Infra, Monitor, Manutencao mapping
     const segurancaData = seguranca ? {
       resistencia_terra: parseFloat(seguranca.resistencia_terra) || 0,
@@ -213,7 +213,7 @@ class ClienteRepository {
       combate_incendio: !!seguranca.combate_incendio,
       distancias_seguranca: !!seguranca.distancias_seguranca,
     } : undefined;
- 
+
     const infraData = infraestrutura ? {
       estado_cabine: infraestrutura.estado_cabine || '',
       ventilacao: !!infraestrutura.ventilacao,
@@ -221,7 +221,7 @@ class ClienteRepository {
       iluminacao: !!infraestrutura.iluminacao,
       controlo_acesso: !!infraestrutura.controlo_acesso,
     } : undefined;
- 
+
     const monitorData = monitorizacao ? {
       scada: !!monitorizacao.scada,
       comunicacao: monitorizacao.comunicacao || '',
@@ -230,12 +230,12 @@ class ClienteRepository {
       sensores_vibracao: !!monitorizacao.sensores_vibracao,
       observacoes: monitorizacao.estado_modem || monitorizacao.protocolo ? `Modem: ${monitorizacao.estado_modem || 'N/D'}, Protocolo: ${monitorizacao.protocolo || 'N/D'}` : undefined
     } : undefined;
- 
+
     const manutData = manutencao ? {
       plano_preventivo: !!manutencao.aperto_terminais,
       observacoes: `Última limpeza: ${manutencao.ultima_limpeza || 'N/D'}, Termográfica: ${manutencao.inspecao_termografica || 'N/D'}`
     } : undefined;
- 
+
     const riscosMapped = risco ? (Array.isArray(risco) ? risco : [risco]).map(r => ({
       sobrecarga: !!r.sobrecarga,
       desequilibrio_fases: !!r.desequilibrio_fases,
@@ -244,7 +244,7 @@ class ClienteRepository {
       nivel_risco_geral: r.nivel_risco_geral || 'Nulo',
       observacoes: r.recomendacoes || r.observacoes || ''
     })) : undefined;
- 
+
     return prisma.cliente.create({
       data: {
         ...baseCliente,
@@ -260,24 +260,24 @@ class ClienteRepository {
       }
     });
   }
- 
+
   async update(id_pt, data) {
-    const { 
-      cliente, 
-      conformidade, 
-      transformador, 
-      media_tensao, 
-      baixa_tensao, 
-      seguranca, 
-      infraestrutura, 
-      monitorizacao, 
-      manutencao, 
+    const {
+      cliente,
+      conformidade,
+      transformador,
+      media_tensao,
+      baixa_tensao,
+      seguranca,
+      infraestrutura,
+      monitorizacao,
+      manutencao,
       risco,
       ...restOfData
     } = data;
- 
+
     const rawBaseData = cliente || restOfData;
- 
+
     // Same mapping logic for update
     const baseCliente = {
       localizacao: rawBaseData.localizacao,
@@ -299,7 +299,7 @@ class ClienteRepository {
       distrito_comuna: rawBaseData.distrito_comuna,
       bairro: rawBaseData.bairro,
     };
- 
+
     if (rawBaseData.id_subestacao !== undefined) baseCliente.id_subestacao = Number(rawBaseData.id_subestacao);
     if (rawBaseData.id_responsavel !== undefined) baseCliente.id_responsavel = rawBaseData.id_responsavel ? Number(rawBaseData.id_responsavel) : null;
     if (rawBaseData.potencia_kva !== undefined) baseCliente.potencia_kva = parseFloat(rawBaseData.potencia_kva) || 0;
@@ -309,7 +309,7 @@ class ClienteRepository {
     if (rawBaseData.ano_instalacao !== undefined) {
       baseCliente.ano_instalacao = rawBaseData.ano_instalacao ? new Date(rawBaseData.ano_instalacao).getFullYear() : new Date().getFullYear();
     }
- 
+
     const conformidadeData = conformidade ? {
       licenciamento: !!conformidade.licenciamento,
       projeto_aprovado: !!conformidade.projeto_aprovado,
@@ -319,7 +319,7 @@ class ClienteRepository {
       normas_ieee: !!(conformidade.normas_ieee || conformidade.normas_iec_ieee),
       normas_locais: !!conformidade.normas_locais,
     } : undefined;
- 
+
     const transformadoresArr = transformador ? (Array.isArray(transformador) ? transformador : [transformador]).map(t => ({
       num_transformador: Number(t.num_transformador || 1),
       potencia_kva: parseFloat(t.potencia_kva || t.potencia_nominal || 0) || 0,
@@ -331,7 +331,7 @@ class ClienteRepository {
       estado_buchas: t.estado_buchas || 'Bom',
       temperatura_operacao: parseFloat(t.temperatura_operacao || t.temperatura_topo || 40) || 40
     })) : undefined;
- 
+
     const mtData = media_tensao ? {
       tipo_celas: media_tensao.tipo_celas || '',
       estado_disjuntores: media_tensao.estado_disjuntores || '',
@@ -340,7 +340,7 @@ class ClienteRepository {
       coordenacao_protecoes: !!media_tensao.coordenacao_protecoes,
       aterramento_mt: !!media_tensao.aterramento_mt,
     } : undefined;
- 
+
     const btData = baixa_tensao ? {
       estado_qgbt: baixa_tensao.estado_qgbt || '',
       barramentos: baixa_tensao.barramentos || '',
@@ -352,7 +352,7 @@ class ClienteRepository {
       tensao: parseFloat(baixa_tensao.tensao) || 0,
       fator_potencia: parseFloat(baixa_tensao.fator_potencia) || 0,
     } : undefined;
- 
+
     const segurancaData = seguranca ? {
       resistencia_terra: parseFloat(seguranca.resistencia_terra) || 0,
       protecao_raios: !!seguranca.protecao_raios,
@@ -361,7 +361,7 @@ class ClienteRepository {
       combate_incendio: !!seguranca.combate_incendio,
       distancias_seguranca: !!seguranca.distancias_seguranca,
     } : undefined;
- 
+
     const infraData = infraestrutura ? {
       estado_cabine: infraestrutura.estado_cabine || 'Bom',
       ventilacao: !!infraestrutura.ventilacao,
@@ -369,7 +369,7 @@ class ClienteRepository {
       iluminacao: !!infraestrutura.iluminacao,
       controlo_acesso: !!infraestrutura.controlo_acesso,
     } : undefined;
- 
+
     const monitorData = monitorizacao ? {
       scada: !!monitorizacao.scada,
       comunicacao: monitorizacao.comunicacao || '',
@@ -378,12 +378,12 @@ class ClienteRepository {
       sensores_vibracao: !!monitorizacao.sensores_vibracao,
       observacoes: monitorizacao.estado_modem || monitorizacao.protocolo ? `Modem: ${monitorizacao.estado_modem || 'N/D'}, Protocolo: ${monitorizacao.protocolo || 'N/D'}` : undefined
     } : undefined;
- 
+
     const manutData = manutencao ? {
       plano_preventivo: !!manutencao.aperto_terminais,
       observacoes: `Última limpeza: ${manutencao.ultima_limpeza || 'N/D'}, Termográfica: ${manutencao.inspecao_termografica || 'N/D'}`
     } : undefined;
- 
+
     const riscosMapped = risco ? (Array.isArray(risco) ? risco : [risco]).map(r => ({
       sobrecarga: !!r.sobrecarga,
       desequilibrio_fases: !!r.desequilibrio_fases,
@@ -392,7 +392,7 @@ class ClienteRepository {
       nivel_risco_geral: r.nivel_risco_geral || 'Nulo',
       observacoes: r.recomendacoes || r.observacoes || ''
     })) : undefined;
- 
+
     return prisma.cliente.update({
       where: { id_pt },
       data: {
@@ -415,12 +415,12 @@ class ClienteRepository {
       }
     });
   }
- 
+
   async delete(id_pt) {
     return prisma.cliente.delete({
       where: { id_pt },
     });
   }
 }
- 
+
 module.exports = new ClienteRepository();

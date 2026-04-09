@@ -244,115 +244,6 @@ export default function ClientManagement() {
         </div>
       </div>
 
-      {/* ── Filter Bar ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 shadow-sm px-6 py-4">
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Label */}
-          <div className="flex items-center gap-2 text-[10px] font-black text-[#747686] uppercase tracking-widest self-center mr-2">
-            <Filter className="w-3.5 h-3.5 text-[#0d3fd1]" />
-            Filtros
-          </div>
-
-          {/* Search */}
-          <div className="flex flex-col gap-0.5 flex-grow max-w-xs">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Pesquisa</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Contrato, proprietário, equipamento..."
-                value={filters.search}
-                onChange={e => handleFilterChange('search', e.target.value)}
-                className="w-full bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg py-2 pl-8 pr-4 text-[10px] font-bold text-[#0f1c2c] outline-none placeholder:text-[#747686]/50 focus:border-[#0d3fd1]/30 transition-all"
-              />
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#747686]" />
-            </div>
-          </div>
-
-          {/* Município */}
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
-            <select
-              value={filters.municipio}
-              onChange={e => handleFilterChange('municipio', e.target.value)}
-              className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold text-[#0f1c2c] outline-none focus:border-[#0d3fd1]/30 transition-all min-w-[150px]"
-            >
-              <option value="">Todos Municípios</option>
-              {(metadata.municipios || []).map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-
-          {/* Estado Operacional */}
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Operacional</label>
-            <select
-              value={filters.estado_operacional}
-              onChange={e => handleFilterChange('estado_operacional', e.target.value)}
-              className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold text-[#0f1c2c] outline-none focus:border-[#0d3fd1]/30 transition-all min-w-[150px]"
-            >
-              <option value="">Todos os Estados</option>
-              <option value="Operacional">Operacional</option>
-              <option value="Crítico">Crítico</option>
-              <option value="Manutenção">Manutenção</option>
-              <option value="Fora de Serviço">Fora de Serviço</option>
-            </select>
-          </div>
-
-          {/* Nível de Tensão */}
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão</label>
-            <select
-              value={filters.nivel_tensao}
-              onChange={e => handleFilterChange('nivel_tensao', e.target.value)}
-              className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold text-[#0f1c2c] outline-none focus:border-[#0d3fd1]/30 transition-all min-w-[130px]"
-            >
-              <option value="">Todos</option>
-              <option value="MT">MT</option>
-              <option value="BT">BT</option>
-              <option value="MT/BT">MT/BT</option>
-              {uniqueNiveisTensao.filter(n => !['MT', 'BT', 'MT/BT'].includes(n)).map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Clear + Badges */}
-          {hasActiveFilters && (
-            <div className="flex items-center gap-2 flex-wrap ml-auto">
-              {activeFilters.municipio && (
-                <span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">
-                  <MapPin className="w-3 h-3" /> {activeFilters.municipio}
-                </span>
-              )}
-              {activeFilters.estado_operacional && (
-                <span className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${statusColor(activeFilters.estado_operacional)}`}>
-                  <Activity className="w-3 h-3" /> {activeFilters.estado_operacional}
-                </span>
-              )}
-              {activeFilters.nivel_tensao && (
-                <span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border border-purple-100">
-                  <Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}
-                </span>
-              )}
-              {activeFilters.search && (
-                <span className="flex items-center gap-1 bg-gray-50 text-gray-700 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border border-gray-100">
-                  <Search className="w-3 h-3" /> "{activeFilters.search}"
-                </span>
-              )}
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all border border-red-100"
-              >
-                <X className="w-3 h-3" /> Limpar
-              </button>
-            </div>
-          )}
-
-          {loading && (
-            <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin ml-auto" />
-          )}
-        </div>
-      </div>
-
       {/* ── KPI Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {kpiCards.map((card, idx) => (
@@ -374,6 +265,96 @@ export default function ClientManagement() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Filter Bar ────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 shadow-sm px-6 py-4">
+        <div className="flex items-start gap-3">
+
+          {/* ESQUERDA */}
+          <div className="flex items-center gap-2 text-[10px] font-black text-[#747686] uppercase tracking-widest mt-5">
+            <Filter className="w-3.5 h-3.5 text-[#0d3fd1]" />
+            Filtros
+          </div>
+
+          {/* Search */}
+          <div className="flex flex-col gap-0.5 flex-grow max-w-xs">
+            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Pesquisa</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Contrato, proprietário, equipamento..."
+                value={filters.search}
+                onChange={e => handleFilterChange('search', e.target.value)}
+                className="w-full bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg py-2 pl-8 pr-4 text-[10px] font-bold text-[#0f1c2c] outline-none"
+              />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#747686]" />
+            </div>
+          </div>
+
+          {/* DIREITA */}
+          <div className="ml-auto flex flex-wrap items-end gap-4">
+
+
+
+            {/* Município */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
+              <select
+                value={filters.municipio}
+                onChange={e => handleFilterChange('municipio', e.target.value)}
+                className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]"
+              >
+                <option value="">Todos Municípios</option>
+                {(metadata.municipios || []).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+
+            {/* Estado */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Operacional</label>
+              <select
+                value={filters.estado_operacional}
+                onChange={e => handleFilterChange('estado_operacional', e.target.value)}
+                className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]"
+              >
+                <option value="">Todos os Estados</option>
+                <option value="Operacional">Operacional</option>
+                <option value="Crítico">Crítico</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Fora de Serviço">Fora de Serviço</option>
+              </select>
+            </div>
+
+            {/* Nível */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão</label>
+              <select
+                value={filters.nivel_tensao}
+                onChange={e => handleFilterChange('nivel_tensao', e.target.value)}
+                className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[130px]"
+              >
+                <option value="">Todos</option>
+                <option value="MT">MT</option>
+                <option value="BT">BT</option>
+                <option value="MT/BT">MT/BT</option>
+              </select>
+            </div>
+
+            {/* BADGES + CLEAR */}
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 flex-wrap ml-2">
+                {/* teus badges aqui */}
+              </div>
+            )}
+
+            {/* LOADING */}
+            {loading && (
+              <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin" />
+            )}
+
+          </div>
+        </div>
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
