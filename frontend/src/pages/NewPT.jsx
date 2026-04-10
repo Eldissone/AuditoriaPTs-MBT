@@ -53,7 +53,18 @@ export default function NewPT() {
       proprietario: '',
       concessionaria: '',
       zona: '',
-      operador: ''
+      operador: '',
+      contrato: '',
+      num_serie: '',
+      divisao: '',
+      denominacao_divisao: '',
+      unidade_leitura: '',
+      num_localidade: '',
+      bairro_num: '',
+      rua: '',
+      tipo_cliente: '',
+      montante_divida: 0,
+      num_facturas_atraso: 0,
     },
     conformidade: {
       licenciamento: false,
@@ -390,6 +401,79 @@ export default function NewPT() {
                   <div className="space-y-2 lg:col-span-1">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Operador</label>
                     <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.operador} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, operador: e.target.value } })} />
+                  </div>
+
+                  {/* BLOCO SAP EXCLUSIVO */}
+                  <div className="lg:col-span-3 mt-4 mb-2 p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-1 h-4 bg-[#0d3fd1] rounded-full"></div>
+                      <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest">Informação Estrutural (SAP/ENDE)</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº do Contrato</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.contrato} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, contrato: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº de Série</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.num_serie} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_serie: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Cliente</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.tipo_cliente} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_cliente: e.target.value } })} placeholder="Ex: MT / BT / IP" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Divisão</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.divisao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, divisao: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Denominação da Divisão</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.denominacao_divisao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, denominacao_divisao: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Unidade de Leitura</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.unidade_leitura} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, unidade_leitura: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº Localidade</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.num_localidade} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_localidade: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Rua (Endereço)</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.rua} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, rua: e.target.value } })} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BLOCO FINANCEIRO */}
+                  <div className="lg:col-span-3 p-6 bg-red-50/30 rounded-3xl border border-red-100/50">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-1 h-4 bg-red-500 rounded-full"></div>
+                      <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Informação Financeira</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Montante da Dívida (Kz)</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600 focus:ring-1 focus:ring-red-200" 
+                          value={formData.identificacao.montante_divida} 
+                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, montante_divida: Number(e.target.value) } })} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Faturas Não Pagas</label>
+                        <input 
+                          type="number" 
+                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600" 
+                          value={formData.identificacao.num_facturas_atraso} 
+                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_facturas_atraso: Number(e.target.value) } })} 
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="lg:col-span-3 space-y-4">

@@ -97,6 +97,60 @@ const DEFAULT_CLIENT_FIELDS = [
     keywords: ['operador', 'técnico', 'tecnico', 'responsável'],
     required: false,
   },
+  {
+    key: 'contrato',
+    label: 'Número do Contrato',
+    keywords: ['contrato', 'nº contrato', 'nr contrato', 'num contrato'],
+    required: false,
+  },
+  {
+    key: 'num_serie',
+    label: 'Nº de Série',
+    keywords: ['nº de série', 'num serie', 'serial number', 'n serie'],
+    required: false,
+  },
+  {
+    key: 'divisao',
+    label: 'Divisão',
+    keywords: ['divisão', 'divisao', 'division'],
+    required: false,
+  },
+  {
+    key: 'denominacao_divisao',
+    label: 'Denominação Divisão',
+    keywords: ['denominação da divisão', 'denominacao divisao', 'denominacao'],
+    required: false,
+  },
+  {
+    key: 'unidade_leitura',
+    label: 'Unidade de Leitura',
+    keywords: ['unidade de leitura', 'unid leitura', 'leitura'],
+    required: false,
+  },
+  {
+    key: 'tipo_cliente',
+    label: 'Tipo de Cliente',
+    keywords: ['tipo de cliente', 'tipo cliente', 'categoria cliente'],
+    required: false,
+  },
+  {
+    key: 'montante_divida',
+    label: 'Montante Dívida',
+    keywords: ['montante divida', 'divida', 'valor divida', 'debito'],
+    required: false,
+  },
+  {
+    key: 'num_facturas_atraso',
+    label: 'Faturas em Atraso',
+    keywords: ['número de facturas não pagas', 'facturas atraso', 'faturas em atraso', 'n faturas'],
+    required: false,
+  },
+  {
+    key: 'rua',
+    label: 'Rua / Endereço',
+    keywords: ['rua', 'endereco', 'endereço', 'rua numero'],
+    required: false,
+  },
 ];
 
 const IGNORE_KEY = '__IGNORE__';
@@ -598,9 +652,9 @@ export default function ExcelImportModal({
                 <div className="space-y-0.5">
                   <p>Importação concluída</p>
                   <p className="opacity-70 normal-case font-medium">
-                    {importResult.pts > 0
-                      ? `${importResult.pts} PT${importResult.pts > 1 ? 's' : ''} e ${importResult.subestacoes} subestação(ões) criados.`
-                      : 'Nenhum registo novo — todos os dados já existem no sistema.'}
+                    {importResult.pts > 0 || importResult.updated > 0
+                      ? `${importResult.pts} novos e ${importResult.updated} atualizados.`
+                      : 'Nenhum registo novo processado.'}
                   </p>
                 </div>
               </div>
@@ -613,10 +667,16 @@ export default function ExcelImportModal({
                     {importResult.pts} novos PTs
                   </div>
                 )}
+                 {importResult.updated > 0 && (
+                  <div className="flex items-center gap-1.5 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {importResult.updated} atualizados
+                  </div>
+                )}
                 {importResult.skipped > 0 && (
                   <div className="flex items-center gap-1.5 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider">
                     <SkipForward className="w-3 h-3" />
-                    {importResult.skipped} ignorados (já existem)
+                    {importResult.skipped} ignorados
                   </div>
                 )}
                 {importResult.errors?.length > 0 && (

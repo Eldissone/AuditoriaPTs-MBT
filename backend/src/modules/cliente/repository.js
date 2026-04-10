@@ -130,6 +130,17 @@ class ClienteRepository {
       txt_categoria_tarifa: rawBaseData.txt_categoria_tarifa || '',
       distrito_comuna: rawBaseData.distrito_comuna || '',
       bairro: rawBaseData.bairro || '',
+      contrato: rawBaseData.contrato || '',
+      num_serie: rawBaseData.num_serie || '',
+      divisao: rawBaseData.divisao || '',
+      denominacao_divisao: rawBaseData.denominacao_divisao || '',
+      unidade_leitura: rawBaseData.unidade_leitura || '',
+      num_localidade: rawBaseData.num_localidade || '',
+      bairro_num: rawBaseData.bairro_num || '',
+      rua: rawBaseData.rua || '',
+      tipo_cliente: rawBaseData.tipo_cliente || '',
+      montante_divida: rawBaseData.montante_divida ? Number(rawBaseData.montante_divida) : 0,
+      num_facturas_atraso: rawBaseData.num_facturas_atraso ? Number(rawBaseData.num_facturas_atraso) : 0,
       id_subestacao: parseInt(rawBaseData.id_subestacao),
       id_responsavel: rawBaseData.id_responsavel ? Number(rawBaseData.id_responsavel) : null,
       potencia_kva: parseFloat(rawBaseData.potencia_kva) || 0,
@@ -296,7 +307,19 @@ class ClienteRepository {
       txt_categoria_tarifa: rawBaseData.txt_categoria_tarifa,
       distrito_comuna: rawBaseData.distrito_comuna,
       bairro: rawBaseData.bairro,
+      contrato: rawBaseData.contrato,
+      num_serie: rawBaseData.num_serie,
+      divisao: rawBaseData.divisao,
+      denominacao_divisao: rawBaseData.denominacao_divisao,
+      unidade_leitura: rawBaseData.unidade_leitura,
+      num_localidade: rawBaseData.num_localidade,
+      bairro_num: rawBaseData.bairro_num,
+      rua: rawBaseData.rua,
+      tipo_cliente: rawBaseData.tipo_cliente,
     };
+
+    if (rawBaseData.montante_divida !== undefined) baseCliente.montante_divida = rawBaseData.montante_divida ? Number(rawBaseData.montante_divida) : 0;
+    if (rawBaseData.num_facturas_atraso !== undefined) baseCliente.num_facturas_atraso = rawBaseData.num_facturas_atraso ? Number(rawBaseData.num_facturas_atraso) : 0;
 
     if (rawBaseData.id_subestacao !== undefined) baseCliente.id_subestacao = Number(rawBaseData.id_subestacao);
     if (rawBaseData.id_responsavel !== undefined) baseCliente.id_responsavel = rawBaseData.id_responsavel ? Number(rawBaseData.id_responsavel) : null;

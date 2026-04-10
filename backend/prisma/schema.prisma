@@ -87,6 +87,19 @@ model Cliente {
   txt_categoria_tarifa String?       @db.VarChar(100)
   distrito_comuna    String?         @db.VarChar(150)
   bairro              String?         @db.VarChar(150)
+  
+  // Novos campos SAP/ENDE
+  contrato            String?         @db.VarChar(100)
+  num_serie           String?         @db.VarChar(100)
+  divisao             String?         @db.VarChar(100)
+  denominacao_divisao String?         @db.VarChar(200)
+  unidade_leitura     String?         @db.VarChar(100)
+  num_localidade      String?         @db.VarChar(100)
+  bairro_num          String?         @db.VarChar(50)
+  rua                 String?         @db.VarChar(200)
+  montante_divida     Decimal?        @db.Decimal(18, 2)
+  num_facturas_atraso Int?            @default(0)
+  tipo_cliente        String?         @db.VarChar(100)
 
   criado_em           DateTime        @default(now())
   atualizado_em       DateTime        @updatedAt

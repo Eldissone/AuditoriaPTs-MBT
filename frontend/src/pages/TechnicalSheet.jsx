@@ -11,7 +11,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
-  Filter
+  Filter,
+  CreditCard,
+  Briefcase,
+  Users,
+  Settings,
+  Hash
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -254,64 +259,146 @@ export default function TechnicalSheet() {
               <h3 className="font-black text-[#0f1c2c] text-lg uppercase tracking-tight">Especificações da Unidade</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12">
+              {/* --- CLIENTE & CONTRATO --- */}
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Zap className="text-[#0d3fd1] w-6 h-6" />
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Users className="text-[#0d3fd1] w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Capacidade Nominal</p>
-                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.potencia_kva || '---'} kVA</p>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Dono / Proprietário</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter uppercase">{pt?.proprietario || 'N/D'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold">Tipo: {pt?.tipo_cliente || 'N/D'}</p>
                 </div>
               </div>
+
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Shield className="text-[#0d3fd1] w-6 h-6" />
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Briefcase className="text-[#0d3fd1] w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Nível de Tensão</p>
-                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.nivel_tensao || '---'} kV</p>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Gestão de Contrato</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter">CONTA: {pt?.conta_contrato || '---'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">Nr: {pt?.contrato || '---'}</p>
                 </div>
               </div>
+
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Calendar className="text-[#0d3fd1] w-6 h-6" />
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Hash className="text-[#0d3fd1] w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Parceiro & Série</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter">PARC: {pt?.parceiro_negocios || '---'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">SÉRIE: {pt?.num_serie || '---'}</p>
+                </div>
+              </div>
+
+              {/* --- TÉCNICO --- */}
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Zap className="text-orange-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Capacidade & Tensão</p>
+                  <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.potencia_kva || '---'} <span className="text-xs">kVA</span></p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">CLASSE: {pt?.nivel_tensao || '---'}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Settings className="text-orange-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Ativo Físico</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter">INST: {pt?.instalacao || '---'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">EQUIP: {pt?.equipamento || '---'}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText className="text-orange-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Operação SAP</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter">DIV: {pt?.divisao || 'N/D'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">{pt?.denominacao_divisao || ''}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Filter className="text-orange-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Tarifário & Leitura</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter">{pt?.categoria_tarifa || '---'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">UNID: {pt?.unidade_leitura || '---'}</p>
+                </div>
+              </div>
+
+              {/* --- LOCALIZAÇÃO --- */}
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="text-purple-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Localização Principal</p>
+                  <p className="text-sm font-black text-[#0f1c2c] tracking-tighter uppercase">{pt?.municipio || '---'}</p>
+                  <p className="text-[10px] text-[#747686] font-bold uppercase">{pt?.distrito_comuna || ''}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="text-purple-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Endereço Detalhado</p>
+                  <p className="text-[11px] font-black text-[#0f1c2c] tracking-tight uppercase">{pt?.rua ? `RUA: ${pt.rua}` : '---'}</p>
+                  <p className="text-[9px] text-[#747686] font-bold uppercase">{pt?.bairro || ''} {pt?.bairro_num ? `(Nº ${pt.bairro_num})` : ''}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="text-purple-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">GEO Referência & Loc.</p>
+                  <p className="text-[11px] font-mono font-bold text-[#0f1c2c]">{pt?.gps || 'N/D'}</p>
+                  <p className="text-[9px] text-[#747686] font-bold uppercase">LOC NR: {pt?.num_localidade || '---'}</p>
+                </div>
+              </div>
+
+              {/* --- FINANCEIRO --- */}
+              <div className="flex gap-4 bg-red-50/30 p-4 rounded-2xl border border-red-100">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="text-red-600 w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-red-700 uppercase tracking-[0.2em] mb-1">Estado Financeiro</p>
+                  <p className="text-lg font-black text-red-600 tracking-tighter">
+                    {Number(pt?.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })} <span className="text-[10px]">Kz</span>
+                  </p>
+                  <p className="text-[9px] text-red-500 font-bold uppercase">
+                    {pt?.num_facturas_atraso || 0} Facturas em atraso
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Calendar className="text-gray-600 w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Ano de Instalação</p>
                   <p className="text-lg font-black text-[#0f1c2c] tracking-tighter">{pt?.ano_instalacao || '---'}</p>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MapPin className="text-[#0d3fd1] w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Coordenadas GPS</p>
-                  <p className="text-xs font-mono font-bold text-[#0f1c2c] uppercase">{pt?.gps || 'NÃO DISPONÍVEL'}</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MapPin className="text-[#0d3fd1] w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Localidade Técnica</p>
-                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">
-                    {[pt?.municipio, pt?.distrito_comuna, pt?.bairro].filter(Boolean).join(' / ') || '---'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-12 h-12 bg-[#eff4ff] rounded-xl flex items-center justify-center flex-shrink-0">
-                  <FileText className="text-[#0d3fd1] w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] mb-1">Dados Comerciais</p>
-                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">Conta: {pt?.conta_contrato || '---'}</p>
-                  <p className="text-xs font-bold text-[#0f1c2c] uppercase">Equipamento: {pt?.equipamento || '---'}</p>
-                </div>
-              </div>
+
             </div>
           </div>
 

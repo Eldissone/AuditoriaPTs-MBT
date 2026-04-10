@@ -402,13 +402,15 @@ export default function ClientManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#243141] text-white">
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Identificação / Código</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Nome Proprietário / Cliente</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Conta Contrato</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Instalação / Equip.</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Potência (kVA)</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Estado</th>
-                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5">Localização</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Identificação / Código</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Nome / Proprietário</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Conta / Contrato</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Instalação / Equip.</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">Potência</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Divisão / Tipo</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Estado</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-right">Dívida (Kz)</th>
+                <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Localização</th>
                 <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest text-center">Ações</th>
               </tr>
             </thead>
@@ -441,19 +443,37 @@ export default function ClientManagement() {
                           <span className="text-[9px] opacity-60">Equip: {cliente.equipamento || '---'}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-black">
+                      <td className="px-6 py-4 font-black text-center whitespace-nowrap">
                         {cliente.potencia_kva?.toLocaleString()} <span className="text-[9px] opacity-40">kVA</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-[10px]">{cliente.divisao || 'N/D'}</span>
+                          <span className="text-[8px] opacity-60 uppercase">{cliente.tipo_cliente || 'N/D'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border ${statusColor(cliente.estado_operacional)}`}>
                           {cliente.estado_operacional || 'N/D'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className={`font-black ${Number(cliente.montante_divida) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {Number(cliente.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                          </span>
+                          {cliente.num_facturas_atraso > 0 && (
+                            <span className="text-[8px] font-bold bg-red-50 text-red-600 px-1 rounded ml-auto">
+                              {cliente.num_facturas_atraso} FACT.
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-[#747686]">
                           <MapPin className="w-3 h-3 text-[#0d3fd1]" />
-                          <span className="font-medium uppercase">{cliente.municipio}</span>
-                          {cliente.bairro && <><span className="mx-1 opacity-20">|</span><span className="text-[9px] truncate max-w-[100px]">{cliente.bairro}</span></>}
+                          <span className="font-black uppercase text-[9px]">{cliente.municipio}</span>
+                          {cliente.bairro && <><span className="mx-1 opacity-20">|</span><span className="text-[9px] truncate max-w-[120px]">{cliente.bairro}</span></>}
                         </div>
                       </td>
                       <td className="px-6 py-4">
