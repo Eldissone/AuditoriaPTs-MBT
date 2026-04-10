@@ -61,8 +61,27 @@ export default function TechnicalSheet() {
     localStorage.setItem('@PTAS:technicalsheet:limiteExecutivo', String(limiteExecutivo));
   }, [limiteExecutivo]);
 
-  const handleExportPDF = () => {
-    window.print();
+  const handleExportPDF = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/clientes/${id_pt}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Ficha_Tecnica_${id_pt}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao exportar PDF:', err);
+      alert('Erro ao gerar o relatório PDF. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRecalibrate = () => {

@@ -8,6 +8,7 @@ router.use(authMiddleware);
 
 router.get('/', (req, res) => controller.index(req, res));
 router.get('/:id_pt', (req, res) => controller.show(req, res));
+router.get('/:id_pt/pdf', (req, res) => controller.generatePDF(req, res));
 router.post('/', (req, res) => controller.store(req, res));
 router.post('/bulk', (req, res) => controller.bulkStore(req, res));
 router.put('/:id_pt', (req, res) => controller.update(req, res));

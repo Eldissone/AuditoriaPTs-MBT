@@ -115,8 +115,28 @@ class IdentificacaoService {
 
     const CHUNK_SIZE = 100;
 
+    // Utility to filter out empty/null values for incremental update
+    const cleanPayload = (data) => {
+      const cleaned = {};
+      Object.keys(data).forEach(key => {
+        const val = data[key];
+        // Only keep values that are not empty, null, or generic defaults
+        if (val !== undefined && val !== null && val !== '' && val !== 'N/D' && val !== 'N/A') {
+          cleaned[key] = val;
+        }
+      });
+      return cleaned;
+    };
+
     for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
       const chunk = dataArray.slice(i, i + CHUNK_SIZE);
+      const chunkIds = chunk.map(item => deriveStableKey(item)).filter(Boolean);
+
+      // ── 3. Pre-fetch full records for comparison in this chunk ─────────────
+      const existingRecordsData = await prisma.cliente.findMany({
+        where: { id_pt: { in: chunkIds } }
+      });
+      const recordMap = new Map(existingRecordsData.map(r => [r.id_pt, r]));
 
       await Promise.all(chunk.map(async (item, chunkIdx) => {
         const absoluteIdx = i + chunkIdx;
@@ -146,7 +166,6 @@ class IdentificacaoService {
           // HIERARQUIA 2: Match Administrativo (Comuna/Distrito -> Nome da SE)
           if (!subestacaoId && clientLocalidade) {
             const localidadeLower = clientLocalidade.toLowerCase();
-            // Tenta encontrar uma subestação que tenha o nome da localidade (ex: "SE Zango" para localidade "Zango")
             const matchedSub = allSubs.find(s => 
               s.nome.toLowerCase().includes(localidadeLower) || 
               localidadeLower.includes(s.nome.toLowerCase())
@@ -156,21 +175,19 @@ class IdentificacaoService {
 
           // HIERARQUIA 3: Fallback por Município (Inteligente)
           if (!subestacaoId) {
-            // Se o município for Luanda (muito genérico), tenta refinar pelo distrito/comuna
             let refinedMunicipio = clientMunicipioName.toLowerCase();
             if (refinedMunicipio === 'luanda' && clientLocalidade) {
               const possibleMunicipio = getMunicipioByLocalidade(clientLocalidade);
               if (possibleMunicipio) refinedMunicipio = possibleMunicipio;
             }
-            
             subestacaoId = municipioToSubId.get(refinedMunicipio) || generalSub.id;
           }
 
           // Dados mapeados para criação/atualização
           const dataPayload = {
             id_subestacao: subestacaoId,
-            proprietario: String(item['Nome completo'] || item['Nome Proprietario'] || item.proprietario || 'N/D'),
-            localizacao: String(clientLocalidade || clientMunicipioName || 'N/A'),
+            proprietario: (item['Nome completo'] || item['Nome Proprietario'] || item.proprietario || 'N/D'),
+            localizacao: (clientLocalidade || clientMunicipioName || 'N/A'),
             municipio: clientMunicipioName || null,
             bairro: item['Bairro'] || item.bairro ? String(item['Bairro'] || item.bairro) : null,
             distrito_comuna: item['Distrito/Comuna'] || item.distrito_comuna ? String(item['Distrito/Comuna'] || item.distrito_comuna) : null,
@@ -186,7 +203,6 @@ class IdentificacaoService {
             categoria_tarifa: String(item['Categoria de tarifa'] || item.categoria_tarifa || ''),
             txt_categoria_tarifa: String(item['Txt.categoria tarifa'] || item.txt_categoria_tarifa || ''),
             gps: clientGpsStr || (clientCoords ? `${clientCoords.lat}, ${clientCoords.lng}` : null),
-
             contrato: String(item['Contrato'] || item.contrato || ''),
             num_serie: String(item['Nº de série'] || item.num_serie || ''),
             divisao: String(item['Divisão'] || item.divisao || ''),
@@ -200,25 +216,49 @@ class IdentificacaoService {
             num_facturas_atraso: parseInt(item['Número de Facturas não pagas'] || item.num_facturas_atraso || 0) || 0,
           };
 
-          const existing = ptIdSet.has(stableKey);
+          const existingRecord = recordMap.get(stableKey);
 
-          await prisma.cliente.upsert({
-            where: { id_pt: stableKey },
-            update: dataPayload,
-            create: {
-              ...dataPayload,
-              id_pt: stableKey
-            }
-          });
-
-          if (existing) {
-            results.updated++;
-          } else {
+          if (!existingRecord) {
+            // ── CASO A: Novo PT (Adicionar) ──────────────────────────────────
+            await prisma.cliente.create({
+              data: {
+                ...dataPayload,
+                id_pt: stableKey
+              }
+            });
             results.pts++;
             ptIdSet.add(stableKey);
+          } else {
+            // ── CASO B: PT Existente (Merge Inteligente) ─────────────────────
+            const updatePayload = cleanPayload(dataPayload);
+            
+            // Lógica de Comparação (Diff): se os dados forem iguais, ignora
+            const hasChanges = Object.keys(updatePayload).some(key => {
+              const newVal = updatePayload[key];
+              const oldVal = existingRecord[key];
+              
+              if (newVal === null || newVal === undefined) return false;
+              
+              // Comparação numérica (precisa para Decimal/Float)
+              if (typeof newVal === 'number' || (oldVal && typeof oldVal === 'object' && oldVal.toNumber)) {
+                return Number(newVal) !== Number(oldVal);
+              }
+              
+              return String(newVal).trim() !== String(oldVal || '').trim();
+            });
+
+            if (hasChanges) {
+              await prisma.cliente.update({
+                where: { id_pt: stableKey },
+                data: updatePayload
+              });
+              results.updated++;
+            } else {
+              // Dados idênticos ou sem informação nova: Ignorado
+              results.skipped++;
+            }
           }
         } catch (err) {
-
           results.errors.push(`Linha ${absoluteIdx + 1}: ${err.message}`);
         }
       }));

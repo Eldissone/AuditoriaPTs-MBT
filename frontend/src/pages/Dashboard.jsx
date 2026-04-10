@@ -111,6 +111,7 @@ export default function Dashboard() {
   const [zoom, setZoom] = useState(6);
 
   const debounceTimerRef = useRef(null);
+  const hasInitialFocused = useRef(false);
 
   const iconSizes = useMemo(() => {
     const z = zoom;
@@ -150,6 +151,26 @@ export default function Dashboard() {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Auto-focus logic: centers the map on the substation cluster once data is loaded
+  useEffect(() => {
+    if (!isLoadingMap && mapData?.subestacoes && mapData.subestacoes.length > 0 && !hasInitialFocused.current) {
+      const points = mapData.subestacoes
+        .map(s => parseGps(s.gps) || (s.latitude && s.longitude ? { lat: s.latitude, lng: s.longitude } : null))
+        .filter(Boolean);
+
+      if (points.length > 0) {
+        const sumLat = points.reduce((acc, p) => acc + p.lat, 0);
+        const sumLng = points.reduce((acc, p) => acc + p.lng, 0);
+        const avgLat = sumLat / points.length;
+        const avgLng = sumLng / points.length;
+
+        setMapCenter([avgLat, avgLng]);
+        setZoom(10);
+        hasInitialFocused.current = true;
+      }
+    }
+  }, [mapData, isLoadingMap, parseGps]);
 
   // Apply filters with debounce
   const applyFilters = useCallback((newFilters) => {

@@ -65,6 +65,41 @@ class IdentificacaoController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async generatePDF(req, res) {
+    try {
+      const { id_pt } = req.params;
+      const prisma = require('../../database/client');
+      const pdfGenerator = require('../../utils/pdfGenerator');
+
+      // Fetch full data including relations
+      const pt = await prisma.cliente.findUnique({
+        where: { id_pt },
+        include: { subestacao: true }
+      });
+
+      if (!pt) return res.status(404).json({ error: 'PT não encontrado' });
+
+      // Fetch inspections history
+      const inspections = await prisma.inspecao.findMany({
+        where: { id_pt },
+        include: { auditor: true },
+        orderBy: { data_inspecao: 'desc' },
+        take: 10 // Only most recent for the PDF
+      });
+
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Ficha_Tecnica_${id_pt}.pdf`);
+
+      await pdfGenerator.generateTechnicalSheet(pt, inspections, res);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro ao gerar o relatório PDF' });
+      }
+    }
+  }
 }
 
 module.exports = new IdentificacaoController();
