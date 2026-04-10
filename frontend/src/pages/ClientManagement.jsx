@@ -26,6 +26,7 @@ import ExcelImportModal from '../components/ExcelImportModal';
 
 export default function ClientManagement() {
   const [clientes, setClientes] = useState([]);
+  const [subestacoes, setSubestacoes] = useState([]);
   const [metadata, setMetadata] = useState({ municipios: [], categorias: [], potencias: [] });
   const [loading, setLoading] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -50,17 +51,27 @@ export default function ClientManagement() {
   const debounceRef = useRef(null);
   const navigate = useNavigate();
 
-  // ── Metadata ──────────────────────────────────────────────────────────────
+  // ── Metadata & Subestações ─────────────────────────────────────────────────
   useEffect(() => {
     fetchMetadata();
+    fetchSubestacoes();
   }, []);
-
+ 
   async function fetchMetadata() {
     try {
       const res = await api.get('/subestacoes/metadata');
       setMetadata(res.data);
     } catch (err) {
       console.error('Erro ao buscar metadados', err);
+    }
+  }
+
+  async function fetchSubestacoes() {
+    try {
+      const res = await api.get('/subestacoes');
+      setSubestacoes(res.data.data || res.data);
+    } catch (err) {
+      console.error('Erro ao buscar subestações', err);
     }
   }
 
@@ -153,15 +164,27 @@ export default function ClientManagement() {
   }, [clientes]);
 
   // ── Grouping by substation ────────────────────────────────────────────────
-  const groupedClientes = useMemo(() =>
-    clientes.reduce((acc, cliente) => {
+  const groupedClientes = useMemo(() => {
+    // Inicializa com todas as subestações conhecidas para garantir visibilidade
+    const acc = {};
+    
+    // 1. Adicionar subestações do banco
+    subestacoes.forEach(s => {
+      acc[s.nome] = [];
+    });
+ 
+    // 2. Adicionar o fallback padrão
+    acc['Subestação Geral (Padrão)'] = [];
+ 
+    // 3. Preencher com os clientes carregados
+    clientes.forEach(cliente => {
       const subName = cliente.subestacao?.nome || 'Subestação Geral (Padrão)';
       if (!acc[subName]) acc[subName] = [];
       acc[subName].push(cliente);
-      return acc;
-    }, {}),
-    [clientes]
-  );
+    });
+ 
+    return acc;
+  }, [clientes, subestacoes]);
 
   const toggleSub = (subName) => {
     setExpandedSubestacoes(prev => ({ ...prev, [subName]: !prev[subName] }));

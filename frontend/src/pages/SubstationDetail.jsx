@@ -8,12 +8,12 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   const [imagensLocais, setImagensLocais] = useState([]);
   const [imagemAtiva, setImagemAtiva] = useState(null);
 
-  // Fetch Clientes for same localidade (municipio) treating them as the substation's Clientes
+  // Fetch Clientes associated with this specific substation
   const { data: localPts = [] } = useQuery({
-    queryKey: ['clientes', { localidade: substation.municipio }],
+    queryKey: ['clientes', { id_subestacao: substation.id }],
     queryFn: async () => {
-      if (!substation.municipio) return [];
-      const res = await api.get('/clientes', { params: { localidade: substation.municipio } });
+      if (!substation.id) return [];
+      const res = await api.get('/clientes', { params: { id_subestacao: substation.id } });
       return res.data;
     },
     staleTime: 5 * 60 * 1000,

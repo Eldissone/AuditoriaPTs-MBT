@@ -209,28 +209,6 @@ export default function SubstationManagement() {
               <option value="Inativa">Inativa</option>
             </select>
 
-            <select
-              value={categoriaTarifa}
-              onChange={(e) => { setCategoriaTarifa(e.target.value); setCurrentPage(1); }}
-              className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
-            >
-              <option value="">Todas Tarifas</option>
-              {(metadata.categorias || []).map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-
-            <select
-              value={potencia}
-              onChange={(e) => { setPotencia(e.target.value); setCurrentPage(1); }}
-              className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all outline-none"
-            >
-              <option value="">Potência (Todas)</option>
-              {(metadata.potencias || []).map(p => (
-                <option key={p} value={p}>{p} kVA</option>
-              ))}
-            </select>
-
             <button
               onClick={() => { setSearchTerm(''); setMunicipio(''); setEstado(''); setPotencia(''); setCategoriaTarifa(''); setCurrentPage(1); }}
               className="flex items-center gap-2 px-4 py-3 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#444655] hover:bg-[#eff4ff] transition-all"

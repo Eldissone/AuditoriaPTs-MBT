@@ -183,4 +183,105 @@ function getGpsForMunicipio(municipio) {
   return found ? ANGOLA_GPS[found] : null;
 }
 
-module.exports = { getGpsForMunicipio };
+/**
+ * Parses a GPS string (e.g. "-8.8383, 13.2344" or "-8.8383;13.2344") into numeric coordinates.
+
+ * @param {string|null} gpsString 
+ * @returns {{lat: number, lng: number}|null}
+ */
+function parseGps(gpsString) {
+  if (!gpsString) return null;
+  const parts = gpsString.split(/[,\s;/]+/).map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
+  if (parts.length >= 2) {
+    return { lat: parts[0], lng: parts[1] };
+  }
+  return null;
+}
+
+/**
+ * Calculates the Haversine distance between two points on Earth in kilometers.
+ * @param {number} lat1 
+ * @param {number} lon1 
+ * @param {number} lat2 
+ * @param {number} lon2 
+ * @returns {number} Distance in KM
+ */
+function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in KM
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+const LUANDA_DIVISION = {
+  'icolo e bengo': {
+    comunas: ['cassoneca', 'cabiri', 'bom jesus', 'caculo cahango', 'quiminha'],
+    distritos: ['catete', 'bela vista']
+  },
+  'luanda': {
+    comunas: [],
+    distritos: ['sambizanga', 'rangel', 'maianga', 'ingombota', 'samba', 'neves bendinha', 'ngola kiluanje', 'mutamba']
+  },
+  'quicama': {
+    comunas: ['muxima', 'demba chio', 'quixinge', 'mumbondo', 'cabeledo'],
+    distritos: []
+  },
+  'cacuaco': {
+    comunas: ['cacuaco', 'quicolo', 'funda'],
+    distritos: ['kikolo', 'mulenvos de baixo', 'sequele']
+  },
+  'cazenga': {
+    comunas: [],
+    distritos: ['cazenga', 'hoji ya henda', '11 de novembro', 'kima kieza', 'tala hadi', 'kalawenda']
+  },
+  'viana': {
+    comunas: ['calumbo'],
+    distritos: ['viana', 'estalagem', 'kikuxi', 'baia', 'zango', 'vila flor']
+  },
+  'belas': {
+    comunas: ['camama', 'benfica', 'vila estoril', 'ilha do mussulo', 'barra do kwanza', 'futungo de belas', 'ramiro'],
+    distritos: ['quenguela', 'morro dos veados', 'ramiros', 'vila verde', 'cabolombo', 'kilamba']
+  },
+  'kilamba kiaxi': {
+    comunas: [],
+    distritos: ['golfe', 'sapu', 'palanca', 'nova vida']
+  },
+  'talatona': {
+    comunas: ['mussulo'],
+    distritos: ['benfica', 'futungo de belas', 'lar do patriota', 'talatona', 'camama', 'cidade universitaria']
+  }
+};
+
+/**
+ * Identifica o município com base no nome de uma comuna ou distrito de Luanda.
+ * @param {string} localidade 
+ * @returns {string|null} Nome do município ou null
+ */
+function getMunicipioByLocalidade(localidade) {
+  if (!localidade) return null;
+  const name = localidade.toLowerCase().trim();
+  
+  for (const [municipio, info] of Object.entries(LUANDA_DIVISION)) {
+    if (info.comunas.includes(name) || info.distritos.includes(name)) {
+      return municipio;
+    }
+  }
+  return null;
+}
+
+module.exports = { 
+  getGpsForMunicipio, 
+  parseGps, 
+  calcularDistanciaHaversine,
+  getMunicipioByLocalidade,
+  ANGOLA_GPS,
+  LUANDA_DIVISION
+};
