@@ -27,18 +27,24 @@ class SubestacaoRepository {
       where.tipo = filters.tipo;
     }
 
-    const [data, total] = await Promise.all([
-      prisma.subestacao.findMany({
-        where,
-        include: {
-          _count: {
-            select: { pts: true },
-          },
+    const options = {
+      where,
+      include: {
+        _count: {
+          select: { pts: true },
         },
-        orderBy: { nome: 'asc' },
-        skip,
-        take: limit,
-      }),
+      },
+      orderBy: { nome: 'asc' },
+    };
+
+    // If 'all' or 'nopagination' is requested, skip pagination logic
+    if (!filters.all && !filters.nopagination) {
+      options.skip = skip;
+      options.take = limit;
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.subestacao.findMany(options),
       prisma.subestacao.count({ where })
     ]);
 

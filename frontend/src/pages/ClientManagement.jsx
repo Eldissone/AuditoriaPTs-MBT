@@ -225,7 +225,7 @@ export default function ClientManagement() {
 
   async function fetchSubestacoes() {
     try {
-      const res = await api.get('/subestacoes');
+      const res = await api.get('/subestacoes', { params: { all: true } });
       setSubestacoes(res.data.data || res.data);
     } catch (err) {
       console.error('Erro ao buscar subestações', err);
