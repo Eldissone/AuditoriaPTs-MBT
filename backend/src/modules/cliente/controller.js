@@ -57,6 +57,19 @@ class IdentificacaoController {
     }
   }
 
+  async transferir(req, res) {
+    try {
+      const { id_pts, id_subestacao_destino } = req.body;
+      if (!id_pts || !id_subestacao_destino) {
+        return res.status(400).json({ error: 'id_pts e id_subestacao_destino são obrigatórios.' });
+      }
+      const result = await service.transferirPTs(id_pts, id_subestacao_destino);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async bulkStore(req, res) {
     try {
       const result = await service.bulkImport(req.body);

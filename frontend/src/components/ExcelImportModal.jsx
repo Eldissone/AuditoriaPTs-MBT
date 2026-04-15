@@ -151,7 +151,7 @@ const DEFAULT_CLIENT_FIELDS = [
     keywords: ['rua', 'endereco', 'endereço', 'rua numero'],
     required: false,
   },
-];
+]; 
 
 const IGNORE_KEY = '__IGNORE__';
 

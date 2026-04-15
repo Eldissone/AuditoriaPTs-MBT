@@ -160,9 +160,9 @@ export default function SubstationManagement() {
         </div>
         <div className="flex gap-3">
           <Link to="/subestacoes/nova">
-            <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
+            <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-3 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
               <Plus className="w-5 h-5" />
-              Registar Subestação
+              Subestação
             </button>
           </Link>
         </div>

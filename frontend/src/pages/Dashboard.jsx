@@ -271,10 +271,7 @@ export default function Dashboard() {
           <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Painel de Operações</h2>
           <p className="text-sm text-[#747686] font-medium">Controllo centralizado com agregação de dados em tempo real</p>
         </div>
-        <button className="flex items-center gap-2 bg-[#243141] text-white px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider hover:bg-[#0f1c2c] transition-all shadow-lg active:scale-95 uppercase">
-          <TrendingUp className="w-4 h-4 text-[#5fff9b]" />
-          Relatório de Ativos
-        </button>
+
       </div>
 
       {/* ── KPI Cards ──────────────────────────────────────────────────── */}

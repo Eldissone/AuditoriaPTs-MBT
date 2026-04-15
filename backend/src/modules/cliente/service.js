@@ -23,6 +23,29 @@ class IdentificacaoService {
     return repository.delete(id_pt);
   }
 
+  async transferirPTs(id_pts, id_subestacao_destino) {
+    if (!Array.isArray(id_pts) || id_pts.length === 0) {
+      throw new Error('Lista de PTs inválida ou vazia.');
+    }
+
+    const prisma = require('../../database/client');
+    const subDestino = parseInt(id_subestacao_destino);
+    if (isNaN(subDestino)) throw new Error('ID de subestação de destino inválido.');
+
+    const subExists = await prisma.subestacao.findUnique({ where: { id: subDestino } });
+    if (!subExists) throw new Error(`Subestação de destino (ID ${subDestino}) não encontrada.`);
+
+    const result = await prisma.cliente.updateMany({
+      where: { id_pt: { in: id_pts } },
+      data: { id_subestacao: subDestino },
+    });
+
+    return {
+      transferidos: result.count,
+      subestacao_destino: subExists.nome,
+    };
+  }
+
   async bulkImport(dataArray) {
     if (!Array.isArray(dataArray)) throw new Error('Dados inválidos para importação.');
 

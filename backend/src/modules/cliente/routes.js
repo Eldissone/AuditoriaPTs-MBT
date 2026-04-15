@@ -11,6 +11,7 @@ router.get('/:id_pt', (req, res) => controller.show(req, res));
 router.get('/:id_pt/pdf', (req, res) => controller.generatePDF(req, res));
 router.post('/', (req, res) => controller.store(req, res));
 router.post('/bulk', (req, res) => controller.bulkStore(req, res));
+router.post('/transferir', (req, res) => controller.transferir(req, res));
 router.put('/:id_pt', (req, res) => controller.update(req, res));
 router.delete('/:id_pt', (req, res) => controller.delete(req, res));
 
