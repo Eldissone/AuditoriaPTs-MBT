@@ -2,15 +2,18 @@ const prisma = require('../../database/client');
 
 class DashboardService {
   async getStats(filters = {}) {
-    const { municipio, status } = filters;
+    const { municipio, status, id_subestacao } = filters;
 
     const subWhere = {};
+    if (id_subestacao) subWhere.id = Number(id_subestacao);
     if (municipio) subWhere.municipio = municipio;
     if (status) subWhere.status = status;
 
-    // Client (PT) filter: join through subestacao
+    // Client (PT) filter
     const clientWhere = {};
-    if (municipio || status) {
+    if (id_subestacao) {
+      clientWhere.id_subestacao = Number(id_subestacao);
+    } else if (municipio || status) {
       clientWhere.subestacao = {};
       if (municipio) clientWhere.subestacao.municipio = municipio;
       if (status) clientWhere.subestacao.status = status;

@@ -100,11 +100,13 @@ export default function Dashboard() {
     municipio: '',
     status: '',
     tipo: '',
+    id_subestacao: '',
   });
   const [activeFilters, setActiveFilters] = useState({
     municipio: '',
     status: '',
     tipo: '',
+    id_subestacao: '',
   });
   const [selectedSubstation, setSelectedSubstation] = useState(null);
   const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]);
@@ -135,6 +137,7 @@ export default function Dashboard() {
       const params = {};
       if (activeFilters.municipio) params.municipio = activeFilters.municipio;
       if (activeFilters.status) params.status = activeFilters.status;
+      if (activeFilters.id_subestacao) params.id_subestacao = activeFilters.id_subestacao;
       const res = await api.get('/dashboard/stats', { params });
       return res.data;
     },
@@ -172,6 +175,20 @@ export default function Dashboard() {
     }
   }, [mapData, isLoadingMap, parseGps]);
 
+  // Handle auto-focus when a specific substation is filtered
+  useEffect(() => {
+    if (activeFilters.id_subestacao && mapData?.subestacoes) {
+      const target = mapData.subestacoes.find(s => String(s.id) === String(activeFilters.id_subestacao));
+      if (target) {
+        const coords = parseGps(target.gps) || (target.latitude && target.longitude ? { lat: target.latitude, lng: target.longitude } : null);
+        if (coords) {
+          setMapCenter([coords.lat, coords.lng]);
+          setZoom(14);
+        }
+      }
+    }
+  }, [activeFilters.id_subestacao, mapData, parseGps]);
+
   // Apply filters with debounce
   const applyFilters = useCallback((newFilters) => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -187,18 +204,19 @@ export default function Dashboard() {
   }, [filters, applyFilters]);
 
   const clearFilters = useCallback(() => {
-    const empty = { municipio: '', status: '', tipo: '' };
+    const empty = { municipio: '', status: '', tipo: '', id_subestacao: '' };
     setFilters(empty);
     setActiveFilters(empty);
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   }, []);
 
-  const hasActiveFilters = activeFilters.municipio || activeFilters.status || activeFilters.tipo;
+  const hasActiveFilters = activeFilters.municipio || activeFilters.status || activeFilters.tipo || activeFilters.id_subestacao;
 
   // Derive computed stats from filtered map data for KPIs
   const filteredSubs = useMemo(() => {
     if (!mapData?.subestacoes) return [];
     return mapData.subestacoes.filter(s => {
+      if (activeFilters.id_subestacao && String(s.id) !== String(activeFilters.id_subestacao)) return false;
       if (activeFilters.municipio && s.municipio !== activeFilters.municipio) return false;
       if (activeFilters.status && s.status !== activeFilters.status) return false;
       if (activeFilters.tipo && s.tipo !== activeFilters.tipo) return false;
@@ -355,10 +373,45 @@ export default function Dashboard() {
               </select>
             </div>
 
+            {/* Subestação */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Subestação</label>
+              <select
+                value={filters.id_subestacao}
+                onChange={e => handleFilterChange('id_subestacao', e.target.value)}
+                className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold text-[#0f1c2c] outline-none min-w-[180px]"
+              >
+                <option value="">Todas Subestações</option>
+                {(mapData?.subestacoes || []).map(s => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Badges */}
             {hasActiveFilters && (
               <div className="flex items-center gap-2 flex-wrap ml-2">
-                {/* teus badges aqui (sem mudar nada) */}
+                {activeFilters.municipio && (
+                  <span className="flex items-center gap-1 bg-blue-50 text-blue-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-blue-100">
+                    <Building2 className="w-3 h-3" /> {activeFilters.municipio}
+                  </span>
+                )}
+                {activeFilters.id_subestacao && (
+                  <span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-100">
+                    <Zap className="w-3 h-3" /> {mapData?.subestacoes?.find(s => String(s.id) === String(activeFilters.id_subestacao))?.nome || 'Subestação'}
+                  </span>
+                )}
+                {activeFilters.status && (
+                  <span className="flex items-center gap-1 bg-green-50 text-green-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-green-100">
+                    <Activity className="w-3 h-3" /> {activeFilters.status}
+                  </span>
+                )}
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 transition-all active:scale-95 ml-1"
+                >
+                  <X className="w-3.5 h-3.5" /> Limpar
+                </button>
               </div>
             )}
 
