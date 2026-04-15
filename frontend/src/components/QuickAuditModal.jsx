@@ -121,7 +121,7 @@ function PhotoCard({ slot, photo, onChange }) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function QuickAuditModal({ tarefa, onClose, onDone }) {
-  const [step, setStep] = useState(1); // 1=briefing, 2=fotos, 3=dados, 4=submeter
+  const [step, setStep] = useState(1); // 1=briefing, 2=fotos, 3=checklist, 4=dados, 5=submeter
   const [iniciando, setIniciando] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -131,6 +131,9 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const [fotos, setFotos] = useState(
     Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, null]))
   );
+
+  // Checklist
+  const [checklist, setChecklist] = useState(tarefa.checklist || []);
 
   // Dados da inspeção
   const [formData, setFormData] = useState({
@@ -160,6 +163,12 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   // ── Gestão de fotos ──────────────────────────────────────────────────────
   const handleFotoChange = (slotId, value) => {
     setFotos(prev => ({ ...prev, [slotId]: value }));
+  };
+
+  const handleToggleChecklist = (id) => {
+    setChecklist(prev => prev.map(item =>
+      item.id === id ? { ...item, checked: !item.checked } : item
+    ));
   };
 
   const fotosObrigatoriasCaptured = PHOTO_SLOTS
@@ -195,7 +204,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
 
       // Concluir tarefa
       await api.put(`/tarefas/${tarefa.id}/concluir`, {
-        checklist: tarefa.checklist || []
+        checklist: checklist
       });
 
       setSuccess(true);
@@ -214,8 +223,9 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const STEPS = [
     { n: 1, label: 'PT Info' },
     { n: 2, label: 'Fotos' },
-    { n: 3, label: 'Dados' },
-    { n: 4, label: 'Submeter' },
+    { n: 3, label: 'Checklist' },
+    { n: 4, label: 'Dados' },
+    { n: 5, label: 'Submeter' },
   ];
 
   return (
@@ -354,8 +364,68 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
             </div>
           )}
 
-          {/* ── PASSO 3: Dados ─────────────────────────────────────────── */}
+          {/* ── PASSO 3: Checklist ──────────────────────────────────────── */}
           {step === 3 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">
+                  Verificação de Itens
+                </p>
+                <span className="text-[9px] font-black text-[#0d3fd1] bg-[#eff4ff] px-3 py-1 rounded-full">
+                  {checklist.filter(c => c.checked).length}/{checklist.length} concluídos
+                </span>
+              </div>
+              
+              <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-2xl p-5 space-y-3">
+                {checklist.length > 0 ? (
+                  checklist.map((item) => (
+                    <label
+                      key={item.id}
+                      className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        item.checked 
+                          ? 'border-emerald-300 bg-emerald-50/30' 
+                          : 'border-[#c4c5d7]/30 hover:border-[#0d3fd1]/40 bg-white'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border-2 mt-0.5 transition-colors ${
+                        item.checked ? 'bg-emerald-500 border-emerald-500' : 'border-[#c4c5d7]'
+                      }`}>
+                        {item.checked && <CheckCircle2 className="w-4 h-4 text-white" />}
+                      </div>
+                      <span className={`text-sm font-bold transition-all ${
+                        item.checked ? 'text-emerald-700 line-through opacity-70' : 'text-[#444655]'
+                      }`}>
+                        {item.label}
+                      </span>
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={item.checked} 
+                        onChange={() => handleToggleChecklist(item.id)} 
+                      />
+                    </label>
+                  ))
+                ) : (
+                  <div className="p-10 border-2 border-dashed border-[#c4c5d7]/30 rounded-2xl text-center">
+                    <ClipboardList className="w-8 h-8 text-[#c4c5d7] mx-auto mb-3 opacity-50" />
+                    <p className="text-xs font-bold text-[#747686] uppercase tracking-wider">
+                      Sem itens na checklist para esta tarefa
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {checklist.length > 0 && !checklist.every(c => c.checked) && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 text-amber-700 p-3 rounded-xl text-[9px] font-bold uppercase tracking-wider">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  Ainda existem itens por marcar. Confirme se verificou tudo antes de avançar.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PASSO 4: Dados ─────────────────────────────────────────── */}
+          {step === 4 && (
             <div className="space-y-4">
               {/* Resultado */}
               <div>
@@ -435,8 +505,8 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
             </div>
           )}
 
-          {/* ── PASSO 4: Resumo & Submeter ─────────────────────────────── */}
-          {step === 4 && (
+          {/* ── PASSO 5: Resumo & Submeter ─────────────────────────────── */}
+          {step === 5 && (
             <div className="space-y-4">
               {/* Resumo fotos */}
               <div className="bg-[#f8faff] border border-[#0d3fd1]/10 rounded-2xl p-4">
@@ -457,6 +527,12 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
 
               {/* Resumo dados */}
               <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-[#747686] mb-1">Checklist</p>
+                  <p className="text-[11px] font-black text-[#0f1c2c] uppercase">
+                    {checklist.filter(c => c.checked).length}/{checklist.length} Itens
+                  </p>
+                </div>
                 <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
                   <p className="text-[8px] font-black uppercase tracking-widest text-[#747686] mb-1">Resultado</p>
                   <span className={`inline-flex px-2.5 py-1 rounded-lg text-[9px] font-black text-white uppercase ${RESULTADO_COLOR[formData.resultado]}`}>
@@ -550,10 +626,18 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                 onClick={() => setStep(4)}
                 className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all"
               >
+                Avançar <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {step === 4 && (
+              <button
+                onClick={() => setStep(5)}
+                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all"
+              >
                 Rever e Submeter <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
-            {step === 4 && !success && (
+            {step === 5 && !success && (
               <button
                 disabled={loading}
                 onClick={handleSubmit}

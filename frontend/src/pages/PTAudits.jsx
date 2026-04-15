@@ -111,7 +111,7 @@ export default function PTAudits() {
             )
           : (auditsRes.data || []);
         setAudits(filteredAudits);
-        setTarefas(tarefasRes.data ? tarefasRes.data.filter(t => t.status !== 'Concluída') : []);
+        setTarefas(tarefasRes.data || []);
       } catch (err) {
         console.error(err);
       }
@@ -307,12 +307,42 @@ export default function PTAudits() {
         : new Date(a.data_inspecao) - new Date(b.data_inspecao)
     );
 
+  const tarefasFiltradas = [...tarefas]
+    .filter((tarefa) => {
+      if (!busca.trim()) return true;
+      const termo = busca.toLowerCase();
+      return (
+        tarefa.titulo?.toLowerCase().includes(termo) ||
+        tarefa.id_pt?.toLowerCase().includes(termo) ||
+        tarefa.auditor?.nome?.toLowerCase().includes(termo) ||
+        tarefa.pt?.subestacao?.nome?.toLowerCase().includes(termo)
+      );
+    })
+    .filter((tarefa) => {
+      if (periodoFiltro === 'todos') return true;
+      const dataRef = tarefa.data_fim || tarefa.data_inicio || tarefa.data_prevista;
+      if (!dataRef) return true;
+      const data = new Date(dataRef);
+      const hoje = new Date();
+      const dias = periodoFiltro === '7' ? 7 : periodoFiltro === '30' ? 30 : 90;
+      const limite = new Date(hoje);
+      limite.setDate(hoje.getDate() - dias);
+      return data >= limite;
+    })
+    .sort((a, b) => {
+      const db = b.data_fim || b.data_inicio || b.data_prevista;
+      const da = a.data_fim || a.data_inicio || a.data_prevista;
+      return ordenacaoRelatorio === 'recentes'
+        ? new Date(db) - new Date(da)
+        : new Date(da) - new Date(db);
+    });
+
   const totalPreventivas = auditsFiltrados.filter((a) => a.tipo === 'Preventiva').length;
   const totalCorretivas = auditsFiltrados.filter((a) => a.tipo === 'Corretiva').length;
   const totalComTarefa = auditsFiltrados.filter((a) => Boolean(a.tarefa?.id)).length;
   const emissaoRelatorio = new Date().toLocaleString('pt-PT');
   const auditsParaExibicao = modoRelatorio === 'executivo' ? auditsFiltrados.slice(0, limiteExecutivo) : auditsFiltrados;
-  const tarefasParaExibicao = modoRelatorio === 'executivo' ? tarefas.slice(0, limiteExecutivo) : tarefas;
+  const tarefasParaExibicao = modoRelatorio === 'executivo' ? tarefasFiltradas.slice(0, limiteExecutivo) : tarefasFiltradas;
 
   const csvEscape = (value) => {
     const text = String(value ?? '');
@@ -636,7 +666,9 @@ export default function PTAudits() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 print-compact executive-hide">
           <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
             <p className="text-[10px] font-black text-[#747686] uppercase">Total filtrado</p>
-            <p className="text-lg font-black text-[#0f1c2c]">{auditsFiltrados.length}</p>
+            <p className="text-lg font-black text-[#0f1c2c]">
+              {subView === 'inspecoes' ? auditsFiltrados.length : tarefasFiltradas.length}
+            </p>
           </div>
           <div className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 print-kpi">
             <p className="text-[10px] font-black text-[#747686] uppercase">Preventivas</p>
@@ -787,7 +819,7 @@ export default function PTAudits() {
                 {tarefasParaExibicao.length === 0 && (
                   <tr>
                     <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
-                      Nenhuma tarefa de auditoria concluída
+                    Nenhuma tarefa encontrada
                     </td>
                   </tr>
                 )}
