@@ -195,6 +195,7 @@ export default function ClientManagement() {
     municipio: '',
     estado_operacional: '',
     nivel_tensao: '',
+    id_subestacao: '',
   });
 
   // Active filters (debounced — triggers the fetch)
@@ -203,6 +204,7 @@ export default function ClientManagement() {
     municipio: '',
     estado_operacional: '',
     nivel_tensao: '',
+    id_subestacao: '',
   });
 
   const debounceRef = useRef(null);
@@ -245,6 +247,7 @@ export default function ClientManagement() {
       if (activeFilters.municipio) params.municipio = activeFilters.municipio;
       if (activeFilters.estado_operacional) params.estado_operacional = activeFilters.estado_operacional;
       if (activeFilters.nivel_tensao) params.nivel_tensao = activeFilters.nivel_tensao;
+      if (activeFilters.id_subestacao) params.id_subestacao = activeFilters.id_subestacao;
 
       const response = await api.get('/clientes', { params });
 
@@ -280,7 +283,7 @@ export default function ClientManagement() {
   }, [filters]);
 
   const clearFilters = useCallback(() => {
-    const empty = { search: '', municipio: '', estado_operacional: '', nivel_tensao: '' };
+    const empty = { search: '', municipio: '', estado_operacional: '', nivel_tensao: '', id_subestacao: '' };
     setFilters(empty);
     setActiveFilters(empty);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -290,7 +293,8 @@ export default function ClientManagement() {
     activeFilters.search ||
     activeFilters.municipio ||
     activeFilters.estado_operacional ||
-    activeFilters.nivel_tensao
+    activeFilters.nivel_tensao ||
+    activeFilters.id_subestacao
   );
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -373,20 +377,25 @@ export default function ClientManagement() {
   const groupedClientes = useMemo(() => {
     const acc = {};
 
-    subestacoes.forEach(s => {
-      acc[s.nome] = { items: [], sub: s };
-    });
-
-    acc['Subestação Geral (Padrão)'] = acc['Subestação Geral (Padrão)'] || { items: [], sub: null };
-
     clientes.forEach(cliente => {
       const subName = cliente.subestacao?.nome || 'Subestação Geral (Padrão)';
-      if (!acc[subName]) acc[subName] = { items: [], sub: cliente.subestacao || null };
+      if (!acc[subName]) {
+        acc[subName] = { 
+          items: [], 
+          sub: cliente.subestacao || null 
+        };
+      }
       acc[subName].items.push(cliente);
     });
 
-    return acc;
-  }, [clientes, subestacoes]);
+    // Ordenar as chaves (nomes das subestações) para manter a tabela organizada
+    const sortedAcc = {};
+    Object.keys(acc).sort().forEach(key => {
+      sortedAcc[key] = acc[key];
+    });
+
+    return sortedAcc;
+  }, [clientes]);
 
   const toggleSub = (subName) => {
     setExpandedSubestacoes(prev => ({ ...prev, [subName]: !prev[subName] }));
@@ -583,6 +592,21 @@ export default function ClientManagement() {
               </select>
             </div>
 
+            {/* Subestação */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Subestação</label>
+              <select
+                value={filters.id_subestacao}
+                onChange={e => handleFilterChange('id_subestacao', e.target.value)}
+                className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[180px]"
+              >
+                <option value="">Todas Subestações</option>
+                {subestacoes.map(s => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+
             {/* BADGES + CLEAR */}
             {hasActiveFilters && (
               <div className="flex items-center gap-2 flex-wrap ml-2">
@@ -599,6 +623,11 @@ export default function ClientManagement() {
                 {activeFilters.nivel_tensao && (
                   <span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-purple-100">
                     <Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}
+                  </span>
+                )}
+                {activeFilters.id_subestacao && (
+                  <span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-100">
+                    <Building2 className="w-3 h-3" /> {subestacoes.find(s => String(s.id) === String(activeFilters.id_subestacao))?.nome || 'Subestação'}
                   </span>
                 )}
                 {activeFilters.search && (
