@@ -37,6 +37,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ExcelImportModal from '../components/ExcelImportModal';
 
 // ─── Transfer Modal ──────────────────────────────────────────────────────────
@@ -148,6 +149,8 @@ function PTTypeBadge({ tipo }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function ClientManagement() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [clientes, setClientes] = useState([]);
   const [subestacoes, setSubestacoes] = useState([]);
   const [metadata, setMetadata] = useState({ municipios: [], categorias: [], potencias: [] });
@@ -439,13 +442,15 @@ export default function ClientManagement() {
               {isSelectionMode ? 'Cancelar Selecção' : 'Seleccionar PTs'}
             </button>
           )}
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-2 bg-white border-2 border-[#0d3fd1] text-[#0d3fd1] px-6 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#eff4ff] transition-all shadow-sm active:scale-95 uppercase"
-          >
-            <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-            Importar Excel
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 bg-white border-2 border-[#0d3fd1] text-[#0d3fd1] px-6 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#eff4ff] transition-all shadow-sm active:scale-95 uppercase"
+            >
+              <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+              Importar Excel
+            </button>
+          )}
           <button
             onClick={() => navigate('/subestacoes')}
             className="flex items-center gap-2 bg-[#f8faff] border border-[#c4c5d7]/30 text-[#0f1c2c] px-6 py-3 rounded-xl text-[10px] font-black tracking-widest hover:bg-[#eff4ff] transition-all active:scale-95 uppercase"
@@ -615,12 +620,16 @@ export default function ClientManagement() {
                                   <button onClick={() => navigate(`/ficha-tecnica/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm" title="Ficha Técnica">
                                     <FileText className="w-4 h-4" />
                                   </button>
-                                  <button onClick={() => navigate(`/subestacoes/${cliente.id_subestacao}/clientes/editar/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm" title="Editar">
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button onClick={() => handleDelete(cliente.id_pt)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Eliminar">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                  {isAdmin && (
+                                    <>
+                                      <button onClick={() => navigate(`/subestacoes/${cliente.id_subestacao}/clientes/editar/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm" title="Editar">
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button onClick={() => handleDelete(cliente.id_pt)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Eliminar">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -783,9 +792,11 @@ export default function ClientManagement() {
                                 <button onClick={() => navigate(`/ficha-tecnica/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm" title="Ficha Técnica">
                                   <FileText className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => navigate(`/subestacoes/${cliente.id_subestacao}/clientes/editar/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm" title="Editar">
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
+                                {isAdmin && (
+                                  <button onClick={() => navigate(`/subestacoes/${cliente.id_subestacao}/clientes/editar/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm" title="Editar">
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>

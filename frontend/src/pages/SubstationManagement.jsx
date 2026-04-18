@@ -15,8 +15,11 @@ import {
   ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function SubstationManagement() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [subestacoes, setSubestacoes] = useState([]);
   const [metadata, setMetadata] = useState({ municipios: [], categorias: [], potencias: [] });
   const [loading, setLoading] = useState(true);
@@ -159,12 +162,14 @@ export default function SubstationManagement() {
           <p className="text-sm text-[#747686] font-medium uppercase tracking-wider opacity-60">Inventário e controlo de ativos</p>
         </div>
         <div className="flex gap-3">
-          <Link to="/subestacoes/nova">
-            <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-3 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
-              <Plus className="w-5 h-5" />
-              Subestação
-            </button>
-          </Link>
+          {isAdmin && (
+            <Link to="/subestacoes/nova">
+              <button className="flex items-center gap-2 bg-[#0d3fd1] text-white px-3 py-3 rounded-xl text-xs font-black tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/20 active:scale-95 uppercase">
+                <Plus className="w-5 h-5" />
+                Subestação
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -296,20 +301,24 @@ export default function SubstationManagement() {
                             >
                               <FileText className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
-                              className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm"
-                              title="Editar"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(sub.id, sub.codigo)}
-                              className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isAdmin && (
+                              <>
+                                <button
+                                  onClick={() => navigate(`/subestacoes/editar/${sub.id}`)}
+                                  className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm"
+                                  title="Editar Subestação"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(sub.id, sub.codigo_operacional)}
+                                  className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                  title="Eliminar Subestação"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

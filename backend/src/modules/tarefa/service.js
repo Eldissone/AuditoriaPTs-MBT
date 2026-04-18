@@ -1,4 +1,5 @@
 const TarefaRepository = require('./repository');
+const prisma = require('../../database/client');
 
 class TarefaService {
   async createTarefa(dados) {
@@ -96,6 +97,37 @@ class TarefaService {
       if (payload.status === 'Pendente') {
         payload.data_inicio = null;
         payload.data_fim = null;
+      }
+      
+      // Validação de Admin: Aplicar as edições de campo pendentes à base de dados mestre
+      if (payload.status === 'Concluída') {
+        const tarefa = await TarefaRepository.findById(id);
+        if (tarefa && tarefa.status === 'Aguardando Validação') {
+          // Procurar a inspeção correspondente
+          const inspecao = await prisma.inspecao.findFirst({
+            where: { id_tarefa: Number(id) },
+            orderBy: { criado_em: 'desc' }
+          });
+          
+          if (inspecao && inspecao.dados_cliente_campo) {
+            const dc = inspecao.dados_cliente_campo;
+            // Atualizar o registo do Cliente/PT com os dados submetidos pelo auditor
+            await prisma.cliente.update({
+              where: { id_pt: inspecao.id_pt },
+              data: {
+                ...(dc.razao_social           && { proprietario: dc.razao_social }),
+                ...(dc.resp_financeiro        && { responsavel_financeiro: dc.resp_financeiro }),
+                ...(dc.contacto_fin           && { contacto_resp_financeiro: dc.contacto_fin }),
+                ...(dc.resp_tecnico           && { responsavel_tecnico_cliente: dc.resp_tecnico }),
+                ...(dc.contacto_tec           && { contacto_resp_tecnico: dc.contacto_tec }),
+                ...(dc.canal_faturacao         && { canal_faturacao: dc.canal_faturacao }),
+                ...(dc.empresa_manutencao      && { empresa_manutencao: dc.empresa_manutencao }),
+                ...(dc.fornece_terceiros       != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
+                ...(dc.data_ultima_manutencao  && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
+              },
+            });
+          }
+        }
       }
     }
 

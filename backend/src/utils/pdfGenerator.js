@@ -46,23 +46,8 @@ class PDFGenerator {
 
         currentY += 50;
 
-        // --- Secção 1: Dados do Proprietário & Contrato ---
-        this._drawSectionTitle(doc, 'PROPRIEDADE & GESTÃO', currentY, colors);
-        currentY += 25;
-
-        this._drawField(doc, 'PROPRIETÁRIO / DONO', ptData.proprietario || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'CONTA CONTRATO', ptData.conta_contrato || 'N/A', 410, currentY, colors);
-
-        currentY += 45;
-        this._drawField(doc, 'PARCEIRO NEGÓCIOS', ptData.parceiro_negocios || '---', 50, currentY, colors);
-        this._drawField(doc, 'TIPO DE CLIENTE', ptData.tipo_cliente || 'N/D', 230, currentY, colors);
-        // this._drawField(doc, 'SÉRIE EQUIPAMENTO', ptData.num_serie || '---', 410, currentY, colors);
-        this._drawField(doc, 'TIPO INSTALAÇÃO', ptData.tipo_instalacao || '---', 410, currentY, colors);
-
-        currentY += 60;
-
-        // --- Secção 2: Especificações Técnicas ---
-        this._drawSectionTitle(doc, 'ESPECIFICAÇÕES TÉCNICAS', currentY, colors);
+        // --- Secção 1: Ficha Técnica do Ativo (PT) ---
+        this._drawSectionTitle(doc, 'FICHA TÉCNICA DO ATIVO (PT)', currentY, colors);
         currentY += 25;
 
         this._drawField(doc, 'POTÊNCIA NOMINAL', `${ptData.potencia_kva || '0'} kVA`, 50, currentY, colors);
@@ -70,31 +55,38 @@ class PDFGenerator {
         this._drawField(doc, 'ESTADO OPERACIONAL', ptData.estado_operacional || 'ATIVO', 410, currentY, colors);
 
         currentY += 45;
-        this._drawField(doc, 'DIVISÃO COMERCIAL', ptData.divisao || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'DENOMINAÇÃO DIVISÃO', ptData.denominacao_divisao || 'N/D', 230, currentY, colors);
-        this._drawField(doc, 'ANO INSTALAÇÃO', String(ptData.ano_instalacao || 'N/A'), 410, currentY, colors);
-
-        currentY += 60;
-
-        // --- Secção 3: Localização & Infraestrutura ---
-        this._drawSectionTitle(doc, 'LOCALIZAÇÃO & INFRAESTRUTURA', currentY, colors);
-        currentY += 25;
-
-        this._drawField(doc, 'MUNICÍPIO', ptData.municipio || '---', 50, currentY, colors);
-        this._drawField(doc, 'DISTRITO / COMUNA', ptData.distrito_comuna || '---', 230, currentY, colors);
+        this._drawField(doc, 'TIPO INSTALAÇÃO', ptData.tipo_instalacao || '---', 50, currentY, colors);
+        this._drawField(doc, 'ANO INSTALAÇÃO', String(ptData.ano_instalacao || 'N/A'), 230, currentY, colors);
         this._drawField(doc, 'SUBESTAÇÃO ORIGEM', ptData.subestacao?.nome || 'N/A', 410, currentY, colors);
 
         currentY += 45;
-        this._drawField(doc, 'ENDEREÇO / RUA', ptData.rua || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'BAIRRO / ZONA', ptData.bairro || '---', 410, currentY, colors);
+        this._drawField(doc, 'MUNICÍPIO', ptData.municipio || '---', 50, currentY, colors);
+        this._drawField(doc, 'LOCALIDADE / BAIRRO', ptData.bairro || ptData.distrito_comuna || '---', 230, currentY, colors);
+        this._drawField(doc, 'COORDENADAS GPS', ptData.gps || 'N/D', 410, currentY, colors);
+
+        currentY += 60;
+
+        // --- Secção 2: Dados Comerciais do Cliente ---
+        this._drawSectionTitle(doc, 'DADOS COMERCIAIS DO CLIENTE', currentY, colors);
+        currentY += 25;
+
+        this._drawField(doc, 'PROPRIETÁRIO / DONO', ptData.proprietario || 'N/D', 50, currentY, colors);
+        this._drawField(doc, 'RESP. TÉCNICO', ptData.responsavel_tecnico_cliente || 'N/D', 230, currentY, colors);
+        this._drawField(doc, 'CONTA CONTRATO', ptData.conta_contrato || 'N/A', 410, currentY, colors);
 
         currentY += 45;
-        this._drawField(doc, 'GPS (COORDENADAS)', ptData.gps || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'DÍVIDA', `${Number(ptData.montante_divida || 0).toLocaleString('pt-PT')} Kz`, 410, currentY, colors);
+        this._drawField(doc, 'TIPO DE CLIENTE', ptData.tipo_cliente || 'N/D', 50, currentY, colors);
+        this._drawField(doc, 'PARCEIRO NEGÓCIOS', ptData.parceiro_negocios || '---', 230, currentY, colors);
+        this._drawField(doc, 'DÍVIDA VENCIDA', `${Number(ptData.montante_divida || 0).toLocaleString('pt-PT')} Kz`, 410, currentY, colors);
+
+        currentY += 45;
+        this._drawField(doc, 'DIVISÃO COMERCIAL', ptData.divisao || 'N/D', 50, currentY, colors);
+        this._drawField(doc, 'DENOMINAÇÃO DIVISÃO', ptData.denominacao_divisao || 'N/D', 230, currentY, colors);
+        this._drawField(doc, 'EMPRESA MANUTENÇÃO', ptData.empresa_manutencao || 'N/A', 410, currentY, colors);
 
         currentY += 70;
 
-        // --- Secção 4: Histórico de Inspeções (Tabela) ---
+        // --- Secção 3: Histórico de Inspeções (Tabela) ---
         this._drawSectionTitle(doc, 'HISTÓRICO RECENTE DE AUDITORIAS', currentY, colors);
         currentY += 25;
 

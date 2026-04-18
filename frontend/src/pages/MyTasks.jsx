@@ -163,11 +163,11 @@ export default function MyTasks() {
 
         {tarefa.status === 'Em Andamento' && (
           <button
-            onClick={() => openConcluirModal(tarefa)}
-            className="flex-1 flex justify-center items-center gap-2 bg-[#00e47c] text-[#005229] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-[#00e47c]/20 hover:bg-[#00d674] transition-all active:scale-95"
+            onClick={() => setAuditTarefa(tarefa)}
+            className="flex-1 flex justify-center items-center gap-2 bg-[#0d3fd1] text-white py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-[#0d3fd1]/10 hover:bg-[#0034cc] transition-all active:scale-95"
           >
-            <CheckCircle className="w-3.5 h-3.5" />
-            Concluir
+            <Zap className="w-3.5 h-3.5" fill="currentColor" />
+            Continuar
           </button>
         )}
 
@@ -428,12 +428,12 @@ export default function MyTasks() {
               <button onClick={() => setDetailTarefa(null)} className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]">
                 Fechar
               </button>
-              {detailTarefa.status === 'Pendente' && (
+              {['Pendente', 'Em Andamento'].includes(detailTarefa.status) && (
                 <button
                   onClick={() => { setDetailTarefa(null); handleIniciar(detailTarefa); }}
                   className="flex items-center gap-2 px-6 py-3 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-[#0034cc] transition-all"
                 >
-                  <Zap className="w-3.5 h-3.5" fill="currentColor" /> Iniciar Auditoria
+                  <Zap className="w-3.5 h-3.5" fill="currentColor" /> {detailTarefa.status === 'Em Andamento' ? 'Continuar Auditoria' : 'Iniciar Auditoria'}
                 </button>
               )}
             </div>

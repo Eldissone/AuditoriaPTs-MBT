@@ -196,7 +196,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const { user } = useAuth();
 
   // Guardar ID Original do Auditor: apenas o utilizador designado (ou Admin, dependendo das regras) deve Iniciar
-  const isAssignedAuditor = user?.id === tarefa?.id_auditor;
+  const isAssignedAuditor = user?.id === tarefa?.id_auditor || user?.role === 'admin';
 
   const [step, setStep] = useState(1);
   const [iniciando, setIniciando] = useState(false);
@@ -263,6 +263,11 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   ];
 
   const handleIniciar = async () => {
+    if (tarefa.status === 'Em Andamento') {
+      setStep(2);
+      return;
+    }
+    
     try {
       setIniciando(true); setError(null);
       await api.put(`/tarefas/${tarefa.id}/iniciar`);
@@ -754,7 +759,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                 onClick={handleIniciar}
                 title={!isAssignedAuditor ? "Apenas o auditor designado pode iniciar" : ""}
                 className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                {iniciando ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A iniciar...</> : <><Zap className="w-4 h-4" fill="currentColor" /> Iniciar Auditoria <ArrowRight className="w-3.5 h-3.5" /></>}
+                {iniciando ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A iniciar...</> : <><Zap className="w-4 h-4" fill="currentColor" /> {tarefa.status === 'Em Andamento' ? 'Continuar Auditoria' : 'Iniciar Auditoria'} <ArrowRight className="w-3.5 h-3.5" /></>}
               </button>
             )}
             {step === 2 && (
