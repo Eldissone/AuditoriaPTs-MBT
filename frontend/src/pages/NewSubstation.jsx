@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
+import {
   Save, ArrowLeft, MapPin, Zap, Database, Activity, Calendar, Info
 } from 'lucide-react';
 import api from '../services/api';
@@ -74,7 +74,7 @@ export default function NewSubstation() {
         try {
           const response = await api.get(`/subestacoes/${id}`);
           const sub = response.data;
-          
+
           setFormData({
             nome: sub.nome || '',
             codigo_operacional: sub.codigo_operacional || '',
@@ -105,20 +105,20 @@ export default function NewSubstation() {
     }
     const fallback = getGpsForMunicipio(formData.municipio);
     if (fallback) {
-       const parts = fallback.split(',');
-       return [parseFloat(parts[0]), parseFloat(parts[1])];
+      const parts = fallback.split(',');
+      return [parseFloat(parts[0]), parseFloat(parts[1])];
     }
     return [-11.2027, 17.8739]; // Default Angola
   }, [formData.latitude, formData.longitude, formData.municipio]);
 
   const markerPos = useMemo(() => {
     if (formData.latitude && formData.longitude) {
-       return { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) };
+      return { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) };
     }
     const fallback = getGpsForMunicipio(formData.municipio);
     if (fallback) {
-       const parts = fallback.split(',');
-       return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+      const parts = fallback.split(',');
+      return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
     }
     return { lat: -8.8383, lng: 13.2344 }; // Default Luanda
   }, [formData.latitude, formData.longitude, formData.municipio]);
@@ -133,8 +133,8 @@ export default function NewSubstation() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setFormData(prev => ({ 
-          ...prev, 
+        setFormData(prev => ({
+          ...prev,
           latitude: position.coords.latitude.toFixed(6),
           longitude: position.coords.longitude.toFixed(6)
         }));
@@ -177,7 +177,7 @@ export default function NewSubstation() {
       {/* Header */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-6">
-          <button 
+          <button
             onClick={() => navigate('/subestacoes')}
             className="p-4 bg-white border border-[#c4c5d7]/20 rounded-2xl text-[#0f1c2c] hover:bg-[#eff4ff] transition-all shadow-sm"
           >
@@ -199,7 +199,7 @@ export default function NewSubstation() {
       <div className="bg-white rounded-[2.5rem] border border-[#c4c5d7]/20 shadow-2xl overflow-hidden">
         <div className="p-8 md:p-12">
           <form onSubmit={handleSubmit} className="space-y-12">
-            
+
             {/* Secção 1: Identificação Operacional */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               <div className="lg:col-span-1">
@@ -211,7 +211,7 @@ export default function NewSubstation() {
                 </div>
                 <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Dados core da subestação no sistema operativo.</p>
               </div>
-              
+
               <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nome da Subestação</label>
@@ -248,7 +248,7 @@ export default function NewSubstation() {
                 </div>
                 <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Parâmetros elétricos e capacidade nominal.</p>
               </div>
-              
+
               <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Entrada (kV)</label>
@@ -301,10 +301,10 @@ export default function NewSubstation() {
                   <h3 className="text-sm font-black text-[#0f1c2c] uppercase tracking-widest">Localização GPS</h3>
                 </div>
                 <p className="text-xs text-[#747686] font-medium leading-relaxed uppercase opacity-60">Geolocalização precisa da infraestrutura.</p>
-                
+
                 <div className="mt-8 space-y-4">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={handleCurrentLocation}
                     disabled={isLocating}
                     className="w-full flex items-center justify-center gap-3 py-4 bg-[#0d3fd1] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
@@ -315,10 +315,10 @@ export default function NewSubstation() {
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Coordenadas (Lat, Lng)</label>
-                      <input 
-                        type="text" 
-                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0d3fd1] font-mono focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none transition-all" 
-                        value={formData.latitude && formData.longitude ? `${formData.latitude}, ${formData.longitude}` : ''} 
+                      <input
+                        type="text"
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0d3fd1] font-mono focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none transition-all"
+                        value={formData.latitude && formData.longitude ? `${formData.latitude}, ${formData.longitude}` : ''}
                         placeholder="Ex: -8.8383, 13.2344"
                         onChange={(e) => {
                           const val = e.target.value;
@@ -335,17 +335,17 @@ export default function NewSubstation() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="lg:col-span-2">
-                <div className="w-full h-80 rounded-[2rem] overflow-hidden border-4 border-[#f8faff] shadow-2xl relative z-0 group">
-                   <div className="absolute top-4 right-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-[#c4c5d7]/20 shadow-sm pointer-events-none group-hover:opacity-0 transition-opacity">
-                     <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Arraste o pino para refinar</p>
-                   </div>
-                   <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }}>
-                      <ChangeView center={mapCenter} zoom={mapZoom} />
-                      <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                      <DraggableMarker position={markerPos} setPosition={(pos) => setFormData({...formData, latitude: pos.lat.toFixed(6), longitude: pos.lng.toFixed(6)})} />
-                   </MapContainer>
+                <div className="w-full h-80 rounded-[1rem] overflow-hidden border-4 border-[#f8faff] shadow-2xl relative z-0 group">
+                  <div className="absolute top-4 right-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-[#c4c5d7]/20 shadow-sm pointer-events-none group-hover:opacity-0 transition-opacity">
+                    <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Arraste o pino para refinar</p>
+                  </div>
+                  <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }}>
+                    <ChangeView center={mapCenter} zoom={mapZoom} />
+                    <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                    <DraggableMarker position={markerPos} setPosition={(pos) => setFormData({ ...formData, latitude: pos.lat.toFixed(6), longitude: pos.lng.toFixed(6) })} />
+                  </MapContainer>
                 </div>
               </div>
             </div>

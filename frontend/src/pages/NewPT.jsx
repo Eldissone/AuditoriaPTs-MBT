@@ -155,7 +155,7 @@ export default function NewPT() {
         try {
           const response = await api.get(`/clientes/${id}`);
           const pt = response.data;
-          
+
           const sanitize = (obj) => {
             if (obj === null) return '';
             if (typeof obj !== 'object') return obj;
@@ -171,11 +171,11 @@ export default function NewPT() {
 
           setFormData(prev => ({
             ...prev,
-            identificacao: { 
-              ...prev.identificacao, 
+            identificacao: {
+              ...prev.identificacao,
               ...sPt,
               id_pt: sPt.id_pt || '', // Ensure id_pt is handled correctly if renamed in response
-              ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : '' 
+              ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : ''
             },
             conformidade: { ...prev.conformidade, ...(sPt.conformidade || {}) },
             transformador: { ...prev.transformador, ...(sPt.transformadores?.[0] || {}) },
@@ -282,7 +282,7 @@ export default function NewPT() {
 
         {/* Form Content Area */}
         <div className="flex-grow">
-          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden p-8 md:p-12 min-h-[600px] flex flex-col">
+          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden p-8 md:p-12 min-h-[600px] flex flex-col">
             <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#c4c5d7]/10">
               <div className="w-12 h-12 bg-[#eff4ff] rounded-2xl flex items-center justify-center text-[#0d3fd1] shadow-inner">
                 {React.createElement(tabs[activeTab - 1].icon, { className: "w-6 h-6" })}
@@ -409,7 +409,7 @@ export default function NewPT() {
                       <div className="w-1 h-4 bg-[#0d3fd1] rounded-full"></div>
                       <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest">Informação Estrutural (SAP/ENDE)</h4>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº do Contrato</label>
@@ -452,25 +452,25 @@ export default function NewPT() {
                       <div className="w-1 h-4 bg-red-500 rounded-full"></div>
                       <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Informação Financeira</h4>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Montante da Dívida (Kz)</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           step="0.01"
-                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600 focus:ring-1 focus:ring-red-200" 
-                          value={formData.identificacao.montante_divida} 
-                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, montante_divida: Number(e.target.value) } })} 
+                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600 focus:ring-1 focus:ring-red-200"
+                          value={formData.identificacao.montante_divida}
+                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, montante_divida: Number(e.target.value) } })}
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Faturas Não Pagas</label>
-                        <input 
-                          type="number" 
-                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600" 
-                          value={formData.identificacao.num_facturas_atraso} 
-                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_facturas_atraso: Number(e.target.value) } })} 
+                        <input
+                          type="number"
+                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600"
+                          value={formData.identificacao.num_facturas_atraso}
+                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_facturas_atraso: Number(e.target.value) } })}
                         />
                       </div>
                     </div>
@@ -807,7 +807,7 @@ export default function NewPT() {
 
               {activeTab === 8 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="md:col-span-2 bg-[#0f1c2c] p-8 rounded-[2rem] border border-[#0d3fd1]/30 shadow-2xl shadow-[#0d3fd1]/10">
+                  <div className="md:col-span-2 bg-[#0f1c2c] p-8 rounded-[1rem] border border-[#0d3fd1]/30 shadow-2xl shadow-[#0d3fd1]/10">
                     <div className="flex items-center gap-4 mb-8">
                       <div className="w-3 h-3 rounded-full bg-[#00e47c] animate-pulse shadow-[0_0_15px_#00e47c]" />
                       <h4 className="text-xs font-black text-[#5fff9b] uppercase tracking-[0.3em]">Sistema de Monitorização SCADA</h4>

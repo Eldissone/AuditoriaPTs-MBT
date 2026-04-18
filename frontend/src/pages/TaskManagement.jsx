@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X, Camera, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X, Camera, ZoomIn, ChevronLeft, ChevronRight, ClipboardCheck, Wrench, Search as SearchIcon, AlertTriangle, Layers } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function TaskManagement() {
+  const { user } = useAuth();
   const [tarefas, setTarefas] = useState([]);
   const [auditores, setAuditores] = useState([]);
   const [pts, setPts] = useState([]);
@@ -20,13 +22,16 @@ export default function TaskManagement() {
     id_pt: '',
     data_prevista: new Date().toISOString().split('T')[0],
     status: 'Pendente',
+    tipo_tarefa: 'Auditoria',
+    prioridade: 'Normal',
     checklist: []
   });
   const [novoChecklistItem, setNovoChecklistItem] = useState('');
   const [detailTarefa, setDetailTarefa] = useState(null);
   const [taskInspecoes, setTaskInspecoes] = useState([]);
-  const [lightboxPhoto, setLightboxPhoto] = useState(null); // { src, label, index, total }
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [localidadeModal, setLocalidadeModal] = useState('');
+  const [tipoFiltro, setTipoFiltro] = useState('');
 
   const fetchDados = async () => {
     try {
@@ -74,6 +79,8 @@ export default function TaskManagement() {
         id_pt: tarefa.id_pt || '',
         data_prevista: tarefa.data_prevista.split('T')[0],
         status: tarefa.status || 'Pendente',
+        tipo_tarefa: tarefa.tipo_tarefa || 'Auditoria',
+        prioridade: tarefa.prioridade || 'Normal',
         checklist: tarefa.checklist || []
       });
     } else {
@@ -85,6 +92,8 @@ export default function TaskManagement() {
         id_pt: '',
         data_prevista: new Date().toISOString().split('T')[0],
         status: 'Pendente',
+        tipo_tarefa: 'Auditoria',
+        prioridade: 'Normal',
         checklist: []
       });
     }
@@ -130,6 +139,8 @@ export default function TaskManagement() {
         descricao: formData.descricao,
         id_auditor: Number(formData.id_auditor),
         data_prevista: formData.data_prevista,
+        tipo_tarefa: formData.tipo_tarefa,
+        prioridade: formData.prioridade,
         checklist: formData.checklist
       };
       if (formData.id_pt) payload.id_pt = formData.id_pt;
@@ -140,7 +151,7 @@ export default function TaskManagement() {
       } else {
         await api.post('/tarefas', payload);
       }
-      
+
       setIsModalOpen(false);
       fetchDados();
     } catch (err) {
@@ -158,28 +169,59 @@ export default function TaskManagement() {
     }
   };
 
+  const handleValidarTarefa = async (id) => {
+    if (!window.confirm('Confirmar a validação final desta tarefa? O relatório ficará visível.')) return;
+    try {
+      await api.put(`/tarefas/${id}`, { status: 'Concluída' });
+      fetchDados();
+      setDetailTarefa(null);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao validar tarefa');
+    }
+  };
+
   const getStatusBadge = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Concluída': return <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">Concluída</span>;
       case 'Em Andamento': return <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">Em Andamento</span>;
+      case 'Aguardando Validação': return <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">Validação</span>;
       default: return <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">Pendente</span>;
+    }
+  };
+
+  const getTipoBadge = (tipo) => {
+    switch (tipo) {
+      case 'Auditoria': return <span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-[#0d3fd1]/20"><ClipboardCheck className="w-3 h-3" />Auditoria</span>;
+      case 'Manutenção Preventiva': return <span className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-green-200"><Wrench className="w-3 h-3" />Prev.</span>;
+      case 'Manutenção Corretiva': return <span className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-orange-200"><Wrench className="w-3 h-3" />Corret.</span>;
+      case 'Inspeção': return <span className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-purple-200"><Layers className="w-3 h-3" />Inspeção</span>;
+      default: return <span className="flex items-center gap-1 bg-slate-50 text-slate-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-slate-200">{tipo || 'N/D'}</span>;
+    }
+  };
+
+  const getPrioridadeBadge = (prio) => {
+    switch (prio) {
+      case 'Urgente': return <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[8px] font-black uppercase">🔴 Urgente</span>;
+      case 'Alta': return <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[8px] font-black uppercase">🟠 Alta</span>;
+      case 'Baixa': return <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[8px] font-black uppercase">⚪ Baixa</span>;
+      default: return <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[8px] font-black uppercase">🔵 Normal</span>;
     }
   };
 
   const filteredTarefas = activeTab === 'completed'
     ? tarefas.filter(t => t.status === 'Concluída')
-    : tarefas
-  ;
+    : tarefas;
 
   const tarefasFiltradas = filteredTarefas
     .filter((t) => (ptFiltro ? t.id_pt === ptFiltro : true))
+    .filter((t) => (tipoFiltro ? (t.tipo_tarefa || 'Auditoria') === tipoFiltro : true))
     .filter((t) => {
       if (!proprietarioFiltro) return true;
       return (t.pt?.subestacao?.proprietario || '').toLowerCase().includes(proprietarioFiltro.toLowerCase());
     });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
+    <div className="max-w-full p-6 mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h2 className="text-[#0f1c2c] text-3xl font-black uppercase tracking-tighter">Gestão de Tarefas</h2>
@@ -200,36 +242,45 @@ export default function TaskManagement() {
       <div className="flex gap-2 border-b border-[#c4c5d7]/20 overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('all')}
-          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
-            activeTab === 'all'
-              ? 'border-[#0d3fd1] text-[#0d3fd1]'
-              : 'border-transparent text-[#747686] hover:text-[#444655]'
-          }`}
+          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'all'
+            ? 'border-[#0d3fd1] text-[#0d3fd1]'
+            : 'border-transparent text-[#747686] hover:text-[#444655]'
+            }`}
         >
           Todas as Tarefas ({tarefas.length})
         </button>
         <button
           onClick={() => setActiveTab('completed')}
-          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
-            activeTab === 'completed'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-[#747686] hover:text-[#444655]'
-          }`}
+          className={`px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${activeTab === 'completed'
+            ? 'border-emerald-500 text-emerald-600'
+            : 'border-transparent text-[#747686] hover:text-[#444655]'
+            }`}
         >
           Tarefas Concluídas ({tarefas.filter(t => t.status === 'Concluída').length})
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <select
           value={ptFiltro}
           onChange={(e) => setPtFiltro(e.target.value)}
           className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
         >
-          <option value="">Filtrar por Cliente (Todos)</option>
+          <option value="">Filtrar por PT (Todos)</option>
           {pts.map((p) => (
-            <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.proprietario || p.subestacao?.nome}</option>
+            <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.proprietario || p.subestacao?.nome || p.proprietario}</option>
           ))}
+        </select>
+        <select
+          value={tipoFiltro}
+          onChange={(e) => setTipoFiltro(e.target.value)}
+          className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
+        >
+          <option value="">Todos os Tipos</option>
+          <option value="Auditoria">Auditoria</option>
+          <option value="Manutenção Preventiva">Manutenção Preventiva</option>
+          <option value="Manutenção Corretiva">Manutenção Corretiva</option>
+          <option value="Inspeção">Inspeção</option>
         </select>
         <input
           value={proprietarioFiltro}
@@ -239,7 +290,7 @@ export default function TaskManagement() {
         />
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
+      <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-[#747686] font-bold">Carregando tarefas...</div>
         ) : (
@@ -334,25 +385,21 @@ export default function TaskManagement() {
                 </thead>
                 <tbody className="divide-y divide-[#c4c5d7]/10">
                   {tarefasFiltradas.map((tarefa, i) => (
-                    <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors`}>
+                    <tr key={tarefa.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fcfdff]'} hover:bg-[#eff4ff] transition-colors group`}>
                       <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <p className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">{tarefa.titulo}</p>
                           {tarefa.id_pt && (
                             <p className="text-xs text-[#0d3fd1] font-bold bg-[#0d3fd1]/5 inline-flex p-1 rounded">
-                              <MapPin className="w-3 h-3 mr-1 inline" /> Cliente: {tarefa.id_pt}
+                              <MapPin className="w-3 h-3 mr-1 inline" /> PT: {tarefa.id_pt}
                             </p>
                           )}
-                          {tarefa.pt?.subestacao?.proprietario && (
-                            <p className="text-[10px] font-black uppercase text-[#444655]">
-                              Proprietário: {tarefa.pt.subestacao.proprietario}
-                            </p>
-                          )}
-                          {tarefa.pt?.subestacao?.municipio && (
-                            <p className="text-[10px] font-bold uppercase text-[#747686]">
-                              Localidade: {tarefa.pt.subestacao.municipio}
-                            </p>
-                          )}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
+                        <div className="flex flex-col gap-1.5">
+                          {getTipoBadge(tarefa.tipo_tarefa || 'Auditoria')}
+                          {getPrioridadeBadge(tarefa.prioridade || 'Normal')}
                         </div>
                       </td>
                       <td className="px-8 py-5 border-r border-[#c4c5d7]/10">
@@ -418,7 +465,7 @@ export default function TaskManagement() {
 
       {detailTarefa && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white max-w-3xl w-full rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+          <div className="bg-white max-w-3xl w-full rounded-[1rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
             <div className="bg-[#f8faff] p-6 sm:p-8 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Detalhes da Tarefa</span>
@@ -440,9 +487,14 @@ export default function TaskManagement() {
                   <p className="text-sm font-black text-[#0f1c2c]">{new Date(detailTarefa.data_prevista).toLocaleDateString('pt-PT')}</p>
                 </div>
                 <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Auditor</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">Técnico</p>
                   <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.auditor?.nome || 'N/A'}</p>
                 </div>
+              </div>
+              {/* Tipo + Prioridade */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {getTipoBadge(detailTarefa.tipo_tarefa || 'Auditoria')}
+                {getPrioridadeBadge(detailTarefa.prioridade || 'Normal')}
               </div>
 
               {detailTarefa.descricao && (
@@ -530,10 +582,20 @@ export default function TaskManagement() {
               );
             })()}
 
-            <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-end">
+            <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff]">
+              {detailTarefa.status === 'Aguardando Validação' && user?.role === 'admin' ? (
+                <button
+                  onClick={() => handleValidarTarefa(detailTarefa.id)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all"
+                >
+                  <CheckCircle className="w-4 h-4" /> Validar Relatório (Concluir)
+                </button>
+              ) : (
+                <div />
+              )}
               <button
                 onClick={() => setDetailTarefa(null)}
-                className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#f8faff]"
+                className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655] hover:bg-[#eff4ff] border border-transparent hover:border-[#c4c5d7]/30 transition-all"
               >
                 Fechar
               </button>
@@ -586,7 +648,7 @@ export default function TaskManagement() {
       {/* MODAL CRIAR/EDITAR */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white max-w-2xl w-full rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-white max-w-2xl w-full rounded-[1rem] shadow-2xl flex flex-col max-h-[90vh]">
             <div className="px-6 sm:px-10 py-6 sm:py-8 border-b border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff] rounded-t-[2rem] gap-4">
               <div>
                 <h3 className="text-[#0f1c2c] text-xl font-black uppercase tracking-tighter">
@@ -607,9 +669,43 @@ export default function TaskManagement() {
                     required
                     className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-4 text-sm font-bold text-[#0f1c2c]"
                     value={formData.titulo}
-                    onChange={(e) => setFormData({...formData, titulo: e.target.value})}
-                    placeholder="Ex: Auditoria Semestral de Segurança"
+                    onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                    placeholder="Ex: Auditoria PTA — Bairro do Rangel"
                   />
+                </div>
+
+                {/* Tipo de Tarefa + Prioridade */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Tipo de Tarefa</label>
+                    <select
+                      required
+                      className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-4 text-sm font-bold text-[#0f1c2c]"
+                      value={formData.tipo_tarefa}
+                      onChange={(e) => setFormData({ ...formData, tipo_tarefa: e.target.value })}
+                    >
+                      <option value="Auditoria">📋 Auditoria</option>
+                      <option value="Manutenção Preventiva">🔧 Manutenção Preventiva</option>
+                      <option value="Manutenção Corretiva">🔧 Manutenção Corretiva</option>
+                      <option value="Inspeção">🔍 Inspeção Técnica</option>
+                    </select>
+                    <p className="text-[9px] text-[#747686] mt-1 ml-1 font-bold">
+                      {formData.tipo_tarefa === 'Auditoria' ? '📌 Recolha e validação de dados — técnico observa e regista, não intervém' : formData.tipo_tarefa === 'Inspeção' ? '📌 Inspeção técnica focada num componente ou sistema' : '📌 Intervenção técnica — técnico repara, substitui ou faz upgrade'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Prioridade</label>
+                    <select
+                      className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-4 text-sm font-bold text-[#0f1c2c]"
+                      value={formData.prioridade}
+                      onChange={(e) => setFormData({ ...formData, prioridade: e.target.value })}
+                    >
+                      <option value="Urgente">🔴 Urgente</option>
+                      <option value="Alta">🟠 Alta</option>
+                      <option value="Normal">🔵 Normal</option>
+                      <option value="Baixa">⚪ Baixa</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -620,7 +716,7 @@ export default function TaskManagement() {
                         required
                         className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
                         value={formData.id_auditor}
-                        onChange={(e) => setFormData({...formData, id_auditor: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, id_auditor: e.target.value })}
                       >
                         <option value="">Selecione...</option>
                         {auditores.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -636,7 +732,7 @@ export default function TaskManagement() {
                         required
                         className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
                         value={formData.data_prevista}
-                        onChange={(e) => setFormData({...formData, data_prevista: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, data_prevista: e.target.value })}
                       />
                       <Calendar className="w-5 h-5 absolute left-4 top-4 text-[#c4c5d7]" />
                     </div>
@@ -679,7 +775,7 @@ export default function TaskManagement() {
                     <select
                       className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
                       value={formData.id_pt}
-                      onChange={(e) => setFormData({...formData, id_pt: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, id_pt: e.target.value })}
                     >
                       <option value="">Nenhum (Tarefa Geral)</option>
                       {ptsFiltradosModal.map((p) => (
@@ -702,7 +798,7 @@ export default function TaskManagement() {
                     <CheckSquare className="w-5 h-5 text-[#0d3fd1]" />
                     <h4 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">Checklist da Tarefa</h4>
                   </div>
-                  
+
                   <div className="space-y-3 mb-4">
                     {formData.checklist.map((item, idx) => (
                       <div key={item.id} className="flex items-center gap-3 bg-white p-3 border border-[#c4c5d7]/30 rounded-xl">
@@ -718,9 +814,9 @@ export default function TaskManagement() {
                   </div>
 
                   <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="Adicionar item à checklist..." 
+                    <input
+                      type="text"
+                      placeholder="Adicionar item à checklist..."
                       className="flex-grow bg-white border border-[#c4c5d7]/30 rounded-xl px-4 text-sm font-bold text-[#0f1c2c]"
                       value={novoChecklistItem}
                       onChange={e => setNovoChecklistItem(e.target.value)}

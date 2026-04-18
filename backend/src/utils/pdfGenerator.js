@@ -7,8 +7,8 @@ class PDFGenerator {
   async generateTechnicalSheet(ptData, inspections, res) {
     return new Promise((resolve, reject) => {
       try {
-        const doc = new PDFDocument({ 
-          margin: 50, 
+        const doc = new PDFDocument({
+          margin: 50,
           size: 'A4',
           info: {
             Title: `Ficha Técnica - ${ptData.id_pt}`,
@@ -34,7 +34,7 @@ class PDFGenerator {
         doc.rect(0, 0, doc.page.width, 100).fill(colors.bgHeader);
         doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('FICHA TÉCNICA DE ATIVO', 50, 35);
         doc.fillColor('#5fff9b').fontSize(10).font('Helvetica').text('SISTEMA DE GESTÃO E AUDITORIA MBT ENERGIA', 50, 65);
-        
+
         // Data de Emissão no cabeçalho
         const emissionDate = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         doc.fillColor('#ffffff').fontSize(8).text(`EMITIDO EM: ${emissionDate}`, 430, 42, { align: 'right' });
@@ -43,20 +43,20 @@ class PDFGenerator {
         let currentY = 130;
         doc.fillColor(colors.primary).fontSize(18).font('Helvetica-Bold').text(`${ptData.id_pt}`, 50, currentY);
         doc.fontSize(10).fillColor(colors.lightText).font('Helvetica').text('IDENTIFICADOR ÚNICO DO POSTO DE TRANSFORMAÇÃO', 50, currentY + 20);
-        
+
         currentY += 50;
 
         // --- Secção 1: Dados do Proprietário & Contrato ---
         this._drawSectionTitle(doc, 'PROPRIEDADE & GESTÃO', currentY, colors);
         currentY += 25;
-        
+
         this._drawField(doc, 'PROPRIETÁRIO / DONO', ptData.proprietario || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'TIPO DE CLIENTE', ptData.tipo_cliente || 'N/D', 230, currentY, colors);
         this._drawField(doc, 'CONTA CONTRATO', ptData.conta_contrato || 'N/A', 410, currentY, colors);
-        
+
         currentY += 45;
         this._drawField(doc, 'PARCEIRO NEGÓCIOS', ptData.parceiro_negocios || '---', 50, currentY, colors);
-        this._drawField(doc, 'SÉRIE EQUIPAMENTO', ptData.num_serie || '---', 230, currentY, colors);
+        this._drawField(doc, 'TIPO DE CLIENTE', ptData.tipo_cliente || 'N/D', 230, currentY, colors);
+        // this._drawField(doc, 'SÉRIE EQUIPAMENTO', ptData.num_serie || '---', 410, currentY, colors);
         this._drawField(doc, 'TIPO INSTALAÇÃO', ptData.tipo_instalacao || '---', 410, currentY, colors);
 
         currentY += 60;
@@ -90,7 +90,7 @@ class PDFGenerator {
 
         currentY += 45;
         this._drawField(doc, 'GPS (COORDENADAS)', ptData.gps || 'N/D', 50, currentY, colors);
-        this._drawField(doc, 'DÍVIDA ESTIMADA', `${Number(ptData.montante_divida || 0).toLocaleString('pt-PT')} Kz`, 410, currentY, colors);
+        this._drawField(doc, 'DÍVIDA', `${Number(ptData.montante_divida || 0).toLocaleString('pt-PT')} Kz`, 410, currentY, colors);
 
         currentY += 70;
 
@@ -125,8 +125,8 @@ class PDFGenerator {
 
         // --- Rodapé ---
         doc.fontSize(8).fillColor(colors.lightText)
-           .text('Documento gerado automaticamente pelo sistema de auditoria MBT Energia. Esta ficha técnica constitui um registo oficial de ativo.', 50, 770, { align: 'center', width: 500 });
-        
+          .text('Documento gerado automaticamente pelo sistema de auditoria MBT Energia. Esta ficha técnica constitui um registo oficial de ativo.', 50, 770, { align: 'center', width: 500 });
+
         doc.end();
         resolve();
       } catch (err) {

@@ -101,6 +101,16 @@ model Cliente {
   num_facturas_atraso Int?            @default(0)
   tipo_cliente        String?         @db.VarChar(100)
 
+  // Dados comerciais do Cliente (recolhidos em campo durante auditoria)
+  responsavel_financeiro       String?   @db.VarChar(200)  // Nome do responsável financeiro
+  contacto_resp_financeiro     String?   @db.VarChar(200)  // Telefone + e-mail (texto livre)
+  responsavel_tecnico_cliente  String?   @db.VarChar(200)  // Nome do responsável técnico do cliente
+  contacto_resp_tecnico        String?   @db.VarChar(200)  // Telefone + e-mail (texto livre)
+  canal_faturacao              String?   @db.VarChar(50)   // Email | SMS | Papel | Portal
+  fornece_terceiros            Boolean   @default(false)   // O PT fornece outros clientes além deste?
+  empresa_manutencao           String?   @db.VarChar(200)  // Empresa/técnico que faz manutenção
+  data_ultima_manutencao       DateTime? @db.Date          // Data da última manutenção
+
   criado_em           DateTime        @default(now())
   atualizado_em       DateTime        @updatedAt
   inspecoes           Inspecao[]
@@ -119,22 +129,30 @@ model Cliente {
 }
 
 model Inspecao {
-  id               Int            @id @default(autoincrement())
-  id_pt            String         @db.VarChar(50)
-  pt               Cliente        @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  id               Int              @id @default(autoincrement())
+  id_pt            String           @db.VarChar(50)
+  pt               Cliente          @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
   id_auditor       Int
-  auditor          Utilizador     @relation(fields: [id_auditor], references: [id])
+  auditor          Utilizador       @relation(fields: [id_auditor], references: [id])
   id_tarefa        Int?
-  tarefa           Tarefa?        @relation(fields: [id_tarefa], references: [id])
-  data_inspecao    DateTime       @default(now()) @db.Date
-  tipo             String         @default("Preventiva") @db.VarChar(50)
-  resultado        String?        @db.VarChar(50)
-  nivel_urgencia   String?        @db.VarChar(20)
-  observacoes      String?        @db.Text
-  fotos            Json?          // Array de { label, data (base64), tipo }
-  proxima_inspecao DateTime?      @db.Date
-  criado_em        DateTime       @default(now())
-  atualizado_em    DateTime       @updatedAt
+  tarefa           Tarefa?          @relation(fields: [id_tarefa], references: [id])
+  data_inspecao    DateTime         @default(now()) @db.Date
+  // Tipo alinhado com os documentos de inspeção
+  // Auditoria PTA | Auditoria PTC | Inspeção | Manutenção Preventiva | Manutenção Corretiva
+  tipo             String           @default("Auditoria PTA") @db.VarChar(50)
+  resultado        String?          @db.VarChar(50)
+  nivel_urgencia   String?          @db.VarChar(20)
+  observacoes      String?          @db.Text
+  fotos            Json?            // Array de { label, data (base64), tipo, secao }
+  // Medições de Terra (da ficha de inspeção)
+  terra_protecao   Float?           // Terra de Protecção (TP) em Ω — normal < 20Ω
+  terra_servico    Float?           // Terra de Serviço (TS) em Ω — normal < 20Ω
+  medicao_tensao   Json?            // { UA, UB, UC, UAB, UBC, UCA } em Volts
+  // Dados do cliente validados em campo (checklist de visita - 10 itens)
+  dados_cliente_campo Json?         // { razao_social, resp_fin, contacto_fin, resp_tec, contacto_tec, canal_fat, ultima_fatura, fornece_terceiros, empresa_manut, data_ultima_manut }
+  proxima_inspecao DateTime?        @db.Date
+  criado_em        DateTime         @default(now())
+  atualizado_em    DateTime         @updatedAt
   
   conformidade     Conformidade[]
   transformadores  Transformador[]
@@ -145,6 +163,7 @@ model Inspecao {
   monitorizacao    Monitorizacao[]
   manutencao       Manutencao[]
   riscos           Risco[]
+  incongruencias   Incongruencia[]
 
   @@map("inspecao")
 }
@@ -287,6 +306,9 @@ model Tarefa {
   data_inicio     DateTime?
   data_fim        DateTime?
   status          String         @default("Pendente") @db.VarChar(50)
+  // Tipo e Prioridade da Tarefa
+  tipo_tarefa     String         @default("Auditoria") @db.VarChar(50) // Auditoria | Manutenção Preventiva | Manutenção Corretiva | Inspeção
+  prioridade      String         @default("Normal") @db.VarChar(20)  // Urgente | Alta | Normal | Baixa
   checklist       Json?
   criado_em       DateTime       @default(now())
   atualizado_em   DateTime       @updatedAt
@@ -331,6 +353,28 @@ model Manutencao {
   atualizado_em    DateTime      @updatedAt
 
   @@map("manutencao")
+}
+
+// ─── Motor de Incongruências ──────────────────────────────────────────────────
+// Regista divergências detectadas pelo técnico no campo vs dados do cadastro.
+// O técnico deve confirmar cada incongruência explicitamente (dupla confirmação).
+model Incongruencia {
+  id                   Int       @id @default(autoincrement())
+  id_inspecao          Int
+  inspecao             Inspecao  @relation(fields: [id_inspecao], references: [id], onDelete: Cascade)
+  tipo                 String    @db.VarChar(50)  // potencia | transformador | cliente | ilegal | tensao | terra | outro
+  descricao            String?   @db.Text         // Descrição textual da incongruência
+  valor_cadastro       String?   @db.VarChar(200) // Valor registado no sistema
+  valor_apurado        String?   @db.VarChar(200) // Valor encontrado no campo
+  confirmado           Boolean   @default(false)  // Técnico confirmou explicitamente
+  confirmado_por       Int?                       // ID do técnico que confirmou
+  resolvido            Boolean   @default(false)  // Foi resolvido/tratado
+  notificou_comercial  Boolean   @default(false)  // Equipa comercial foi notificada
+  nivel_urgencia       String?   @db.VarChar(20)  // urgente | alta | normal
+  criado_em            DateTime  @default(now())
+  atualizado_em        DateTime  @updatedAt
+
+  @@map("incongruencia")
 }
 
 model Risco {

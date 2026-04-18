@@ -16,13 +16,13 @@ import {
   Trash2,
   ExternalLink,
   Edit2,
-  RefreshCw,          
-  LayoutGrid,        
-  Minimize2,         
-  CheckCircle,       
-  ClipboardList,     
-  FileSpreadsheet,   
-  FileText,        
+  RefreshCw,
+  LayoutGrid,
+  Minimize2,
+  CheckCircle,
+  ClipboardList,
+  FileSpreadsheet,
+  FileText,
   FilePlus
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -107,8 +107,8 @@ export default function PTAudits() {
         setPts(ptsRes.data);
         const filteredAudits = localidadeFiltro
           ? (auditsRes.data || []).filter((audit) =>
-              (audit.pt?.municipio || audit.pt?.subestacao?.municipio) === localidadeFiltro
-            )
+            (audit.pt?.municipio || audit.pt?.subestacao?.municipio) === localidadeFiltro
+          )
           : (auditsRes.data || []);
         setAudits(filteredAudits);
         setTarefas(tarefasRes.data || []);
@@ -164,13 +164,13 @@ export default function PTAudits() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Client-side validation
     if (!formData.id_pt || formData.id_pt === '') {
       alert('Por favor, selecione um PT.');
       return;
     }
-    
+
     let payload;
     try {
       // Destructure to remove singular properties and instead use arrays
@@ -190,7 +190,7 @@ export default function PTAudits() {
         await api.post('/inspecoes', payload);
         alert('Auditoria registada com sucesso!');
       }
-      
+
       setView('list');
       setStep(1);
       setSelectedAuditId(null);
@@ -222,7 +222,7 @@ export default function PTAudits() {
     try {
       const res = await api.get(`/inspecoes/${audit.id}`);
       const fullAudit = res.data;
-      
+
       setFormData({
         id_pt: fullAudit.id_pt || '',
         id_tarefa: fullAudit.tarefa?.id ? String(fullAudit.tarefa.id) : '',
@@ -234,9 +234,14 @@ export default function PTAudits() {
         seguranca: fullAudit.seguranca?.[0] || formData.seguranca,
         resultado: fullAudit.resultado || 'Em Avaliação',
         nivel_urgencia: fullAudit.nivel_urgencia || 'Baixo',
-        fotos: fullAudit.fotos || []
+        fotos: fullAudit.fotos || [],
+        terra_protecao: fullAudit.terra_protecao,
+        terra_servico: fullAudit.terra_servico,
+        medicao_tensao: fullAudit.medicao_tensao || {},
+        dados_cliente_campo: fullAudit.dados_cliente_campo || {},
+        incongruencias: fullAudit.incongruencias || []
       });
-      
+
       setSelectedAuditId(fullAudit.id);
       setStep(5);
       setView('form');
@@ -249,7 +254,7 @@ export default function PTAudits() {
     try {
       const res = await api.get(`/inspecoes/${audit.id}`);
       const fullAudit = res.data;
-      
+
       setFormData({
         id_pt: fullAudit.id_pt,
         id_tarefa: fullAudit.tarefa?.id ? String(fullAudit.tarefa.id) : '',
@@ -263,7 +268,7 @@ export default function PTAudits() {
         nivel_urgencia: fullAudit.nivel_urgencia || 'Baixo',
         fotos: fullAudit.fotos || []
       });
-      
+
       setSelectedAuditId(fullAudit.id);
       setStep(1);
       setView('form');
@@ -452,7 +457,7 @@ export default function PTAudits() {
 
   if (view === 'list') {
     return (
-      <div className={`max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 print-report ${modoRelatorio === 'executivo' ? 'executive-mode' : ''}`}>
+      <div className={`max-w-full p-6 mx-auto space-y-8 animate-in fade-in duration-500 print-report ${modoRelatorio === 'executivo' ? 'executive-mode' : ''}`}>
         <style>{`
           @media print {
             .print-hide { display: none !important; }
@@ -521,13 +526,13 @@ export default function PTAudits() {
               </span>
             )}
             <div className="bg-[#f8faff] rounded-xl p-1 border border-[#c4c5d7]/20 flex print-hide">
-              <button 
+              <button
                 onClick={() => setSubView('inspecoes')}
                 className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'inspecoes' ? 'bg-white text-[#0d3fd1] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
               > <ClipboardList className="w-4 h-4" />
                 Inspeções de Clientes
               </button>
-              <button 
+              <button
                 onClick={() => setSubView('tarefas')}
                 className={`flex items-center gap-1 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${subView === 'tarefas' ? 'bg-white text-[#005229] shadow-sm' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
               >  <CheckCircle className="w-4 h-4" />
@@ -685,7 +690,7 @@ export default function PTAudits() {
         </div>
 
         {subView === 'inspecoes' ? (
-          <div className="bg-white rounded-[2rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden print-table-wrap">
+          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden print-table-wrap">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
@@ -710,11 +715,10 @@ export default function PTAudits() {
                       )}
                     </td>
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
-                      <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${
-                        audit.resultado === 'Conforme' ? 'bg-emerald-500' :
+                      <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${audit.resultado === 'Conforme' ? 'bg-emerald-500' :
                         audit.resultado === 'Não Conforme' ? 'bg-amber-500' :
-                        audit.resultado === 'Urgente' ? 'bg-red-500' : 'bg-blue-500'
-                      }`}>
+                          audit.resultado === 'Urgente' ? 'bg-red-500' : 'bg-blue-500'
+                        }`}>
                         {audit.resultado || 'N/D'}
                       </span>
                     </td>
@@ -723,12 +727,11 @@ export default function PTAudits() {
                     </td>
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
                       {audit.nivel_urgencia && (audit.resultado === 'Não Conforme' || audit.resultado === 'Urgente') ? (
-                         <span className={`inline-flex px-2 py-1 rounded-md text-[8px] font-black text-white uppercase ${
-                           audit.nivel_urgencia === 'Crítico' ? 'bg-red-700' :
-                           audit.nivel_urgencia === 'Alto' ? 'bg-orange-600' : 'bg-amber-600'
-                         }`}>
-                           {audit.nivel_urgencia}
-                         </span>
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[8px] font-black text-white uppercase ${audit.nivel_urgencia === 'Crítico' ? 'bg-red-700' :
+                          audit.nivel_urgencia === 'Alto' ? 'bg-orange-600' : 'bg-amber-600'
+                          }`}>
+                          {audit.nivel_urgencia}
+                        </span>
                       ) : <span className="text-[#c4c5d7]">—</span>}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-[#c4c5d7]/10 font-mono text-center">
@@ -736,19 +739,19 @@ export default function PTAudits() {
                     </td>
                     <td className="px-8 py-5 print-hide">
                       <div className="flex justify-center gap-2 print-hide">
-                        <button 
+                        <button
                           onClick={() => handleView(audit)}
                           className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
                         >
                           Abrir
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEdit(audit)}
                           className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
                         >
                           Editar
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(audit.id)}
                           className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
                         >
@@ -769,7 +772,7 @@ export default function PTAudits() {
             </table>
           </div>
         ) : (
-          <div className="bg-white rounded-[2rem] border border-emerald-100 shadow-xl overflow-hidden print-table-wrap">
+          <div className="bg-white rounded-[1rem] border border-emerald-100 shadow-xl overflow-hidden print-table-wrap">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-emerald-50 border-b border-emerald-100">
@@ -819,7 +822,7 @@ export default function PTAudits() {
                 {tarefasParaExibicao.length === 0 && (
                   <tr>
                     <td colSpan="6" className="py-20 text-center text-[#747686] font-black uppercase tracking-[0.2em] opacity-30">
-                    Nenhuma tarefa encontrada
+                      Nenhuma tarefa encontrada
                     </td>
                   </tr>
                 )}
@@ -832,10 +835,10 @@ export default function PTAudits() {
           <QuickAuditModal
             tarefa={auditTarefa}
             onClose={() => setAuditTarefa(null)}
-            onDone={() => { 
-               setAuditTarefa(null); 
-               // Trigger refresh of data
-               setView('list'); 
+            onDone={() => {
+              setAuditTarefa(null);
+              // Trigger refresh of data
+              setView('list');
             }}
           />
         )}
@@ -883,49 +886,47 @@ export default function PTAudits() {
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               {/* Resultado & Urgencia no passo 1 */}
               <div className="bg-[#fcfdff] border border-[#0d3fd1]/10 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div>
-                    <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Resultado da Auditoria *</label>
+                <div>
+                  <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Resultado da Auditoria *</label>
+                  <div className="flex gap-2">
+                    {['Conforme', 'Não Conforme', 'Urgente', 'Em Avaliação'].map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, resultado: r })}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${formData.resultado === r
+                          ? r === 'Conforme' ? 'bg-emerald-500 text-white border-transparent' :
+                            r === 'Não Conforme' ? 'bg-amber-500 text-white border-transparent' :
+                              r === 'Urgente' ? 'bg-red-500 text-white border-transparent' : 'bg-blue-500 text-white border-transparent'
+                          : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
+                          }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {['Não Conforme', 'Urgente', 'Em Avaliação'].includes(formData.resultado) && (
+                  <div>
+                    <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Nível de Urgência</label>
                     <div className="flex gap-2">
-                       {['Conforme', 'Não Conforme', 'Urgente', 'Em Avaliação'].map(r => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => setFormData({...formData, resultado: r})}
-                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${
-                               formData.resultado === r 
-                               ? r === 'Conforme' ? 'bg-emerald-500 text-white border-transparent' :
-                                 r === 'Não Conforme' ? 'bg-amber-500 text-white border-transparent' :
-                                 r === 'Urgente' ? 'bg-red-500 text-white border-transparent' : 'bg-blue-500 text-white border-transparent'
-                               : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
+                      {['Baixo', 'Médio', 'Alto', 'Crítico'].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, nivel_urgencia: u })}
+                          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${formData.nivel_urgencia === u
+                            ? u === 'Crítico' ? 'bg-red-700 text-white border-transparent' :
+                              u === 'Alto' ? 'bg-orange-600 text-white border-transparent' : 'bg-amber-600 text-white border-transparent'
+                            : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
                             }`}
-                          >
-                             {r}
-                          </button>
-                       ))}
+                        >
+                          {u}
+                        </button>
+                      ))}
                     </div>
-                 </div>
-                 {['Não Conforme', 'Urgente', 'Em Avaliação'].includes(formData.resultado) && (
-                   <div>
-                      <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-3">Nível de Urgência</label>
-                      <div className="flex gap-2">
-                        {['Baixo', 'Médio', 'Alto', 'Crítico'].map(u => (
-                           <button
-                             key={u}
-                             type="button"
-                             onClick={() => setFormData({...formData, nivel_urgencia: u})}
-                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${
-                               formData.nivel_urgencia === u 
-                               ? u === 'Crítico' ? 'bg-red-700 text-white border-transparent' :
-                                 u === 'Alto' ? 'bg-orange-600 text-white border-transparent' : 'bg-amber-600 text-white border-transparent'
-                               : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
-                             }`}
-                           >
-                              {u}
-                           </button>
-                        ))}
-                      </div>
-                   </div>
-                 )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1081,7 +1082,7 @@ export default function PTAudits() {
                   { key: 'combate_incendio', label: 'Extintores / CO2' },
                   { key: 'distancias_seguranca', label: 'Distâncias Mínimas' }
                 ].map((item) => (
-                  <label key={item.key} className="flex flex-col items-start gap-4 p-6 bg-white border border-[#c4c5d7]/10 rounded-[2rem] cursor-pointer hover:border-[#0d3fd1]/40 transition-all shadow-sm text-center">
+                  <label key={item.key} className="flex flex-col items-start gap-4 p-6 bg-white border border-[#c4c5d7]/10 rounded-[1rem] cursor-pointer hover:border-[#0d3fd1]/40 transition-all shadow-sm text-center">
                     <Shield className={`w-8 h-8 ${formData.seguranca[item.key] ? 'text-[#00e47c]' : 'text-[#747686]/30'} mx-auto`} />
                     <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest mx-auto">{item.label}</span>
                     <input
@@ -1194,8 +1195,12 @@ export default function PTAudits() {
                       <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg inline-block shadow-sm">Segurança</h5>
                       <ul className="space-y-3 bg-white/40 p-5 rounded-2xl border border-white/50">
                         <li className="flex justify-between items-center text-xs border-b border-[#0d3fd1]/10 pb-3 mb-1">
-                          <span className="font-bold text-[#444655] uppercase tracking-wide">Res. Terra</span>
-                          <span className="font-black text-[#0f1c2c]">{formData.seguranca.resistencia_terra} Ω</span>
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Terra Protecção</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.terra_protecao ?? formData.seguranca.resistencia_terra ?? 'N/D'} Ω</span>
+                        </li>
+                        <li className="flex justify-between items-center text-xs border-b border-[#0d3fd1]/10 pb-3 mb-1">
+                          <span className="font-bold text-[#444655] uppercase tracking-wide">Terra Serviço</span>
+                          <span className="font-black text-[#0f1c2c]">{formData.terra_servico ?? 'N/D'} Ω</span>
                         </li>
                         {[
                           { key: 'protecao_raios', label: 'Proteção Raios' },
@@ -1215,6 +1220,20 @@ export default function PTAudits() {
                     </div>
                   </div>
                 </div>
+
+                {formData.incongruencias?.length > 0 && (
+                  <div className="space-y-4">
+                    <h5 className="text-[10px] font-black text-amber-700 uppercase tracking-widest bg-amber-100 px-3 py-1.5 rounded-lg inline-block shadow-sm">Incongruências Detetadas</h5>
+                    <ul className="space-y-3 bg-amber-50 p-5 rounded-2xl border border-amber-200">
+                      {formData.incongruencias.map((inc, i) => (
+                        <li key={i} className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-amber-900 uppercase tracking-wide">{inc.campo}</span>
+                          <span className="font-black text-amber-900">{inc.valor_campo} <span className="text-amber-600/70 text-[9px]">(vs {inc.valor_sistema})</span></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1236,9 +1255,9 @@ export default function PTAudits() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {formData.fotos.map((foto, i) => (
                       <div key={i} className="group relative bg-white p-2 rounded-2xl border border-[#c4c5d7]/10 shadow-sm hover:shadow-md transition-all">
-                        <img 
-                          src={foto.data} 
-                          alt={foto.label} 
+                        <img
+                          src={foto.data}
+                          alt={foto.label}
                           className="w-full h-32 object-cover rounded-xl cursor-pointer"
                           onClick={() => window.open(foto.data, '_blank')}
                         />

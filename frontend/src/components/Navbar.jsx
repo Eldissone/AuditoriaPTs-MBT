@@ -97,7 +97,7 @@ export default function Navbar() {
       {/* Top Bar / Brand & User */}
       <div className="max-w-full mx-auto px-8 md:px-16 h-14 flex items-center justify-between border-b border-white/5 ">
         <div className="flex items-center gap-2">
-          <h1 className="text-sm font-black tracking-tighter uppercase whitespace-nowrap">MBT Energia<span className="text-[9px] text-[#5fff9b] tracking-[0.2em] font-bold opacity-60 ml-2"></span></h1>
+          <h1 className="text-2xl font-black tracking-tighter uppercase whitespace-nowrap">MBT Energia<span className="text-[9px] text-[#5fff9b] tracking-[0.2em] font-bold opacity-60 ml-2"></span></h1>
         </div>
 
         <div className="flex items-center gap-4">

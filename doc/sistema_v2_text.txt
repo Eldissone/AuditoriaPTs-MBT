@@ -1,0 +1,364 @@
+﻿**Sistema de Auditoria e Gestão de PTs***		Confidencial — Uso Interno*
+
+**SISTEMA DE AUDITORIA E GESTÃO DE**
+
+**POSTOS DE TRANSFORMAÇÃO**
+
+*Blueprint Estratégico e Técnico*
+
+Síntese da Reunião de Conceção do Sistema
+
+*Luanda, Angola  •  2025–2026*
+
+*Distribuição: Uso Interno / Confidencial*
+
+| **Dimensão** | **Descrição** |
+| --- | --- |
+| **Cliente-alvo** | Distribuidoras de energia (ENDE e similares) |
+| **Utilizadores** | Técnicos de campo, gestores operacionais, diretores |
+| **Modelo de negócio** | SaaS B2B — licença mensal por número de PTs geridos |
+| **Tecnologia base** | React Native + Node.js + PostgreSQL + React Web |
+| **Fase atual** | Conceção — pronto para MVP e demo piloto |
+| **Mercado inicial** | Angola (Luanda e zonas prioritárias) |
+| **Expansão prevista** | África subsaariana — países lusófonos e anglófonos |
+
+# **1. Sumário Executivo**
+
+Este documento sintetiza os requisitos, insights e estratégia de escalabilidade do Sistema de Auditoria e Gestão de Postos de Transformação (PTs), resultantes da reunião de conceção realizada com a equipa técnica e de gestão da distribuidora.
+
+O sistema tem como objetivo principal digitalizar e automatizar o processo de inventário, auditoria de campo e deteção de incongruências técnico-comerciais nos postos de transformação, substituindo processos manuais em papel ou Excel por uma plataforma integrada, móvel e em tempo real.
+
+*O valor central do sistema está na deteção automática de desvios entre a potência instalada e a potência contratada — permitindo à distribuidora recuperar receita perdida, reduzir fraude e modernizar a gestão técnica da rede.*
+
+# **2. Tipologia dos Postos de Transformação**
+
+Um Posto de Transformação (PT) é uma instalação elétrica que converte energia de Média Tensão (MT) para Baixa Tensão (BT), tornando-a adequada para distribuição aos consumidores finais. Existem dois tipos principais de PT, com arquitetura e componentes distintos:
+
+## **2.1 PT Aéreo (PTA)**
+
+O PT Aéreo é instalado em postes, exposto ao ar livre. É a solução mais comum em redes de distribuição urbana e periurbana em Angola. A sua estrutura é mais simples e compacta, montada sobre apoios de betão ou madeira.
+
+| **Nº** | **Componente** | **Descrição / Função** |
+| --- | --- | --- |
+| **1** | **Apoio (Poste TP4)** | Suporte físico de toda a instalação. O poste TP4 é o tipo normalizado para PTs aéreos, fabricado em betão armado vibrado, com resistência mecânica adequada ao peso dos equipamentos. |
+| **2** | **Travessa** | Estrutura horizontal metálica (normalmente perfil XS) que sustenta os equipamentos no topo do poste. Serve de base ao seccionador e ao barramento de MT. |
+| **3** | **Plataforma do Seccionador** | Base estrutural metálica que suporta o órgão de corte de Média Tensão. Deve estar ligada à terra de proteção. |
+| **4** | **Seccionador (Mono ou Tripolar)** | Órgão de corte em Média Tensão que permite isolar o transformador da linha MT. Pode ser monopolar (corte de uma fase) ou tripolar (corte das três fases simultaneamente). Inclui isoladores, facas e comando ligado à terra. |
+| **5** | **Barramento** | Condutores que fazem a ligação elétrica entre o seccionador e o transformador. O estado geral dos barramentos é um indicador crítico de segurança e continuidade de serviço. |
+| **6** | **Descarregadores de Sobretensão** | Dispositivos de proteção que derivam para terra os picos de tensão provenientes de descargas atmosféricas ou manobras na rede MT. A sua ligação direta à terra é obrigatória. |
+| **7** | **Tubos de Proteção** | Tubagem metálica ou PVC que protege mecanicamente os cabos de acometimento MT e BT ao longo do poste. O estado de fixação e integridade é verificado em cada inspeção. |
+| **8** | **Mesa do Transformador** | Plataforma metálica fixada ao poste que serve de suporte ao transformador. Deve estar ligada à terra de proteção e em bom estado mecânico. |
+| **9** | **Transformador (MT/BT)** | Equipamento principal do PT. Converte a Média Tensão (ex.: 15kV ou 30kV) em Baixa Tensão (400/230V) para distribuição. Dados críticos: marca, potência instalada (kVA), ano de fabrico, nível de óleo, estado dos isoladores primário e secundário, fugas de óleo e estado da sílica gel. |
+| **10** | **QGBT — Quadro Geral de Baixa Tensão (AI / AS)** | Painel de distribuição em BT. Inclui interruptor/disjuntor geral, bases fusíveis, identificação de saídas BT, mapa de terras e registo de circuitos. Nos PTA o quadro pode ser do tipo AI (armário interior) ou AS (armário de superfície). |
+
+*Nota de auditoria PTA: O técnico deve registar fotograficamente cada um dos 10 componentes acima listados. A checklist de inspeção PTA cobre 32 itens agrupados por subsistema: Travessa, Apoio, Plataforma, Seccionador, Barramento, Transformador, Descarregadores, Tubos de Proteção e QGBT.*
+
+## **2.2 PT Cabinado (PTC)**
+
+O PT Cabinado é instalado dentro de um edifício/cabine, oferecendo maior proteção aos equipamentos e maior segurança de acesso. É a solução preferencial para zonas urbanas densas, clientes industriais e instalações de maior potência. A sua arquitetura é mais complexa e inclui equipamentos de Média Tensão em cela fechada.
+
+### **Infraestrutura Civil**
+
+| **Nº** | **Componente** | **Descrição / Função** |
+| --- | --- | --- |
+| **1** | **Edifício / Invólucro** | Construção civil que abriga todos os equipamentos. Inspecionar rachas, humidades, pintura interior e exterior, janelas, portas e fechaduras. A vedação e o encravamento das celas são elementos de segurança críticos. |
+| **2** | **Ventilação e Iluminação** | Sistema de ventilação natural ou forçada para controlo térmico dos equipamentos. Inclui bombagem e iluminação da PT. O funcionamento deve ser ensaiado em cada visita. |
+| **3** | **Passa-Muros e Caleiras** | Aberturas estanques para passagem de cabos MT e BT através das paredes. As tampas das caleiras e os passa-muros devem estar íntegros para evitar a entrada de animais ou humidade. |
+
+### **Lado de Média Tensão**
+
+| **Nº** | **Componente** | **Descrição / Função** |
+| --- | --- | --- |
+| **4** | **Celas de Média Tensão** | Conjunto de células metálicas que albergam os órgãos de corte MT: seccionadores, interruptores, combinados e/ou disjuntores. Podem conter SF6 (gás isolante). Inspecionar estado geral, isoladores, facas, ruídos anormais e numeração dos órgãos. |
+| **5** | **Barramento MT** | Condutores de MT que interligam as celas. Inspecionar estado geral e isoladores do barramento. |
+| **6** | **Caixas Fim-de-Cabo MT** | Terminações dos cabos subterrâneos de Média Tensão. Verificar fugas de óleo, limpeza, derrames, contornamentos e ligação das bainhas à terra de proteção. |
+
+### **Transformação e Baixa Tensão**
+
+| **Nº** | **Componente** | **Descrição / Função** |
+| --- | --- | --- |
+| **7** | **Transformador (MT/BT)** | Idêntico em função ao do PTA, mas instalado em ambiente protegido. Dados obrigatórios: número, tipo, potência (kVA), ano, nível de óleo no conservador, fugas de óleo, estado da sílica gel, focos de corrosão e chapa de características visível. |
+| **8** | **QGBT — Quadro Geral de Baixa Tensão (CA2)** | Painel de distribuição BT do tipo CA2 (armário em cabine). Inclui interruptor/disjuntor geral, identificação de saídas, calibre de fusíveis, sentido de rotação de fases e estado das bases fusíveis. Mais robusto que o equivalente no PTA. |
+
+*Nota de auditoria PTC: A checklist de inspeção PTC cobre 37 itens agrupados por subsistema: Edifício/Invólucro (19 itens), Caixas Fim-de-Cabo MT, Seccionadores/Interruptores/Disjuntores, Barramento MT, Transformadores de Potência, QGBT e Pontos Quentes. O sistema adapta automaticamente o formulário ao tipo de PT selecionado.*
+
+## **2.3 Comparação entre PTA e PTC**
+
+| **Critério** | **PT Aéreo (PTA)** | **PT Cabinado (PTC)** |
+| --- | --- | --- |
+| **Instalação** | Poste (exterior) | Edifício / Cabine (interior) |
+| **Órgão de corte MT** | Seccionador mono ou tripolar | Celas de MT (seccionador, interruptor, disjuntor, combinado) |
+| **QGBT** | Tipo AI ou AS | Tipo CA2 |
+| **Infra. civil auditada** | Não (poste + plataforma) | Sim (edifício completo) |
+| **Transformador** | Sim | Sim |
+| **Terra de Proteção (TP)** | Sim (< 20 Ω) | Sim (< 20 Ω) |
+| **Terra de Serviço (TS)** | Sim (< 20 Ω) | Sim (< 20 Ω) |
+| **Complexidade de auditoria** | Média (32 itens) | Alta (37 itens + edifício) |
+| **Formulário no sistema** | Dinâmico — campos PTA | Dinâmico — campos PTC |
+
+# **3. Visão do Sistema**
+
+## **3.1 Fluxo Central**
+
+O sistema opera em ciclos contínuos de auditoria. Cada ciclo começa com a criação de uma tarefa pelo administrador e termina com um relatório PDF validado, alimentando a base de dados técnica da distribuidora em tempo real.
+
+| **Etapa** | **Responsável** | **Ação** | **Resultado** |
+| --- | --- | --- | --- |
+| **1** | Administrador | Cadastro do PT | Ficha técnica base criada no sistema |
+| **2** | Gestor / Admin | Criação de tarefa | Técnico notificado com PT, data e checklist |
+| **3** | Técnico | Deslocação ao campo | Geolocalização ativa, dados do PT no telemóvel |
+| **4** | Técnico | Início da auditoria | Relógio iniciado, formulários abertos |
+| **5** | Técnico | Preenchimento de dados | Fotos, medições, estado dos componentes |
+| **6** | Sistema automático | Deteção de divergência | Alerta vermelho se potência difere do cadastro |
+| **7** | Supervisor | Validação | Dados revistos e aprovados antes de entrar no sistema |
+| **8** | Sistema automático | Geração de relatório | PDF completo com fotos, dados e assinatura |
+| **9** | Sistema automático | Notificação comercial | Equipa comercial alertada de irregularidades |
+
+## **3.2 Distinção Fundamental: Auditoria vs Manutenção**
+
+*Esta distinção foi identificada na reunião como crítica para o sucesso do sistema. Misturar estes dois processos compromete a integridade dos dados e a qualidade operacional.*
+
+| **Auditoria** | **Manutenção** |
+| --- | --- |
+| Processo de recolha e validação de informação | Processo operacional de intervenção técnica |
+| Acontece por ciclos programados ou amostragem | Acontece de forma corretiva, preventiva ou preditiva |
+| Técnico observa e regista — não intervém | Técnico intervém, repara, substitui ou faz upgrade |
+| Gera ficha técnica atualizada do PT | Gera registo de intervenção e histórico de manutenção |
+| Pode identificar necessidade de manutenção | Nunca deve ser classificada como auditoria |
+| Base para decisões comerciais e faturação | Base para planeamento de equipas e stocks |
+
+# **4. Módulos do Sistema**
+
+## **4.1 Cadastro Técnico do PT**
+
+O cadastro é a fundação de todo o sistema. Sem dados técnicos completos e corretos, os módulos de deteção de fraude, faturação e manutenção ficam comprometidos. O sistema adapta os campos dinamicamente conforme o tipo de PT — um PTA não apresenta campos de células ou cabine, reduzindo a complexidade para o técnico no campo.
+
+| **Secção** | **Campos** |
+| --- | --- |
+| **Identificação geral** | Tipo de PT (PTA, PTC, CAL, CAI...), código único, estado operacional, divisão comercial |
+| **Dados do transformador** | Marca, fabricante, potência instalada (kVA), tensão, tipo de óleo, placa fotográfica |
+| **Infraestrutura** | Tipo QGBT, disjuntores, células, tipo de contador, nível de contagem (MT/BT) |
+| **Localização** | Município, distrito, bairro, rua, coordenadas GPS (X, Y) |
+| **Informação comercial** | Potência contratada, ano de instalação, tipo de cliente, fornece terceiros? |
+| **Documentação fotográfica** | Foto exterior, interior, transformador, placa, QGBT, contador, estado geral |
+| **Dados do cliente** | Razão social, responsável técnico, responsável financeiro, contactos, morada |
+
+## **4.2 Gestão de Tarefas Mobile**
+
+O administrador programa todas as tarefas do dia ou semana. O técnico recebe no telemóvel a lista ordenada por prioridade e geolocalização.
+
+- Admin seleciona o PT, o técnico responsável, a data agendada e acrescenta checklist específico
+
+- Técnico recebe notificação com acesso à geolocalização do PT — integração direta com Waze/Google Maps
+
+- Ao chegar ao PT, clica em 'Iniciar Tarefa' — relógio começa automaticamente
+
+- Preenche todos os campos do formulário, incluindo fotos de cada componente
+
+- Ao finalizar, clica em 'Concluir' — dados enviados para validação pelo supervisor
+
+- Sistema regista hora de início, hora de fim e tempo total de execução
+
+- Supervisor valida os dados antes de entrarem na base de dados oficial
+
+*O tempo médio por tipo de PT pode ser calculado automaticamente, permitindo ao gestor identificar técnicos lentos, PTs problemáticos e otimizar o planeamento diário.*
+
+## **4.3 Deteção Automática de Incongruências**
+
+Este é o módulo de maior valor económico para a distribuidora. Funciona comparando em tempo real o que o técnico regista no campo com o que está no cadastro histórico.
+
+| **Tipo de Incongruência** | **Ação Automática** | **Impacto** |
+| --- | --- | --- |
+| Potência instalada > Potência contratada | Alerta vermelho + notificação à equipa comercial | Recuperação de receita perdida |
+| PT ligado fora do cadastro | Registo como PT ilegal | Combate à fraude na rede |
+| Transformador diferente do registado | Campo assinalado a vermelho + confirmação obrigatória | Deteção de troca não autorizada |
+| Dados do cliente desatualizados | Campo assinalado para atualização | Melhoria da base comercial |
+| PT em BT mas registado em MT | Alerta de reclassificação | Correção da base de faturação |
+
+*O técnico não pode avançar sem confirmar explicitamente cada incongruência detetada. O sistema exige dupla confirmação para garantir que os dados registados são os reais.*
+
+## **4.4 Geração de Relatórios PDF**
+
+No final de cada auditoria concluída e validada, o sistema gera automaticamente um relatório em formato PDF estruturado.
+
+- Ficha técnica completa do PT com todos os campos preenchidos
+
+- Fotos organizadas por secção (transformador, QGBT, contador, quadro, fachada)
+
+- Comparativo entre dados cadastrados e dados apurados no campo
+
+- Registo de data, hora, duração e técnico responsável
+
+- Assinatura eletrónica do cliente confirmando a presença do técnico
+
+- Envio automático por e-mail para o cliente e para os gestores da distribuidora
+
+- Arquivo digital organizado por PT — acessível a qualquer momento pela distribuidora
+
+## **4.5 Portal do Cliente (Diferenciador)**
+
+Clientes especiais (industriais, grandes consumidores) têm acesso a um portal próprio onde podem registar ocorrências e acompanhar intervenções em tempo real.
+
+- Cliente faz login → regista avaria ou baixa tensão com localização
+
+- Sistema identifica automaticamente o perfil técnico e comercial do cliente
+
+- Técnico é despachado com toda a informação prévia: histórico de faturação, PTs associados, dívidas, responsáveis
+
+- Cliente acompanha o estado da intervenção em tempo real no portal
+
+*Este módulo posiciona o sistema como uma solução de Customer Experience — não apenas de gestão interna — o que aumenta significativamente o valor percebido pela distribuidora.*
+
+# **5. Checklist da Visita ao Cliente**
+
+Durante cada auditoria, o técnico deve recolher e confirmar os seguintes dados do cliente, independentemente dos dados já existentes no cadastro:
+
+| **#** | **Item a confirmar** | **Observação** |
+| --- | --- | --- |
+| **1** | Razão social atual da empresa | Pode ter mudado — verificar se o contrato está em nome correto |
+| **2** | Nome do responsável financeiro | Quem autoriza pagamentos e assina contratos |
+| **3** | Contacto do responsável financeiro | Telefone + e-mail ativos |
+| **4** | Nome do responsável técnico | Quem responde a questões de manutenção e instalação |
+| **5** | Contacto do responsável técnico | Telefone + e-mail ativos |
+| **6** | Canal de receção de faturas | E-mail? SMS? Papel? Portal? |
+| **7** | Última fatura recebida | Valida se morada/canal está correto e ativo |
+| **8** | O PT fornece apenas este cliente? | Ou existem terceiros ligados ao mesmo PT? |
+| **9** | Quem faz manutenção ao PT? | Empresa certificada ou técnico independente? |
+| **10** | Data da última manutenção | Para registo histórico e análise de risco |
+
+# **6. Insights Estratégicos**
+
+## **6.1 Problemas Estruturais Identificados no Mercado**
+
+A reunião identificou um conjunto de problemas sistémicos na gestão de PTs em Angola que representam a oportunidade de mercado para este sistema:
+
+| **Problema** | **Impacto** | **Como o sistema resolve** |
+| --- | --- | --- |
+| PTs com potência instalada muito superior à contratada | Perda de receita significativa | Deteção automática de desvio e alerta imediato à equipa comercial |
+| Transformadores trocados sem notificação | Faturação incorreta, risco técnico na rede | Comparação campo vs cadastro com alerta e confirmação obrigatória |
+| PTs ilegais — instalações não cadastradas | Energia distribuída sem faturação | Qualquer PT ligado e fora do cadastro é identificado como irregular |
+| Dados comerciais desatualizados | Faturas enviadas para contactos errados, dívidas não recuperadas | Atualização de contactos e responsáveis durante cada visita |
+| Ausência de controlo de quem faz manutenção | Técnicos não certificados a operar em PTs sensíveis | Registo obrigatório da empresa e certificação do técnico de manutenção |
+| Falta de registo fotográfico do estado dos equipamentos | Impossibilidade de rastrear deterioração ao longo do tempo | Fotos obrigatórias por componente em cada auditoria |
+
+## **6.2 Vantagem Competitiva face ao SAP PM**
+
+| **Critério** | **SAP PM** | **Este Sistema** |
+| --- | --- | --- |
+| Custo de implementação | Muito elevado (centenas de milhares USD) | Acessível — SaaS com licença mensal |
+| Tempo de implementação | 6 a 18 meses | 2 a 6 semanas |
+| Adaptação ao contexto africano | Genérico — requer parametrização extensa | Desenhado para Angola e África desde o início |
+| App mobile offline-first | Limitado — dependente de infraestrutura | Funciona com conectividade reduzida no campo |
+| Deteção de fraude por potência | Não existe nativamente | Core do sistema — deteção automática em tempo real |
+| Gestão de fotos por componente | Requer módulos adicionais | Integrado — foto por campo do formulário |
+| Propriedade dos dados | Dados no ambiente SAP (dependência de vendor) | Dados 100% da distribuidora — exportação livre |
+
+# **7. Arquitetura Técnica Recomendada**
+
+## **7.1 Stack Tecnológica**
+
+| **Camada** | **Tecnologia** | **Justificação** |
+| --- | --- | --- |
+| **App mobile (campo)** | React Native | Uma base de código para Android e iOS; offline-first facilitado |
+| **API principal** | Node.js + Express | Leve, rápido, ecossistema rico em Angular/JSON |
+| **Base de dados** | PostgreSQL + PostGIS | Relacional robusto com suporte nativo a dados geoespaciais |
+| **Cache e filas** | Redis + BullMQ | Gestão de tarefas assíncronas e notificações em tempo real |
+| **Dashboard web** | React + Vite + Tailwind | Interface moderna, reativa e de fácil manutenção |
+| **Geração de PDF** | Puppeteer / PDFKit | Relatórios HTML-to-PDF com fotos integradas |
+| **Armazenamento de fotos** | AWS S3 / Wasabi | Escalável, barato, acessível via URL |
+| **Mapas e GIS** | Mapbox / Leaflet + PostGIS | Visualização geográfica dos PTs na rede |
+| **Autenticação** | JWT + bcrypt | Tokens seguros com refresh; roles por perfil de utilizador |
+| **Containerização** | Docker + Docker Compose | Deploy consistente em qualquer ambiente |
+
+## **7.2 Estrutura da Base de Dados**
+
+| **Entidade** | **Campos principais** | **Relações** |
+| --- | --- | --- |
+| **postos_transformacao** | id, tipo_pt, potencia_instalada, potencia_contratada, status, geom (PostGIS), divisao_comercial | 1:N tarefas; 1:N auditorias; 1:1 cliente |
+| **clientes** | id, razao_social, nif, responsavel_financeiro, responsavel_tecnico, canal_faturacao, contactos | N:1 posto; 1:N faturas |
+| **tarefas** | id, pt_id, tecnico_id, tipo (auditoria/manutencao), status, agendado_para, iniciado_em, concluido_em | N:1 posto; N:1 tecnico |
+| **auditorias** | id, tarefa_id, dados_json (todos os campos), incongruencias[], validado_por, pdf_url | N:1 tarefa |
+| **fotos** | id, auditoria_id, secao (transformador/qgbt/...), url_s3, created_at | N:1 auditoria |
+| **tecnicos** | id, nome, telefone, zona, ativo, role (tecnico/supervisor/admin) | N:M zonas; 1:N tarefas |
+| **incongruencias** | id, auditoria_id, tipo, valor_cadastro, valor_apurado, confirmado_por, resolvido | N:1 auditoria; notificacao para equipa comercial |
+
+# **8. Roadmap de Desenvolvimento**
+
+## **8.1 Prioridades do MVP**
+
+*Antes da apresentação ao cliente: realizar uma simulação completa com um PT real — preencher dados, fotografar todos os componentes, gerar PDF e demonstrar a ficha técnica online.*
+
+| **Prioridade** | **Funcionalidade** | **Prazo estimado** |
+| --- | --- | --- |
+| **P1 — Crítico** | App mobile com formulários dinâmicos por tipo de PT + câmera + GPS | 2–3 semanas |
+| **P1 — Crítico** | Geração automática de relatório PDF com fotos organizadas por secção | 2–3 semanas |
+| **P2 — Alto** | Sistema de criação e atribuição de tarefas (admin → técnico) | 3–4 semanas |
+| **P2 — Alto** | Lógica de deteção de incongruências + alertas automáticos | 3–4 semanas |
+| **P3 — Médio** | Dashboard web com mapa de PTs e KPIs operacionais | 5–6 semanas |
+| **P3 — Médio** | Validação de dados pelo supervisor com workflow de aprovação | 4–5 semanas |
+| **P4 — Futuro** | Portal do cliente com login e acompanhamento de intervenções | 8–10 semanas |
+| **P4 — Futuro** | Módulo de manutenção separado da auditoria | 10–12 semanas |
+| **P5 — Escala** | Integração com SAP via API, marketplace de empresas de manutenção | Fase 2 |
+
+## **8.2 Guião da Demo para Apresentação**
+
+- Escolher um PT físico acessível e realizar a auditoria completa com o sistema
+
+- Mostrar o preenchimento de dados no telemóvel — cada secção do formulário
+
+- Demonstrar o alerta de incongruência ao introduzir uma potência diferente do cadastro
+
+- Gerar o PDF da ficha técnica com fotos organizadas
+
+- Mostrar o dashboard web com o PT marcado no mapa e os dados atualizados
+
+- Demonstrar o envio automático do relatório por e-mail para o gestor
+
+# **9. Modelo de Negócio e Escala**
+
+## **9.1 Estrutura de Monetização**
+
+| **Tier** | **Inclui** | **Modelo de preço** |
+| --- | --- | --- |
+| **Base** | App mobile, cadastro de PTs, tarefas, relatórios PDF, geolocalização | Licença mensal por número de PTs geridos |
+| **Profissional** | Base + deteção de incongruências + alertas + validação por supervisor | Licença mensal + taxa por PT com alerta processado |
+| **Enterprise** | Profissional + dashboard BI, API de integração, portal do cliente, suporte dedicado | Contrato anual com SLA garantido |
+| **Marketplace** | Módulo de manutenção + listagem de empresas certificadas + gestão de contratos | Comissão por transação ou assinatura |
+
+## **9.2 Estratégia de Escala Geográfica**
+
+| **Fase** | **Mercado** | **Estratégia** |
+| --- | --- | --- |
+| **Fase 1** | Luanda (piloto ENDE) | Projeto piloto contratado — provar conceito e gerar dados de ROI |
+| **Fase 2** | Angola nacional | Expansão para outras zonas de distribuição com dados do piloto validados |
+| **Fase 3** | PALOP | Moçambique (EDM), Cabo Verde, S. Tomé — mercados lusófonos com realidade similar |
+| **Fase 4** | África Subsaariana | Nigeria, Kenya, Ghana — maior complexidade mas escala de mercado relevante |
+| **Fase 5** | Plataforma SaaS aberta | Qualquer distribuidora de energia pode contratar diretamente online |
+
+## **9.3 Oportunidades de Expansão do Produto**
+
+- Manutenção preditiva com IA: Usar histórico de auditorias para prever falhas antes de acontecerem, reduzindo apagões e custos de manutenção corretiva.
+
+- Marketplace de manutenção certificada: O sistema já identifica quem faz manutenção aos PTs. Criar um ecossistema de empresas certificadas que a distribuidora pode contratar diretamente.
+
+- BI para reguladores: Dashboards de conformidade técnica para entidades reguladoras e ministérios de energia — receita adicional de licenciamento.
+
+- Gestão de inventário técnico: Rastreio de stocks de transformadores, contadores e outros equipamentos — integrado com os dados de campo.
+
+- Conector SAP PM: API que alimenta automaticamente o SAP da distribuidora com dados recolhidos no campo, eliminando duplicação de esforço.
+
+# **10. Fator Crítico de Sucesso: Continuidade**
+
+*O maior risco identificado na reunião não é técnico — é operacional. O sistema só gera valor se o processo de auditoria for repetido ciclicamente. Uma auditoria pontual não resolve o problema estrutural.*
+
+Recomenda-se implementar um modelo de auditoria contínua por amostragem, semelhante ao método usado em inventários de armazém:
+
+- Definir uma cadência mínima: ex. 6% dos PTs auditados por mês — garantindo cobertura total em menos de 18 meses e repetição anual para os PTs de maior risco.
+
+- Priorizar PTs com maior potência instalada e histórico de incongruências para auditoria mais frequente.
+
+- Usar os KPIs do dashboard para identificar zonas com maior densidade de irregularidades e concentrar recursos de campo.
+
+- Estabelecer metas mensais por técnico e por divisão comercial, tornando o processo de auditoria uma rotina operacional e não uma iniciativa pontual.
+
+*O sucesso do sistema mede-se pela recuperação de receita e pela qualidade da base de dados técnica ao longo do tempo — não pela funcionalidade da plataforma em si. A plataforma é o meio; o processo contínuo é o fim.*

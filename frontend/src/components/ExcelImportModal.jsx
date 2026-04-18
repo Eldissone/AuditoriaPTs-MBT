@@ -151,7 +151,7 @@ const DEFAULT_CLIENT_FIELDS = [
     keywords: ['rua', 'endereco', 'endereço', 'rua numero'],
     required: false,
   },
-]; 
+];
 
 const IGNORE_KEY = '__IGNORE__';
 
@@ -241,11 +241,11 @@ function applyMapping(rawRows, columnMap, fields) {
       const val = mappedHeader && mappedHeader !== IGNORE_KEY ? row[mappedHeader] : null;
       result[field.key] = val !== undefined ? val : null;
     }
-    
+
     // Fallbacks genéricos básicos
     if (result.municipio && !result.localizacao) result.localizacao = result.municipio;
     if (result.municipio && !result.nome) result.nome = result.municipio;
-    
+
     return result;
   });
 }
@@ -275,16 +275,16 @@ function ScoreBadge({ score }) {
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
-export default function ExcelImportModal({ 
-  isOpen, 
-  onClose, 
-  onImportSuccess, 
-  fields: propFields, 
+export default function ExcelImportModal({
+  isOpen,
+  onClose,
+  onImportSuccess,
+  fields: propFields,
   apiUrl = '/clientes/bulk',
   title: propTitle
 }) {
   const fields = propFields || DEFAULT_CLIENT_FIELDS;
-  
+
   const [step, setStep] = useState(1);            // 1=upload, 2=mapping, 3=preview
   const [file, setFile] = useState(null);
   const [rawHeaders, setRawHeaders] = useState([]); // cabeçalhos reais do Excel
@@ -404,7 +404,7 @@ export default function ExcelImportModal({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
+      <div className="bg-white rounded-[1rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
 
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="p-6 border-b border-[#c4c5d7]/10 flex justify-between items-center bg-[#fcfdff]">
@@ -429,13 +429,12 @@ export default function ExcelImportModal({
             <div className="flex items-center gap-2">
               {[1, 2, 3].map((s) => (
                 <React.Fragment key={s}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${
-                    step === s
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${step === s
                       ? 'bg-[#0d3fd1] text-white shadow-lg shadow-[#0d3fd1]/30'
                       : step > s
                         ? 'bg-emerald-500 text-white'
                         : 'bg-[#eff4ff] text-[#747686]'
-                  }`}>
+                    }`}>
                     {step > s ? <CheckCircle2 className="w-3.5 h-3.5" /> : s}
                   </div>
                   {s < 3 && (
@@ -456,7 +455,7 @@ export default function ExcelImportModal({
 
           {/* ── PASSO 1: Upload ──────────────────────────────────────── */}
           {step === 1 && (
-            <div className="border-4 border-dashed border-[#eff4ff] rounded-[2rem] p-16 flex flex-col items-center justify-center text-center hover:border-[#0d3fd1]/20 group transition-all duration-300">
+            <div className="border-4 border-dashed border-[#eff4ff] rounded-[1rem] p-16 flex flex-col items-center justify-center text-center hover:border-[#0d3fd1]/20 group transition-all duration-300">
               <div className="w-24 h-24 bg-[#eff4ff] rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
                 <Upload className="w-10 h-10 text-[#0d3fd1]" />
               </div>
@@ -523,11 +522,10 @@ export default function ExcelImportModal({
                   return (
                     <div
                       key={field.key}
-                      className={`p-4 rounded-2xl border transition-all duration-200 ${
-                        selected && selected !== IGNORE_KEY
+                      className={`p-4 rounded-2xl border transition-all duration-200 ${selected && selected !== IGNORE_KEY
                           ? 'bg-white border-[#0d3fd1]/15 shadow-sm'
                           : 'bg-[#f8f9fc] border-[#e8eaf0] opacity-70'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -614,9 +612,9 @@ export default function ExcelImportModal({
                       {mappedData.slice(0, 50).map((row, i) => (
                         <tr key={i} className="hover:bg-[#f8faff] transition-colors">
                           {fields.filter(f => columnMap[f.key] && columnMap[f.key] !== IGNORE_KEY).map(f => (
-                             <td key={f.key} className="px-4 py-2.5 text-[9px] truncate max-w-[150px]">
-                               {row[f.key]?.toString() || '—'}
-                             </td>
+                            <td key={f.key} className="px-4 py-2.5 text-[9px] truncate max-w-[150px]">
+                              {row[f.key]?.toString() || '—'}
+                            </td>
                           ))}
                         </tr>
                       ))}
@@ -643,11 +641,10 @@ export default function ExcelImportModal({
           {success && importResult && (
             <div className="mt-5 space-y-3">
               {/* Banner principal */}
-              <div className={`flex items-start gap-3 p-4 rounded-2xl border text-[10px] font-bold uppercase tracking-wider ${
-                importResult.pts > 0
+              <div className={`flex items-start gap-3 p-4 rounded-2xl border text-[10px] font-bold uppercase tracking-wider ${importResult.pts > 0
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                   : 'bg-amber-50 text-amber-700 border-amber-100'
-              }`}>
+                }`}>
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
                   <p>Importação concluída</p>
@@ -667,7 +664,7 @@ export default function ExcelImportModal({
                     {importResult.pts} novos PTs
                   </div>
                 )}
-                 {importResult.updated > 0 && (
+                {importResult.updated > 0 && (
                   <div className="flex items-center gap-1.5 bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider">
                     <CheckCircle2 className="w-3 h-3" />
                     {importResult.updated} atualizados
@@ -724,11 +721,10 @@ export default function ExcelImportModal({
             <button
               disabled={!requiredMapped}
               onClick={handleApplyMapping}
-              className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-lg ${
-                requiredMapped
+              className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-lg ${requiredMapped
                   ? 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20 active:scale-95'
                   : 'bg-[#c4c5d7] text-white cursor-not-allowed'
-              }`}
+                }`}
             >
               Aplicar Mapeamento
               <ArrowRight className="w-4 h-4" />
@@ -739,11 +735,10 @@ export default function ExcelImportModal({
             <button
               disabled={loading}
               onClick={handleImport}
-              className={`flex items-center gap-3 px-10 py-3 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-lg ${
-                loading
+              className={`flex items-center gap-3 px-10 py-3 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-lg ${loading
                   ? 'bg-[#c4c5d7] cursor-not-allowed text-white'
                   : 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20 active:scale-95'
-              }`}
+                }`}
             >
               {loading
                 ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A importar...</>

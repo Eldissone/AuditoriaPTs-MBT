@@ -152,7 +152,7 @@ export default function SubstationManagement() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Gestão de Subestações</h2>

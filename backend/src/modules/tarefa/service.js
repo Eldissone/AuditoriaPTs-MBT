@@ -46,7 +46,7 @@ class TarefaService {
     });
   }
 
-  async concluirTarefa(id, auditorId, role, checklistSalvo) {
+  async concluirTarefa(id, auditorId, role, checklistSalvo, novoStatus) {
     const tarefa = await TarefaRepository.findById(id);
     if (!tarefa) throw new Error('Tarefa não encontrada');
     
@@ -59,7 +59,7 @@ class TarefaService {
     }
 
     return await TarefaRepository.update(id, {
-      status: 'Concluída',
+      status: novoStatus || 'Concluída',
       data_fim: new Date(),
       checklist: checklistSalvo || tarefa.checklist
     });

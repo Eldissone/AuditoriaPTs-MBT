@@ -40,6 +40,7 @@ class InspecaoRepository {
         monitorizacao: true,
         manutencao: true,
         riscos: true,
+        incongruencias: true,
         tarefa: true,
       },
     });
@@ -66,19 +67,42 @@ class InspecaoRepository {
     return prisma.$transaction(async (tx) => {
       const inspecao = await tx.inspecao.create({
         data: {
-          id_pt:            baseData.id_pt,
-          id_auditor:       baseData.id_auditor   ? Number(baseData.id_auditor) : undefined,
-          id_tarefa:        baseData.id_tarefa     ? Number(baseData.id_tarefa)  : null,
-          tipo:             baseData.tipo          ?? 'Preventiva',
-          resultado:        baseData.resultado     ?? null,
-          nivel_urgencia:   baseData.nivel_urgencia ?? null,
-          observacoes:      baseData.observacoes   ?? null,
-          data_inspecao:    baseData.data_inspecao    ? new Date(baseData.data_inspecao)    : new Date(),
-          proxima_inspecao: baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
-          // fotos é um campo Json? — passa o array JS directamente ou null
-          fotos: Array.isArray(baseData.fotos) ? baseData.fotos : (baseData.fotos ?? null),
+          id_pt:              baseData.id_pt,
+          id_auditor:         baseData.id_auditor     ? Number(baseData.id_auditor) : undefined,
+          id_tarefa:          baseData.id_tarefa       ? Number(baseData.id_tarefa)  : null,
+          tipo:               baseData.tipo            ?? 'Auditoria PTA',
+          resultado:          baseData.resultado       ?? null,
+          nivel_urgencia:     baseData.nivel_urgencia  ?? null,
+          observacoes:        baseData.observacoes     ?? null,
+          data_inspecao:      baseData.data_inspecao    ? new Date(baseData.data_inspecao)    : new Date(),
+          proxima_inspecao:   baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
+          fotos:              Array.isArray(baseData.fotos) ? baseData.fotos : (baseData.fotos ?? null),
+          // Novos campos de auditoria de campo
+          terra_protecao:     baseData.terra_protecao     != null ? Number(baseData.terra_protecao)   : null,
+          terra_servico:      baseData.terra_servico      != null ? Number(baseData.terra_servico)    : null,
+          medicao_tensao:     baseData.medicao_tensao     ?? null,
+          dados_cliente_campo: baseData.dados_cliente_campo ?? null,
         },
       });
+
+      // Se foram recolhidos dados do cliente em campo, actualiza o registo do PT/Cliente
+      if (baseData.dados_cliente_campo) {
+        const dc = baseData.dados_cliente_campo;
+        await tx.cliente.update({
+          where: { id_pt: baseData.id_pt },
+          data: {
+            ...(dc.razao_social          && { proprietario: dc.razao_social }),
+            ...(dc.resp_financeiro       && { responsavel_financeiro: dc.resp_financeiro }),
+            ...(dc.contacto_fin          && { contacto_resp_financeiro: dc.contacto_fin }),
+            ...(dc.resp_tecnico          && { responsavel_tecnico_cliente: dc.resp_tecnico }),
+            ...(dc.contacto_tec          && { contacto_resp_tecnico: dc.contacto_tec }),
+            ...(dc.canal_faturacao        && { canal_faturacao: dc.canal_faturacao }),
+            ...(dc.empresa_manutencao     && { empresa_manutencao: dc.empresa_manutencao }),
+            ...(dc.fornece_terceiros      != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
+            ...(dc.data_ultima_manutencao && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
+          },
+        });
+      }
 
       const id_pt = baseData.id_pt;
       const id_inspecao = inspecao.id;
@@ -185,20 +209,42 @@ class InspecaoRepository {
       const inspecao = await tx.inspecao.update({
         where: { id: Number(id) },
         data: {
-          id_pt:            baseData.id_pt           ?? existing.id_pt,
-          id_auditor:       baseData.id_auditor      ? Number(baseData.id_auditor) : existing.id_auditor,
-          id_tarefa:        baseData.id_tarefa !== undefined ? (baseData.id_tarefa ? Number(baseData.id_tarefa) : null) : existing.id_tarefa,
-          tipo:             baseData.tipo            ?? existing.tipo,
-          resultado:        baseData.resultado       !== undefined ? baseData.resultado       : existing.resultado,
-          nivel_urgencia:   baseData.nivel_urgencia  !== undefined ? baseData.nivel_urgencia  : existing.nivel_urgencia,
-          observacoes:      baseData.observacoes     !== undefined ? baseData.observacoes     : existing.observacoes,
-          data_inspecao:    baseData.data_inspecao    ? new Date(baseData.data_inspecao)    : undefined,
-          proxima_inspecao: baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
-          fotos: baseData.fotos !== undefined
-            ? (Array.isArray(baseData.fotos) ? baseData.fotos : baseData.fotos)
-            : existing.fotos,
+          id_pt:              baseData.id_pt            ?? existing.id_pt,
+          id_auditor:         baseData.id_auditor       ? Number(baseData.id_auditor) : existing.id_auditor,
+          id_tarefa:          baseData.id_tarefa !== undefined ? (baseData.id_tarefa ? Number(baseData.id_tarefa) : null) : existing.id_tarefa,
+          tipo:               baseData.tipo             ?? existing.tipo,
+          resultado:          baseData.resultado        !== undefined ? baseData.resultado        : existing.resultado,
+          nivel_urgencia:     baseData.nivel_urgencia   !== undefined ? baseData.nivel_urgencia   : existing.nivel_urgencia,
+          observacoes:        baseData.observacoes      !== undefined ? baseData.observacoes      : existing.observacoes,
+          data_inspecao:      baseData.data_inspecao     ? new Date(baseData.data_inspecao)    : undefined,
+          proxima_inspecao:   baseData.proxima_inspecao  ? new Date(baseData.proxima_inspecao) : null,
+          fotos:              baseData.fotos !== undefined ? (Array.isArray(baseData.fotos) ? baseData.fotos : baseData.fotos) : existing.fotos,
+          // Novos campos de auditoria
+          terra_protecao:     baseData.terra_protecao     !== undefined ? (baseData.terra_protecao != null ? Number(baseData.terra_protecao) : null) : existing.terra_protecao,
+          terra_servico:      baseData.terra_servico      !== undefined ? (baseData.terra_servico  != null ? Number(baseData.terra_servico)  : null) : existing.terra_servico,
+          medicao_tensao:     baseData.medicao_tensao     !== undefined ? baseData.medicao_tensao     : existing.medicao_tensao,
+          dados_cliente_campo: baseData.dados_cliente_campo !== undefined ? baseData.dados_cliente_campo : existing.dados_cliente_campo,
         },
       });
+
+      // Actualiza dados comerciais do PT se vieram em campo
+      if (baseData.dados_cliente_campo) {
+        const dc = baseData.dados_cliente_campo;
+        await tx.cliente.update({
+          where: { id_pt: id_pt },
+          data: {
+            ...(dc.razao_social           && { proprietario: dc.razao_social }),
+            ...(dc.resp_financeiro        && { responsavel_financeiro: dc.resp_financeiro }),
+            ...(dc.contacto_fin           && { contacto_resp_financeiro: dc.contacto_fin }),
+            ...(dc.resp_tecnico           && { responsavel_tecnico_cliente: dc.resp_tecnico }),
+            ...(dc.contacto_tec           && { contacto_resp_tecnico: dc.contacto_tec }),
+            ...(dc.canal_faturacao         && { canal_faturacao: dc.canal_faturacao }),
+            ...(dc.empresa_manutencao      && { empresa_manutencao: dc.empresa_manutencao }),
+            ...(dc.fornece_terceiros       != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
+            ...(dc.data_ultima_manutencao  && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
+          },
+        });
+      }
 
       const id_inspecao = inspecao.id;
 

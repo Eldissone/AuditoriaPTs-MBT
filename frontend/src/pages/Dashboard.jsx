@@ -282,7 +282,7 @@ export default function Dashboard() {
   const isLoading = isLoadingStats || isLoadingMap;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 p-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>

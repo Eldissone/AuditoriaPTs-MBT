@@ -52,8 +52,8 @@ class TarefaController {
   async concluir(req, res) {
     try {
       const { id } = req.params;
-      const { checklist } = req.body;
-      const tarefa = await TarefaService.concluirTarefa(Number(id), req.user.id, req.user.role, checklist);
+      const { checklist, novoStatus } = req.body;
+      const tarefa = await TarefaService.concluirTarefa(Number(id), req.user.id, req.user.role, checklist, novoStatus);
       return res.json(tarefa);
     } catch (error) {
       return res.status(400).json({ error: error.message });

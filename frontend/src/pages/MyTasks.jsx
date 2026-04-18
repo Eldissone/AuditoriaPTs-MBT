@@ -72,27 +72,26 @@ export default function MyTasks() {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Concluída':    return 'border-emerald-200 bg-emerald-50';
+      case 'Concluída': return 'border-emerald-200 bg-emerald-50';
       case 'Em Andamento': return 'border-amber-200 bg-amber-50';
-      default:             return 'border-[#c4c5d7]/30 bg-white';
+      default: return 'border-[#c4c5d7]/30 bg-white';
     }
   };
 
-  const pendentes   = tarefas.filter(t => t.status === 'Pendente');
-  const andamento   = tarefas.filter(t => t.status === 'Em Andamento');
-  const concluidas  = tarefas.filter(t => t.status === 'Concluída');
+  const pendentes = tarefas.filter(t => t.status === 'Pendente');
+  const andamento = tarefas.filter(t => t.status === 'Em Andamento');
+  const concluidas = tarefas.filter(t => t.status === 'Concluída');
 
   const renderTarefa = (tarefa) => (
     <div
       key={tarefa.id}
-      className={`p-6 rounded-[2rem] border-2 shadow-lg hover:shadow-xl transition-all flex flex-col ${getStatusStyle(tarefa.status)}`}
+      className={`p-6 rounded-[1rem] border-2 shadow-lg hover:shadow-xl transition-all flex flex-col ${getStatusStyle(tarefa.status)}`}
     >
       <div className="flex justify-between items-start mb-4">
-        <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded-full ${
-          tarefa.status === 'Concluída'    ? 'bg-emerald-200 text-emerald-800' :
+        <span className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded-full ${tarefa.status === 'Concluída' ? 'bg-emerald-200 text-emerald-800' :
           tarefa.status === 'Em Andamento' ? 'bg-amber-200 text-amber-800' :
-                                             'bg-slate-200 text-slate-700'
-        }`}>
+            'bg-slate-200 text-slate-700'
+          }`}>
           {tarefa.status}
         </span>
         <span className="text-xs font-bold text-[#747686] flex items-center gap-1 bg-white/50 px-2 py-1 rounded-md">
@@ -182,7 +181,7 @@ export default function MyTasks() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-16">
+    <div className="max-w-full p-6 mx-auto space-y-10 animate-in fade-in duration-500 pb-16">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">
@@ -272,7 +271,7 @@ export default function MyTasks() {
       {/* ── Modal Concluir Manual (tarefas sem PT) ───────────────────────── */}
       {activeTarefa && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-sm p-4">
-          <div className="bg-white max-w-lg w-full rounded-[2rem] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+          <div className="bg-white max-w-lg w-full rounded-[1rem] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             <div className="bg-[#f8faff] p-6 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Conclusão da Tarefa</span>
@@ -332,7 +331,7 @@ export default function MyTasks() {
       {/* ── Detail Modal ──────────────────────────────────────────────────── */}
       {detailTarefa && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-sm p-4">
-          <div className="bg-white max-w-2xl w-full rounded-[2rem] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+          <div className="bg-white max-w-2xl w-full rounded-[1rem] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             <div className="bg-[#f8faff] p-6 border-b border-[#c4c5d7]/20 flex justify-between items-start gap-4">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-2">Detalhes da Tarefa</span>
@@ -350,7 +349,7 @@ export default function MyTasks() {
                   { label: 'Técnico', val: detailTarefa.auditor?.nome },
                   { label: 'Data Prevista', val: new Date(detailTarefa.data_prevista).toLocaleDateString('pt-PT') },
                   detailTarefa.data_inicio && { label: 'Início', val: new Date(detailTarefa.data_inicio).toLocaleString('pt-PT') },
-                  detailTarefa.data_fim    && { label: 'Conclusão', val: new Date(detailTarefa.data_fim).toLocaleString('pt-PT') },
+                  detailTarefa.data_fim && { label: 'Conclusão', val: new Date(detailTarefa.data_fim).toLocaleString('pt-PT') },
                 ].filter(Boolean).map(({ label, val }) => (
                   <div key={label} className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-1">{label}</p>
