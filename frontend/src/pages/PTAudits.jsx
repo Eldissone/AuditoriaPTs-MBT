@@ -578,54 +578,56 @@ export default function PTAudits() {
               <FileText className="w-4 h-4" />
               PDF
             </button>
-            <button
-              onClick={() => {
-                setSelectedAuditId(null);
-                setFormData({
-                  id_pt: '',
-                  id_tarefa: '',
-                  tipo: 'Preventiva',
-                  data_inspecao: new Date().toISOString().split('T')[0],
-                  resultado: 'Em Avaliação',
-                  nivel_urgencia: 'Baixo',
-                  observacoes: '',
-                  conformidade: {
-                    licenciamento: false,
-                    projeto_aprovado: false,
-                    diagramas_unifilares: false,
-                    plano_manutencao: false,
-                    registos_inspecao: false,
-                    normas_iec: false,
-                    normas_ieee: false,
-                    normas_locais: false
-                  },
-                  transformador: {
-                    num_transformador: 1,
-                    potencia_kva: 630,
-                    tensao_primaria: 15,
-                    tensao_secundaria: 0.4,
-                    tipo_isolamento: 'Oleo',
-                    estado_oleo: 'Bom',
-                    fugas: false,
-                    temperatura_operacao: 45
-                  },
-                  seguranca: {
-                    resistencia_terra: 2.5,
-                    protecao_raios: false,
-                    spd: false,
-                    sinalizacao: false,
-                    combate_incendio: false,
-                    distancias_seguranca: false
-                  }
-                });
-                setView('form');
-                setStep(1);
-              }}
-              className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
-            >
-              <Plus className="w-4 h-4" />
-              Auditoria
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => {
+                  setSelectedAuditId(null);
+                  setFormData({
+                    id_pt: '',
+                    id_tarefa: '',
+                    tipo: 'Preventiva',
+                    data_inspecao: new Date().toISOString().split('T')[0],
+                    resultado: 'Em Avaliação',
+                    nivel_urgencia: 'Baixo',
+                    observacoes: '',
+                    conformidade: {
+                      licenciamento: false,
+                      projeto_aprovado: false,
+                      diagramas_unifilares: false,
+                      plano_manutencao: false,
+                      registos_inspecao: false,
+                      normas_iec: false,
+                      normas_ieee: false,
+                      normas_locais: false
+                    },
+                    transformador: {
+                      num_transformador: 1,
+                      potencia_kva: 630,
+                      tensao_primaria: 15,
+                      tensao_secundaria: 0.4,
+                      tipo_isolamento: 'Oleo',
+                      estado_oleo: 'Bom',
+                      fugas: false,
+                      temperatura_operacao: 45
+                    },
+                    seguranca: {
+                      resistencia_terra: 2.5,
+                      protecao_raios: false,
+                      spd: false,
+                      sinalizacao: false,
+                      combate_incendio: false,
+                      distancias_seguranca: false
+                    }
+                  });
+                  setView('form');
+                  setStep(1);
+                }}
+                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+              >
+                <Plus className="w-4 h-4" />
+                Auditoria
+              </button>
+            )}
           </div>
         </div>
 
@@ -745,18 +747,22 @@ export default function PTAudits() {
                         >
                           Abrir
                         </button>
-                        <button
-                          onClick={() => handleEdit(audit)}
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(audit.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
-                        >
-                          Apagar
-                        </button>
+                        {user?.role === 'admin' && (
+                          <>
+                            <button
+                              onClick={() => handleEdit(audit)}
+                              className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(audit.id)}
+                              className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
+                            >
+                              Apagar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

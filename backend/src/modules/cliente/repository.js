@@ -97,10 +97,11 @@ class ClienteRepository {
       monitorizacao,
       manutencao,
       risco,
+      identificacao,
       ...restOfData
     } = data;
 
-    const rawBaseData = cliente || restOfData;
+    const rawBaseData = cliente || identificacao || restOfData;
 
     const getYear = (val) => {
       if (!val) return new Date().getFullYear();
@@ -282,10 +283,11 @@ class ClienteRepository {
       monitorizacao,
       manutencao,
       risco,
+      identificacao,
       ...restOfData
     } = data;
 
-    const rawBaseData = cliente || restOfData;
+    const rawBaseData = cliente || identificacao || restOfData;
 
     // Same mapping logic for update
     const baseCliente = {
