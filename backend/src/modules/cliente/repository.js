@@ -110,11 +110,23 @@ class ClienteRepository {
       return new Date(val).getFullYear() || new Date().getFullYear();
     };
 
+    // Extract coordinates if available
+    let latitude = null, longitude = null;
+    if (rawBaseData.gps) {
+      const parts = rawBaseData.gps.split(/[,;]/);
+      if (parts.length >= 2) {
+        latitude = parseFloat(parts[0]);
+        longitude = parseFloat(parts[1]);
+      }
+    }
+
     // 1. Base Cliente mapping
     const baseCliente = {
       id_pt: rawBaseData.id_pt,
       localizacao: rawBaseData.localizacao || 'N/D',
       gps: rawBaseData.gps || '',
+      latitude: latitude && !isNaN(latitude) ? latitude : null,
+      longitude: longitude && !isNaN(longitude) ? longitude : null,
       morada: rawBaseData.morada || '',
       municipio: rawBaseData.municipio || 'Luanda',
       provincia: rawBaseData.provincia || 'Luanda',
@@ -288,11 +300,23 @@ class ClienteRepository {
     } = data;
 
     const rawBaseData = cliente || identificacao || restOfData;
+    
+    // Extract coordinates if available
+    let latitude = null, longitude = null;
+    if (rawBaseData.gps) {
+      const parts = rawBaseData.gps.split(/[,;]/);
+      if (parts.length >= 2) {
+        latitude = parseFloat(parts[0]);
+        longitude = parseFloat(parts[1]);
+      }
+    }
 
     // Same mapping logic for update
     const baseCliente = {
       localizacao: rawBaseData.localizacao,
       gps: rawBaseData.gps,
+      latitude: latitude && !isNaN(latitude) ? latitude : undefined,
+      longitude: longitude && !isNaN(longitude) ? longitude : undefined,
       morada: rawBaseData.morada,
       municipio: rawBaseData.municipio,
       provincia: rawBaseData.provincia,
@@ -419,7 +443,57 @@ class ClienteRepository {
     return prisma.cliente.update({
       where: { id_pt },
       data: {
-        ...baseCliente,
+        // Campos Escalares Base (Mapeamento Explícito)
+        localizacao:          baseCliente.localizacao,
+        gps:                  baseCliente.gps,
+        latitude:             baseCliente.latitude,
+        longitude:            baseCliente.longitude,
+        morada:               baseCliente.morada,
+        municipio:            baseCliente.municipio,
+        provincia:            baseCliente.provincia,
+        tipo_instalacao:      baseCliente.tipo_instalacao,
+        nivel_tensao:         baseCliente.nivel_tensao,
+        fabricante:           baseCliente.fabricante,
+        regime_exploracao:    baseCliente.regime_exploracao,
+        estado_operacional:   baseCliente.estado_operacional,
+        conta_contrato:       baseCliente.conta_contrato,
+        instalacao:           baseCliente.instalacao,
+        equipamento:          baseCliente.equipamento,
+        parceiro_negocios:    baseCliente.parceiro_negocios,
+        categoria_tarifa:     baseCliente.categoria_tarifa,
+        txt_categoria_tarifa: baseCliente.txt_categoria_tarifa,
+        distrito_comuna:      baseCliente.distrito_comuna,
+        bairro:               baseCliente.bairro,
+        contrato:             baseCliente.contrato,
+        num_serie:            baseCliente.num_serie,
+        divisao:              baseCliente.divisao,
+        denominacao_divisao:  baseCliente.denominacao_divisao,
+        unidade_leitura:      baseCliente.unidade_leitura,
+        num_localidade:       baseCliente.num_localidade,
+        bairro_num:           baseCliente.bairro_num,
+        rua:                  baseCliente.rua,
+        tipo_cliente:         baseCliente.tipo_cliente,
+        
+        // Campos Numéricos com Cast Garantido
+        potencia_kva:         baseCliente.potencia_kva !== undefined ? Number(baseCliente.potencia_kva) : undefined,
+        ano_instalacao:       baseCliente.ano_instalacao !== undefined ? Number(baseCliente.ano_instalacao) : undefined,
+        num_transformadores:  baseCliente.num_transformadores !== undefined ? Number(baseCliente.num_transformadores) : undefined,
+        montante_divida:      baseCliente.montante_divida !== undefined ? Number(baseCliente.montante_divida) : undefined,
+        num_facturas_atraso:  baseCliente.num_facturas_atraso !== undefined ? Number(baseCliente.num_facturas_atraso) : undefined,
+        id_subestacao:        baseCliente.id_subestacao !== undefined ? Number(baseCliente.id_subestacao) : undefined,
+        id_responsavel:       baseCliente.id_responsavel !== undefined ? (baseCliente.id_responsavel ? Number(baseCliente.id_responsavel) : null) : undefined,
+
+        // Dados de Auditoria de Campo
+        responsavel_financeiro:      baseCliente.responsavel_financeiro,
+        contacto_resp_financeiro:    baseCliente.contacto_resp_financeiro,
+        responsavel_tecnico_cliente: baseCliente.responsavel_tecnico_cliente,
+        contacto_resp_tecnico:       baseCliente.contacto_resp_tecnico,
+        canal_faturacao:             baseCliente.canal_faturacao,
+        fornece_terceiros:           baseCliente.fornece_terceiros,
+        empresa_manutencao:          baseCliente.empresa_manutencao,
+        data_ultima_manutencao:      baseCliente.data_ultima_manutencao,
+
+        // Relações (Upsert/Nested)
         conformidade: conformidadeData ? { upsert: { create: conformidadeData, update: conformidadeData } } : undefined,
         media_tensao: mtData ? { upsert: { create: mtData, update: mtData } } : undefined,
         baixa_tensao: btData ? { upsert: { create: btData, update: btData } } : undefined,

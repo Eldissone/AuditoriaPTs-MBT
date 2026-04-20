@@ -40,8 +40,10 @@ export default function PTAudits() {
   const [pts, setPts] = useState([]);
   const [audits, setAudits] = useState([]);
   const [tarefas, setTarefas] = useState([]);
+  const [subestacoes, setSubestacoes] = useState([]);
   const [selectedAuditId, setSelectedAuditId] = useState(null);
   const localidadeFiltro = searchParams.get('localidade') || '';
+  const [subestacaoFiltro, setSubestacaoFiltro] = useState('');
   const [busca, setBusca] = useState('');
   const [tipoFiltroRelatorio, setTipoFiltroRelatorio] = useState('');
   const [periodoFiltro, setPeriodoFiltro] = useState('todos');
@@ -99,10 +101,11 @@ export default function PTAudits() {
     async function fetchData() {
       try {
         const ptsParams = localidadeFiltro ? { params: { localidade: localidadeFiltro } } : undefined;
-        const [ptsRes, auditsRes, tarefasRes] = await Promise.all([
+        const [ptsRes, auditsRes, tarefasRes, substRes] = await Promise.all([
           api.get('/clientes', ptsParams),
           api.get('/inspecoes'),
-          api.get('/tarefas').catch(() => ({ data: [] }))
+          api.get('/tarefas').catch(() => ({ data: [] })),
+          api.get('/subestacoes').catch(() => ({ data: [] }))
         ]);
         setPts(ptsRes.data);
         const filteredAudits = localidadeFiltro
@@ -112,12 +115,18 @@ export default function PTAudits() {
           : (auditsRes.data || []);
         setAudits(filteredAudits);
         setTarefas(tarefasRes.data || []);
+        setSubestacoes(substRes.data || []);
       } catch (err) {
         console.error(err);
       }
     }
     fetchData();
   }, [view, localidadeFiltro]);
+
+  // Reset subestacao filter if localidade changes
+  useEffect(() => {
+    setSubestacaoFiltro('');
+  }, [localidadeFiltro]);
 
   useEffect(() => {
     localStorage.setItem('@PTAS:ptaudits:modo', modoRelatorio);
@@ -287,6 +296,7 @@ export default function PTAudits() {
 
   const auditsFiltrados = [...audits]
     .filter((audit) => (tipoFiltroRelatorio ? audit.tipo === tipoFiltroRelatorio : true))
+    .filter((audit) => (subestacaoFiltro ? String(audit.pt?.id_subestacao) === String(subestacaoFiltro) : true))
     .filter((audit) => {
       if (!busca.trim()) return true;
       const termo = busca.toLowerCase();
@@ -313,12 +323,14 @@ export default function PTAudits() {
     );
 
   const tarefasFiltradas = [...tarefas]
+    .filter((tarefa) => (subestacaoFiltro ? String(tarefa.pt?.subestacao?.id) === String(subestacaoFiltro) : true))
     .filter((tarefa) => {
       if (!busca.trim()) return true;
       const termo = busca.toLowerCase();
       return (
         tarefa.titulo?.toLowerCase().includes(termo) ||
         tarefa.id_pt?.toLowerCase().includes(termo) ||
+        tarefa.pt?.proprietario?.toLowerCase().includes(termo) ||
         tarefa.auditor?.nome?.toLowerCase().includes(termo) ||
         tarefa.pt?.subestacao?.nome?.toLowerCase().includes(termo)
       );
@@ -442,6 +454,23 @@ export default function PTAudits() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPDF = async (auditId) => {
+    try {
+      const response = await api.get(`/inspecoes/${auditId}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Relatorio_Inspecao_${auditId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao descarregar PDF:', err);
+      alert('Erro ao gerar o relatório PDF. Por favor, tente novamente.');
+    }
   };
 
   const handleExportPDF = () => {
@@ -635,9 +664,21 @@ export default function PTAudits() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por código cliente, proprietário, subestação ou tarefa..."
-            className="md:col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-sm font-bold text-[#0f1c2c]"
+            placeholder="Buscar por código cliente, nome, subestação ou tarefa..."
+            className="md:col-span-1 bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-sm font-bold text-[#0f1c2c]"
           />
+          <select
+            value={subestacaoFiltro}
+            onChange={(e) => setSubestacaoFiltro(e.target.value)}
+            className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold uppercase text-[#0f1c2c]"
+          >
+            <option value="">Todas as Subestações</option>
+            {subestacoes
+              .filter(s => !localidadeFiltro || s.municipio === localidadeFiltro)
+              .map(s => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+          </select>
           <select
             value={tipoFiltroRelatorio}
             onChange={(e) => setTipoFiltroRelatorio(e.target.value)}
@@ -746,6 +787,13 @@ export default function PTAudits() {
                           className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
                         >
                           Abrir
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPDF(audit.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          PDF
                         </button>
                         {user?.role === 'admin' && (
                           <>
@@ -1108,7 +1156,19 @@ export default function PTAudits() {
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
               <div className="bg-[#eff4ff] p-8 rounded-3xl border border-[#0d3fd1]/10 space-y-8">
                 <div>
-                  <h4 className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight mb-6">Resumo da Inspeção</h4>
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-sm font-black text-[#0d3fd1] uppercase tracking-tight">Resumo da Inspeção</h4>
+                    {selectedAuditId && (
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadPDF(selectedAuditId)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Descarregar Relatório PDF
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-6 border-b border-[#0d3fd1]/10">
                     <div className="space-y-1">
                       <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Posto Alvo</span>
@@ -1232,9 +1292,14 @@ export default function PTAudits() {
                     <h5 className="text-[10px] font-black text-amber-700 uppercase tracking-widest bg-amber-100 px-3 py-1.5 rounded-lg inline-block shadow-sm">Incongruências Detetadas</h5>
                     <ul className="space-y-3 bg-amber-50 p-5 rounded-2xl border border-amber-200">
                       {formData.incongruencias.map((inc, i) => (
-                        <li key={i} className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-amber-900 uppercase tracking-wide">{inc.campo}</span>
-                          <span className="font-black text-amber-900">{inc.valor_campo} <span className="text-amber-600/70 text-[9px]">(vs {inc.valor_sistema})</span></span>
+                        <li key={i} className="flex flex-col gap-1 text-xs py-2 border-b border-amber-200/50 last:border-0">
+                          <span className="font-black text-amber-900 uppercase tracking-wide flex items-center gap-2">
+                            <AlertTriangle className="w-3 h-3" /> {inc.descricao}
+                          </span>
+                          <div className="flex gap-4 ml-5">
+                            <span className="text-amber-700">Sistema: <span className="font-bold">{inc.valor_cadastro || '---'}</span></span>
+                            <span className="text-amber-900">Campo: <span className="font-black">{inc.valor_apurado || '---'}</span></span>
+                          </div>
                         </li>
                       ))}
                     </ul>

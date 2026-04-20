@@ -58,6 +58,33 @@ class InspecaoController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async generatePDF(req, res) {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'ID inválido.' });
+      }
+
+      const pdfGenerator = require('../../utils/pdfGenerator');
+      const inspecao = await service.getDetails(id);
+
+      if (!inspecao) {
+        return res.status(404).json({ error: 'Inspeção não encontrada' });
+      }
+
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Relatorio_Inspecao_${id}.pdf`);
+
+      await pdfGenerator.generateAuditReport(inspecao, res);
+    } catch (error) {
+      console.error('Erro ao gerar PDF de inspeção:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro ao gerar o relatório PDF' });
+      }
+    }
+  }
 }
 
 module.exports = new InspecaoController();

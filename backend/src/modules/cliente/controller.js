@@ -6,7 +6,12 @@ class IdentificacaoController {
       const result = await service.listAll(req.query);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('ERRO FATAL /api/clientes:', error);
+      if (error.stack) console.error(error.stack);
+      res.status(500).json({ 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+      });
     }
   }
 

@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X, Camera, Upload, CheckCircle2, AlertCircle, MapPin,
   ArrowRight, ArrowLeft, Zap, ClipboardList, Trash2,
   AlertTriangle, FileText, Clock, Users, Phone,
-  Wrench, Activity, Shield, Building2, Info,
+  Wrench, Activity, Shield, Building2, Info, Calendar
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -198,7 +198,25 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   // Guardar ID Original do Auditor: apenas o utilizador designado (ou Admin, dependendo das regras) deve Iniciar
   const isAssignedAuditor = user?.id === tarefa?.id_auditor || user?.role === 'admin';
 
-  const [step, setStep] = useState(1);
+  const STORAGE_KEY = `@AUDMBT:audit_progress:${tarefa.id}`;
+  
+  // ── Helper: Carregar dados iniciais (Lazy Initializer) ──────────────────
+  const getInitialData = () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.timestamp && Date.now() - data.timestamp < 12 * 60 * 60 * 1000) { // Cache de 12h
+          return data;
+        }
+      } catch (err) { console.error('Erro ao ler cache:', err); }
+    }
+    return null;
+  };
+
+  const initialProgress = getInitialData();
+
+  const [step, setStep] = useState(initialProgress?.step || 1);
   const [iniciando, setIniciando] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -211,17 +229,11 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const isPTC = tarefa?.id_pt?.toUpperCase().includes('PTC') || tarefa?.pt?.tipo_instalacao === 'PTC';
   const checklistBase = isPTC ? CHECKLIST_PTC : CHECKLIST_PTA;
 
-  // Fotos
-  const [fotos, setFotos] = useState(Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, null])));
-
-  // Checklist: { item_id: 'ok'|'nc'|'na'|null }
-  const [checklistMap, setChecklistMap] = useState(Object.fromEntries(checklistBase.map(i => [i.id, null])));
-
-  // Medições de terra e tensão
-  const [medicoes, setMedicoes] = useState({ terra_protecao: '', terra_servico: '', UA: '', UB: '', UC: '', UAB: '', UBC: '', UCA: '' });
-
-  // Dados do cliente verificados em campo
-  const [dadosCliente, setDadosCliente] = useState({
+  // Estados Base — Inicializados com progresso carregado ou valor padrão
+  const [fotos, setFotos] = useState(initialProgress?.fotos || Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, null])));
+  const [checklistMap, setChecklistMap] = useState(initialProgress?.checklistMap || Object.fromEntries(checklistBase.map(i => [i.id, null])));
+  const [medicoes, setMedicoes] = useState(initialProgress?.medicoes || { terra_protecao: '', terra_servico: '', UA: '', UB: '', UC: '', UAB: '', UBC: '', UCA: '' });
+  const [dadosCliente, setDadosCliente] = useState(initialProgress?.dadosCliente || {
     razao_social: pt?.proprietario || '',
     resp_financeiro: pt?.responsavel_financeiro || '',
     contacto_fin: pt?.contacto_resp_financeiro || '',
@@ -233,9 +245,31 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
     empresa_manutencao: pt?.empresa_manutencao || '',
     data_ultima_manutencao: '',
   });
+  const [formData, setFormData] = useState(initialProgress?.formData || { resultado: 'Em Avaliação', nivel_urgencia: 'Baixo', observacoes: '', proxima_inspecao: '' });
+  const [resumed, setResumed] = useState(!!initialProgress);
 
-  // Resultado
-  const [formData, setFormData] = useState({ resultado: 'Em Avaliação', nivel_urgencia: 'Baixo', observacoes: '', proxima_inspecao: '' });
+  // 1. Mostrar feedback de retomada por alguns segundos
+  useEffect(() => {
+    if (resumed) {
+      const t = setTimeout(() => setResumed(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [resumed]);
+
+  // 2. Salvar progresso a cada alteração
+  useEffect(() => {
+    const stateToSave = {
+      step,
+      fotos,
+      checklistMap,
+      medicoes,
+      dadosCliente,
+      formData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [STORAGE_KEY, step, fotos, checklistMap, medicoes, dadosCliente, formData]);
+
 
   // Dados checklist da tarefa original (para manter compatibilidade)
   const [tarefaChecklist, setTarefaChecklist] = useState(tarefa.checklist || []);
@@ -251,6 +285,12 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const totalOK = Object.values(checklistMap).filter(v => v === 'ok').length;
   const totalNC = Object.values(checklistMap).filter(v => v === 'nc').length;
   const totalPendente = Object.values(checklistMap).filter(v => v === null).length;
+
+  // Validação de Integridade
+  const infoCompleta = totalPendente === 0 && 
+                      fotosObrigOk && 
+                      medicoes.terra_protecao !== '' && 
+                      medicoes.terra_servico !== '';
 
   const STEPS = [
     { n: 1, label: 'PT Info', icon: Info },
@@ -340,6 +380,9 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
         // Itens NC de prioridade A são registados no checklist — o motor de incongruências processará no backend
       }
 
+      // Limpar progresso salvo
+      localStorage.removeItem(STORAGE_KEY);
+
       setSuccess(true);
       setTimeout(() => { onDone?.(); onClose(); }, 2200);
     } catch (err) {
@@ -359,6 +402,11 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
               <span className="text-[9px] text-white/70 font-black uppercase tracking-[0.2em]">
                 {isPTC ? 'Auditoria PTC — 37 itens' : 'Auditoria PTA — 32 itens'}
               </span>
+              {resumed && (
+                <span className="ml-3 text-[8px] font-black uppercase bg-emerald-400 text-[#0d3fd1] px-2 py-0.5 rounded-full animate-pulse">
+                  Progresso Retomado
+                </span>
+              )}
             </div>
             <h3 className="text-white text-base font-black uppercase tracking-tight leading-tight">{tarefa.titulo}</h3>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -597,19 +645,21 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                   { key: 'contacto_tec', label: 'Contacto do Resp. Técnico', icon: Phone },
                   { key: 'ultima_fatura', label: 'Referência da Última Fatura', icon: FileText },
                   { key: 'empresa_manutencao', label: 'Empresa de Manutenção', icon: Wrench },
+                  { key: 'data_ultima_manutencao', label: 'Data da Última Manutenção', icon: Calendar, type: 'date' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#747686] mb-1">
                       <f.icon className="w-3 h-3" /> {f.label}
                     </label>
                     <input
-                      type="text"
-                      value={dadosCliente[f.key]}
+                      type={f.type || 'text'}
+                      value={dadosCliente[f.key] || ''}
                       onChange={e => setDadosCliente(p => ({ ...p, [f.key]: e.target.value }))}
                       className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-4 py-2.5 text-sm font-bold text-[#0f1c2c] focus:outline-none focus:ring-2 focus:ring-[#0d3fd1]/20"
                     />
                   </div>
                 ))}
+
 
                 {/* Canal de Faturação */}
                 <div>
@@ -712,12 +762,43 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                     {medicoes.terra_servico !== '' ? `${medicoes.terra_servico} Ω` : 'Não medido'}
                   </p>
                 </div>
+                <div className="col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
+                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Divergências de Cadastro</p>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const divs = [];
+                      const mapping = {
+                        razao_social: { campo: 'proprietario', label: 'Nome' },
+                        resp_financeiro: { campo: 'responsavel_financeiro', label: 'Resp. Fin.' },
+                        resp_tecnico: { campo: 'responsavel_tecnico_cliente', label: 'Resp. Téc.' },
+                        contacto_fin: { campo: 'contacto_resp_financeiro', label: 'Cont. Fin.' },
+                        contacto_tec: { campo: 'contacto_resp_tecnico', label: 'Cont. Téc.' },
+                        empresa_manutencao: { campo: 'empresa_manutencao', label: 'Manutenção' },
+                      };
+                      Object.entries(mapping).forEach(([key, meta]) => {
+                        const vCampo = String(dadosCliente?.[key] || '').trim();
+                        const vSist = String(tarefa?.pt?.[meta.campo] || '').trim();
+                        if (vCampo && vSist && vCampo !== vSist) {
+                          divs.push(`${meta.label}: ${vSist} → ${vCampo}`);
+                        }
+                      });
+                      if (dadosCliente?.fornece_terceiros !== !!tarefa?.pt?.fornece_terceiros) {
+                        divs.push(`Fornece Terceiros: ${tarefa?.pt?.fornece_terceiros ? 'Sim' : 'Não'} → ${dadosCliente?.fornece_terceiros ? 'Sim' : 'Não'}`);
+                      }
+
+                      
+                      if (divs.length === 0) return <p className="text-[10px] font-bold text-emerald-600">Sem divergências (Dados em conformidade)</p>;
+                      return divs.map((d, i) => <p key={i} className="text-[10px] font-bold text-amber-600">⚠️ {d}</p>);
+                    })()}
+                  </div>
+                </div>
                 {formData.observacoes && (
                   <div className="col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
                     <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Observações</p>
                     <p className="text-[11px] font-medium text-[#444655]">{formData.observacoes}</p>
                   </div>
                 )}
+
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
                 <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -769,14 +850,14 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
               </button>
             )}
             {step === 3 && (
-              <button onClick={() => setStep(4)}
-                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all">
-                Avançar <ArrowRight className="w-3.5 h-3.5" />
+              <button disabled={totalPendente > 0} onClick={() => setStep(4)}
+                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${totalPendente === 0 ? 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20' : 'bg-[#c4c5d7] text-white cursor-not-allowed'}`}>
+                {totalPendente > 0 ? `Faltam ${totalPendente} itens` : 'Avançar'} <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
             {step === 4 && (
-              <button onClick={() => setStep(5)}
-                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all">
+              <button disabled={medicoes.terra_protecao === '' || medicoes.terra_servico === ''} onClick={() => setStep(5)}
+                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${medicoes.terra_protecao !== '' && medicoes.terra_servico !== '' ? 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20' : 'bg-[#c4c5d7] text-white cursor-not-allowed'}`}>
                 Dados do Cliente <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -793,9 +874,9 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
               </button>
             )}
             {step === 7 && !success && (
-              <button disabled={loading} onClick={handleSubmit}
-                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${loading ? 'bg-[#c4c5d7] text-white cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200'}`}>
-                {loading ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A submeter...</> : <><CheckCircle2 className="w-4 h-4" /> Concluir Auditoria</>}
+              <button disabled={loading || !infoCompleta} onClick={handleSubmit}
+                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${loading || !infoCompleta ? 'bg-[#c4c5d7] text-white cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200'}`}>
+                {loading ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A submeter...</> : !infoCompleta ? 'Informação Incompleta' : <><CheckCircle2 className="w-4 h-4" /> Concluir Auditoria</>}
               </button>
             )}
           </div>

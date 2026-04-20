@@ -31,6 +31,7 @@ export default function TaskManagement() {
   const [taskInspecoes, setTaskInspecoes] = useState([]);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [localidadeModal, setLocalidadeModal] = useState('');
+  const [subestacaoModal, setSubestacaoModal] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState('');
 
   const fetchDados = async () => {
@@ -44,7 +45,9 @@ export default function TaskManagement() {
       setTarefas(resTarefas.data);
       // Filtrar para mostrar apenas quem tem role auditor (ou todos se preferir, aqui filtramos auditores)
       setAuditores(resAuditores.data.filter(u => u.role === 'auditor' || u.role === 'admin'));
-      setPts(resPts.data);
+      // Ensure pts is an array even if paginated
+      const clientData = Array.isArray(resPts.data) ? resPts.data : (resPts.data?.data || []);
+      setPts(clientData);
     } catch (err) {
       console.error(err);
       alert('Erro ao carregar dados essenciais para tarefas');
@@ -70,6 +73,7 @@ export default function TaskManagement() {
 
   const handleOpenModal = (tarefa = null) => {
     setLocalidadeModal('');
+    setSubestacaoModal('');
     if (tarefa) {
       setFormData({
         id: tarefa.id,
@@ -110,10 +114,30 @@ export default function TaskManagement() {
     return [...new Set(items)].sort((a, b) => a.localeCompare(b, 'pt-PT'));
   }, [pts]);
 
-  const ptsFiltradosModal = React.useMemo(() => {
-    if (!localidadeModal) return pts;
-    return (pts || []).filter((p) => (p.subestacao?.municipio || p.municipio) === localidadeModal);
+  const subestacoesLista = React.useMemo(() => {
+    let filtered = pts || [];
+    if (localidadeModal) {
+      filtered = filtered.filter((p) => (p.subestacao?.municipio || p.municipio) === localidadeModal);
+    }
+    const items = filtered
+      .map((p) => p.subestacao?.nome)
+      .filter(Boolean)
+      .map((x) => String(x).trim())
+      .filter(Boolean);
+    return [...new Set(items)].sort((a, b) => a.localeCompare(b, 'pt-PT'));
   }, [pts, localidadeModal]);
+
+  const ptsFiltradosModal = React.useMemo(() => {
+    let filtered = pts || [];
+    if (localidadeModal) {
+      filtered = filtered.filter((p) => (p.subestacao?.municipio || p.municipio) === localidadeModal);
+    }
+    if (subestacaoModal) {
+      filtered = filtered.filter((p) => p.subestacao?.nome === subestacaoModal);
+    }
+    // Limit to top 100 for performance
+    return filtered.slice(0, 500);
+  }, [pts, localidadeModal, subestacaoModal]);
 
   const handleAddChecklist = () => {
     if (!novoChecklistItem.trim()) return;
@@ -514,24 +538,33 @@ export default function TaskManagement() {
 
               <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
                 <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <CheckSquare className="w-4 h-4 text-[#0d3fd1]" /> Checklist ( / )
+                  <CheckSquare className="w-4 h-4 text-[#0d3fd1]" /> Checklist de Campo
                 </h4>
                 {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 && (
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#747686] mb-3">
-                    {detailTarefa.checklist.filter((item) => item.checked).length}/{detailTarefa.checklist.length} marcados
+                    {detailTarefa.checklist.filter((item) => item.checked || item.resultado === 'ok').length}/{detailTarefa.checklist.length} itens conformes
                   </p>
                 )}
                 {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 ? (
                   <div className="space-y-2">
-                    {detailTarefa.checklist.map((item) => (
-                      <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${item.checked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-                        <span className="text-sm font-bold text-[#444655]">{item.label}</span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${item.checked ? 'text-emerald-700' : 'text-red-600'}`}>
-                          {item.checked ? <CheckCircle className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                          {item.checked ? '' : ''}
-                        </span>
-                      </div>
-                    ))}
+                    {detailTarefa.checklist.map((item) => {
+                      const res = item.resultado;
+                      const isOK = res === 'ok' || (item.checked && !res);
+                      const isNC = res === 'nc';
+                      const isNA = res === 'na';
+                      
+                      return (
+                        <div key={item.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${isOK ? 'border-emerald-200 bg-emerald-50/50' : isNC ? 'border-red-200 bg-red-50/50' : isNA ? 'border-gray-200 bg-gray-50' : 'border-amber-200 bg-amber-50'}`}>
+                          <span className={`text-[11px] font-bold ${isNA ? 'text-gray-400 line-through' : 'text-[#444655]'}`}>{item.label}</span>
+                          <div className="flex items-center gap-2">
+                            {isOK && <span className="text-[9px] font-black uppercase bg-emerald-500 text-white px-2 py-0.5 rounded">OK</span>}
+                            {isNC && <span className="text-[9px] font-black uppercase bg-red-500 text-white px-2 py-0.5 rounded">NC</span>}
+                            {isNA && <span className="text-[9px] font-black uppercase bg-gray-400 text-white px-2 py-0.5 rounded">N/A</span>}
+                            {!res && !item.checked && <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-2 py-0.5 rounded">Pendente</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="p-3 bg-white rounded-lg border border-dashed border-[#c4c5d7] text-center">
@@ -539,6 +572,53 @@ export default function TaskManagement() {
                   </div>
                 )}
               </div>
+
+              {/* ── Detalhes da Inspeção (Medições e Resultados) ────────── */}
+              {taskInspecoes.length > 0 && (
+                <div className="space-y-4">
+                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                    <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Wrench className="w-4 h-4 text-[#0d3fd1]" /> Medições e Resultados
+                    </h4>
+                    {taskInspecoes.map((ins, idx) => (
+                      <div key={idx} className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="p-2 border border-[#c4c5d7]/10 rounded-lg">
+                            <p className="text-[8px] font-black text-[#747686] uppercase">Terra Proteção</p>
+                            <p className="text-[11px] font-black text-[#0f1c2c]">{ins.medicoes?.terra_protecao ? `${ins.medicoes.terra_protecao} Ω` : '—'}</p>
+                          </div>
+                          <div className="p-2 border border-[#c4c5d7]/10 rounded-lg">
+                            <p className="text-[8px] font-black text-[#747686] uppercase">Terra Serviço</p>
+                            <p className="text-[11px] font-black text-[#0f1c2c]">{ins.medicoes?.terra_servico ? `${ins.medicoes.terra_servico} Ω` : '—'}</p>
+                          </div>
+                          <div className="p-2 border border-[#c4c5d7]/10 rounded-lg column-span-2">
+                            <p className="text-[8px] font-black text-[#747686] uppercase">Resultado Final</p>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${ins.resultado === 'Favorável' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                              {ins.resultado || 'Em Avaliação'}
+                            </span>
+                          </div>
+                        </div>
+                        {ins.observacoes && (
+                          <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                            <p className="text-[8px] font-black text-amber-700 uppercase mb-1">Observações do Técnico</p>
+                            <p className="text-xs font-medium text-amber-900">{ins.observacoes}</p>
+                          </div>
+                        )}
+                        {ins.dados_cliente && Object.values(ins.dados_cliente).some(v => v !== '') && (
+                          <div className="p-3 border border-[#c4c5d7]/20 rounded-lg bg-gray-50/50">
+                            <p className="text-[8px] font-black text-[#747686] uppercase mb-2">Dados Cadastrais Atualizados</p>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4">
+                              {ins.dados_cliente.razao_social && <div className="text-[10px]"><span className="text-[#747686]">Proprietário:</span> <span className="font-bold">{ins.dados_cliente.razao_social}</span></div>}
+                              {ins.dados_cliente.resp_tecnico && <div className="text-[10px]"><span className="text-[#747686]">Resp. Técnico:</span> <span className="font-bold">{ins.dados_cliente.resp_tecnico}</span></div>}
+                              {ins.dados_cliente.contacto_tec && <div className="text-[10px]"><span className="text-[#747686]">Contacto:</span> <span className="font-bold">{ins.dados_cliente.contacto_tec}</span></div>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
@@ -756,21 +836,40 @@ export default function TaskManagement() {
                 <div>
                   <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-2 block ml-1">Cliente Associado (Opcional)</label>
                   <div className="relative">
-                    <div className="mb-3">
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block ml-1">Filtrar por Localidade</label>
-                      <select
-                        className="w-full appearance-none bg-white border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-xs font-black uppercase tracking-widest text-[#0f1c2c]"
-                        value={localidadeModal}
-                        onChange={(e) => {
-                          setLocalidadeModal(e.target.value);
-                          setFormData((prev) => ({ ...prev, id_pt: '' }));
-                        }}
-                      >
-                        <option value="">Todas as localidades</option>
-                        {localidades.map((loc) => (
-                          <option key={loc} value={loc}>{loc}</option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block ml-1">Localidade</label>
+                        <select
+                          className="w-full appearance-none bg-white border border-[#c4c5d7]/30 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#0f1c2c]"
+                          value={localidadeModal}
+                          onChange={(e) => {
+                            setLocalidadeModal(e.target.value);
+                            setSubestacaoModal(''); // Reset substation when localidade changes
+                            setFormData((prev) => ({ ...prev, id_pt: '' }));
+                          }}
+                        >
+                          <option value="">Todas</option>
+                          {localidades.map((loc) => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block ml-1">Subestação</label>
+                        <select
+                          className="w-full appearance-none bg-white border border-[#c4c5d7]/30 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#0f1c2c]"
+                          value={subestacaoModal}
+                          onChange={(e) => {
+                            setSubestacaoModal(e.target.value);
+                            setFormData((prev) => ({ ...prev, id_pt: '' }));
+                          }}
+                        >
+                          <option value="">Todas</option>
+                          {subestacoesLista.map((se) => (
+                            <option key={se} value={se}>{se}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <select
                       className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
@@ -778,11 +877,15 @@ export default function TaskManagement() {
                       onChange={(e) => setFormData({ ...formData, id_pt: e.target.value })}
                     >
                       <option value="">Nenhum (Tarefa Geral)</option>
-                      {ptsFiltradosModal.map((p) => (
-                        <option key={p.id_pt} value={p.id_pt}>
-                          {p.id_pt} — {(p.subestacao?.proprietario || p.proprietario || 'Sem proprietário')} — {(p.subestacao?.nome || 'Sem subestação')}
-                        </option>
-                      ))}
+                      {ptsFiltradosModal.length > 0 ? (
+                        ptsFiltradosModal.map((p) => (
+                          <option key={p.id_pt} value={p.id_pt}>
+                            {p.id_pt} — {(p.subestacao?.proprietario || p.proprietario || 'Sem proprietário')} — {(p.subestacao?.nome || 'Sem subestação')}
+                          </option>
+                        ))
+                      ) : (
+                        <option disabled>Nenhum cliente encontrado...</option>
+                      )}
                     </select>
                     <MapPin className="w-5 h-5 absolute left-4 top-4 text-[#c4c5d7]" />
                   </div>

@@ -85,9 +85,105 @@ class InspecaoRepository {
         },
       });
 
+      const id_inspecao = inspecao.id;
+      const id_pt = baseData.id_pt;
+
+      // --- MOTOR DE INCONGRUÊNCIAS ---
+      // 1) Descobrir divergências entre o cadastro e os dados de campo
+      const currentCliente = await tx.cliente.findUnique({ where: { id_pt: id_pt } });
+      
+      if (currentCliente && baseData.dados_cliente_campo) {
+        const dc = baseData.dados_cliente_campo;
+        const mapping = {
+          razao_social:       { campo: 'proprietario',                label: 'Nome/Razão Social' },
+          resp_financeiro:    { campo: 'responsavel_financeiro',      label: 'Resp. Financeiro' },
+          contacto_fin:       { campo: 'contacto_resp_financeiro',    label: 'Contacto Financeiro' },
+          resp_tecnico:       { campo: 'responsavel_tecnico_cliente', label: 'Resp. Técnico' },
+          contacto_tec:       { campo: 'contacto_resp_tecnico',       label: 'Contacto Técnico' },
+          canal_faturacao:    { campo: 'canal_faturacao',             label: 'Canal Facturação' },
+          empresa_manutencao: { campo: 'empresa_manutencao',          label: 'Empresa Manutenção' },
+          data_ultima_manutencao: { campo: 'data_ultima_manutencao',   label: 'Data Últ. Manutenção', isDate: true },
+        };
+
+        for (const [key, meta] of Object.entries(mapping)) {
+          let valorCampo = dc[key];
+          let valorCadastro = currentCliente[meta.campo];
+
+          // Normalize for comparison
+          if (meta.isDate) {
+            valorCampo = valorCampo ? new Date(valorCampo).toISOString().split('T')[0] : null;
+            valorCadastro = valorCadastro ? new Date(valorCadastro).toISOString().split('T')[0] : null;
+          }
+          
+          if (valorCampo && valorCadastro && String(valorCampo).trim() !== String(valorCadastro).trim()) {
+            await tx.incongruencia.create({
+              data: {
+                id_inspecao: id_inspecao,
+                tipo: 'cliente',
+                descricao: `Divergência detectada em: ${meta.label}`,
+                valor_cadastro: String(valorCadastro),
+                valor_apurado: String(valorCampo),
+                nivel_urgencia: 'normal'
+              }
+            });
+          }
+        }
+
+        // Fornecimento a terceiros
+        if (dc.fornece_terceiros != null && Boolean(dc.fornece_terceiros) !== Boolean(currentCliente.fornece_terceiros)) {
+          await tx.incongruencia.create({
+            data: {
+              id_inspecao: id_inspecao,
+              tipo: 'ilegal',
+              descricao: 'Alteração no estado de fornecimento a terceiros',
+              valor_cadastro: currentCliente.fornece_terceiros ? 'Sim' : 'Não',
+              valor_apurado: dc.fornece_terceiros ? 'Sim' : 'Não',
+              nivel_urgencia: 'u_alta'
+            }
+          });
+        }
+      }
+
+      // 2) Verificação de Terra (Normativo < 20 Ohm)
+      if (baseData.terra_protecao != null && Number(baseData.terra_protecao) >= 20) {
+        await tx.incongruencia.create({
+          data: {
+            id_inspecao: id_inspecao,
+            tipo: 'terra',
+            descricao: 'Resistência de Terra de Protecção (TP) acima do limite normativo',
+            valor_cadastro: '< 20 Ω',
+            valor_apurado: `${baseData.terra_protecao} Ω`,
+            nivel_urgencia: 'urgente'
+          }
+        });
+      }
+      if (baseData.terra_servico != null && Number(baseData.terra_servico) >= 20) {
+        await tx.incongruencia.create({
+          data: {
+            id_inspecao: id_inspecao,
+            tipo: 'terra',
+            descricao: 'Resistência de Terra de Serviço (TS) acima do limite normativo',
+            valor_cadastro: '< 20 Ω',
+            valor_apurado: `${baseData.terra_servico} Ω`,
+            nivel_urgencia: 'urgente'
+          }
+        });
+      }
+
       // Se foram recolhidos dados do cliente em campo, actualiza o registo do PT/Cliente
       if (baseData.dados_cliente_campo) {
         const dc = baseData.dados_cliente_campo;
+        
+        // Extrair coordenadas se disponíveis para campos First-Class
+        let lat = null, lon = null;
+        if (dc.gps) {
+          const parts = dc.gps.split(/[,;]/);
+          if (parts.length >= 2) {
+            lat = parseFloat(parts[0]);
+            lon = parseFloat(parts[1]);
+          }
+        }
+
         await tx.cliente.update({
           where: { id_pt: baseData.id_pt },
           data: {
@@ -100,14 +196,15 @@ class InspecaoRepository {
             ...(dc.empresa_manutencao     && { empresa_manutencao: dc.empresa_manutencao }),
             ...(dc.fornece_terceiros      != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
             ...(dc.data_ultima_manutencao && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
+            ...(lat !== null && !isNaN(lat) && { latitude: lat }),
+            ...(lon !== null && !isNaN(lon) && { longitude: lon }),
+            ...(dc.gps && { gps: dc.gps })
           },
         });
       }
 
-      const id_pt = baseData.id_pt;
-      const id_inspecao = inspecao.id;
-
       // Criar listas via modelos diretamente (evita depender de writes relacionais no prisma client)
+
       if (transformadores) {
         const list = (Array.isArray(transformadores) ? transformadores : [transformadores]).map((t) => ({
           ...t,
