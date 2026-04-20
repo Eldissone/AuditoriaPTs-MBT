@@ -21,7 +21,7 @@ class DashboardService {
 
     const [subTotal, clientTotal, capacitySum, tasksCompleted] = await Promise.all([
       prisma.subestacao.count({ where: subWhere }),
-      prisma.cliente.count({ where: clientWhere }),
+      prisma.postoTransformacao.count({ where: clientWhere }),
       prisma.subestacao.aggregate({
         where: subWhere,
         _sum: { capacidade_total_mva: true }

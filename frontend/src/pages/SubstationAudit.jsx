@@ -114,7 +114,7 @@ export default function SubstationAudit() {
   const avgEfficiency = 95; // Industry standard baseline
   const proprietarios = [...new Set(
     pts
-      .map((pt) => pt.subestacao?.proprietario || pt.proprietario)
+      .map((pt) => pt.proprietario?.nome || pt.proprietario)
       .filter(Boolean)
   )];
 
@@ -252,7 +252,7 @@ export default function SubstationAudit() {
                   <span className="text-[10px] font-black text-[#0d3fd1] opacity-40">{index + 1} -</span>
                   <div className="flex flex-col">
                     <span className="text-xs font-black text-[#0f1c2c] tracking-tighter uppercase">
-                      {pt.subestacao?.proprietario || pt.proprietario || pt.id_pt}
+                      {pt.proprietario?.nome || pt.id_pt}
                     </span>
                     <span className="text-[9px] font-bold text-[#747686]">{pt.localizacao}</span>
                   </div>

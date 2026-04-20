@@ -302,7 +302,7 @@ export default function PTAudits() {
       const termo = busca.toLowerCase();
       return (
         audit.id_pt?.toLowerCase().includes(termo) ||
-        audit.pt?.proprietario?.toLowerCase().includes(termo) ||
+        audit.pt?.proprietario?.nome?.toLowerCase().includes(termo) ||
         audit.pt?.subestacao?.nome?.toLowerCase().includes(termo) ||
         audit.tarefa?.titulo?.toLowerCase().includes(termo)
       );
@@ -330,7 +330,7 @@ export default function PTAudits() {
       return (
         tarefa.titulo?.toLowerCase().includes(termo) ||
         tarefa.id_pt?.toLowerCase().includes(termo) ||
-        tarefa.pt?.proprietario?.toLowerCase().includes(termo) ||
+        tarefa.pt?.proprietario?.nome?.toLowerCase().includes(termo) ||
         tarefa.auditor?.nome?.toLowerCase().includes(termo) ||
         tarefa.pt?.subestacao?.nome?.toLowerCase().includes(termo)
       );
@@ -392,7 +392,7 @@ export default function PTAudits() {
 
       const rows = auditsFiltrados.map((audit) => ([
         audit.id_pt,
-        audit.pt?.proprietario || '',
+        audit.pt?.proprietario?.nome || '',
         audit.tipo || '',
         audit.resultado || 'Em Avaliação',
         audit.nivel_urgencia || 'N/A',
@@ -766,7 +766,7 @@ export default function PTAudits() {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#444655] border-r border-[#c4c5d7]/10">
-                      {audit.pt?.proprietario || 'N/A'}
+                      {audit.pt?.proprietario?.nome || 'N/A'}
                     </td>
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
                       {audit.nivel_urgencia && (audit.resultado === 'Não Conforme' || audit.resultado === 'Urgente') ? (
@@ -848,7 +848,7 @@ export default function PTAudits() {
                       {tarefa.titulo} {tarefa.id_pt && `(Cód: ${tarefa.id_pt})`}
                     </td>
                     <td className="px-8 py-5 text-xs font-bold text-[#444655] border-r border-emerald-50 uppercase">
-                      {(tarefa.pt?.subestacao?.proprietario || 'N/A')} / {(tarefa.pt?.subestacao?.municipio || tarefa.pt?.municipio || 'N/A')}
+                      {(tarefa.pt?.proprietario?.nome || 'N/A')} / {(tarefa.pt?.subestacao?.municipio || tarefa.pt?.municipio || 'N/A')}
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#747686] border-r border-emerald-50 font-mono">
                       {tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '-'}

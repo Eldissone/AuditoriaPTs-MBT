@@ -158,13 +158,12 @@ export default function ClientManagement() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [expandedSubestacoes, setExpandedSubestacoes] = useState({});
 
-  // ── Main tab (PTs | Clientes) ─────────────────────────────────────────────
-  const [mainTab, setMainTab] = useState('pts'); // 'pts' | 'clientes'
-
-  // ── Selection state ───────────────────────────────────────────────────────
+  const [mainTab, setMainTab] = useState('pts'); // 'pts' | 'proprietarios'
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedPTs, setSelectedPTs] = useState(new Set());
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [proprietarios, setProprietarios] = useState([]);
+  const [loadingProprietarios, setLoadingProprietarios] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -201,7 +200,13 @@ export default function ClientManagement() {
     } catch (err) { console.error('Erro ao buscar subestações', err); }
   }
 
-  useEffect(() => { fetchClientes(); }, [activeFilters]);
+  useEffect(() => {
+    if (mainTab === 'pts') {
+      fetchClientes();
+    } else {
+      fetchProprietarios();
+    }
+  }, [activeFilters, mainTab]);
 
   async function fetchClientes() {
     try {
@@ -215,17 +220,28 @@ export default function ClientManagement() {
 
       const response = await api.get('/clientes', { params });
       let data = response.data.data || response.data;
-
-      if (activeFilters.nivel_tensao) {
-        data = data.filter(c => (c.nivel_tensao || '').toLowerCase().includes(activeFilters.nivel_tensao.toLowerCase()));
-      }
-
       setClientes(data);
     } catch (error) {
       console.error('Erro ao buscar clientes', error);
       setClientes([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchProprietarios() {
+    try {
+      setLoadingProprietarios(true);
+      const params = {};
+      if (activeFilters.search) params.search = activeFilters.search;
+
+      const response = await api.get('/proprietarios', { params });
+      setProprietarios(response.data.data || response.data);
+    } catch (error) {
+      console.error('Erro ao buscar proprietários', error);
+      setProprietarios([]);
+    } finally {
+      setLoadingProprietarios(false);
     }
   }
 
@@ -472,12 +488,12 @@ export default function ClientManagement() {
           <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${mainTab === 'pts' ? 'bg-[#eff4ff] text-[#0d3fd1]' : 'bg-white/60 text-[#747686]'}`}>{statsPTs.total}</span>
         </button>
         <button
-          onClick={() => setMainTab('clientes')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${mainTab === 'clientes' ? 'bg-white text-[#8b5cf6] shadow-md shadow-purple-500/10' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
+          onClick={() => setMainTab('proprietarios')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${mainTab === 'proprietarios' ? 'bg-white text-[#0d3fd1] shadow-md shadow-purple-500/10' : 'text-[#747686] hover:text-[#0f1c2c]'}`}
         >
           <Users className="w-4 h-4" />
-          Clientes
-          <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${mainTab === 'clientes' ? 'bg-purple-50 text-purple-700' : 'bg-white/60 text-[#747686]'}`}>{statsClientes.total}</span>
+          Clientes (Proprietários)
+          <span className={`text-[9px] px-2 py-0.5 rounded-md font-black ${mainTab === 'proprietarios' ? 'bg-purple-50 text-purple-700' : 'bg-white/60 text-[#747686]'}`}>{proprietarios.length || statsClientes.total}</span>
         </button>
       </div>
 
@@ -493,7 +509,7 @@ export default function ClientManagement() {
               { title: 'Potência Instalada', value: `${(statsPTs.potenciaTotal / 1000).toLocaleString('pt-PT', { maximumFractionDigits: 1 })} MVA`, icon: Zap, color: '#fb923c', label: 'Total kVA' },
               { title: 'Operacionais', value: statsPTs.operacionais, icon: CheckCircle2, color: '#00e47c', label: `${statsPTs.total > 0 ? Math.round((statsPTs.operacionais / statsPTs.total) * 100) : 0}% do total` },
               { title: 'Críticos / Manutenção', value: statsPTs.criticos + statsPTs.manutencao, icon: AlertTriangle, color: '#f59e0b', label: `${statsPTs.foraServico} Fora de Serviço` },
-              { title: 'Municípios', value: statsPTs.municipiosUnicos, icon: MapPin, color: '#8b5cf6', label: 'Locais únicos' },
+              { title: 'Municípios', value: statsPTs.municipiosUnicos, icon: MapPin, color: '#0d3fd1', label: 'Locais únicos' },
             ].map((card, idx) => (
               <div key={idx} className={`bg-white rounded-2xl p-5 shadow-sm border ${hasActiveFilters ? 'border-[#0d3fd1]/20' : 'border-[#c4c5d7]/10'} group hover:shadow-lg transition-all relative overflow-hidden ${loading ? 'animate-pulse' : ''}`}>
                 {hasActiveFilters && <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc]" />}
@@ -662,20 +678,17 @@ export default function ClientManagement() {
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* ABA: CLIENTES (Dados Comerciais)                                     */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {mainTab === 'clientes' && (
+      {mainTab === 'proprietarios' && (
         <>
-          {/* KPI Cards Cliente */}
+          {/* KPI Cards Proprietário */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { title: 'Clientes Cadastrados', value: statsClientes.total.toLocaleString(), icon: Users, color: '#8b5cf6', label: 'Com razão social' },
-              { title: 'Dívida Total', value: `${(statsClientes.totalDivida / 1000000).toLocaleString('pt-PT', { maximumFractionDigits: 1 })}M Kz`, icon: TrendingDown, color: '#ef4444', label: `${statsClientes.comDivida} com dívida activa` },
-              { title: 'Em Atraso', value: statsClientes.emAtraso, icon: ShieldAlert, color: '#f59e0b', label: `${statsClientes.totalFactAtraso} facturas em atraso` },
-              { title: 'Categorias Tarifárias', value: new Set(clientes.map(c => c.categoria_tarifa).filter(Boolean)).size, icon: BarChart3, color: '#0d3fd1', label: 'Tipos de tarifa únicos' },
+              { title: 'Proprietários', value: proprietarios.length.toLocaleString(), icon: Users, color: '#0d3fd1', label: 'Cadastrados' },
+              { title: 'Dívida Total', value: `${(proprietarios.reduce((acc, p) => acc + Number(p.montante_divida || 0), 0) / 1000000).toLocaleString('pt-PT', { maximumFractionDigits: 1 })}M Kz`, icon: TrendingDown, color: '#ef4444', label: 'Total Acumulado' },
+              { title: 'PTs Associados', value: proprietarios.reduce((acc, p) => acc + (p._count?.pts || 0), 0), icon: Database, color: '#0d3fd1', label: 'Ativos Técnicos' },
+              { title: 'Maiores Devedores', value: proprietarios.filter(p => Number(p.montante_divida) > 1000000).length, icon: ShieldAlert, color: '#f59e0b', label: '> 1.000.000 Kz' },
             ].map((card, idx) => (
-              <div key={idx} className={`bg-white rounded-2xl p-5 shadow-sm border border-[#c4c5d7]/10 group hover:shadow-lg transition-all relative overflow-hidden ${loading ? 'animate-pulse' : ''}`}>
+              <div key={idx} className={`bg-white rounded-2xl p-5 shadow-sm border border-[#c4c5d7]/10 group hover:shadow-lg transition-all relative overflow-hidden ${loadingProprietarios ? 'animate-pulse' : ''}`}>
                 <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-[60px] -mr-4 -mt-4" style={{ backgroundColor: `${card.color}10` }} />
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-3">
@@ -694,134 +707,95 @@ export default function ClientManagement() {
 
           <FilterBar />
 
-          {/* Clientes Table */}
+          {/* Proprietarios Table */}
           <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative min-h-[400px]">
-            {loading && (
+            {loadingProprietarios && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
                 <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-[9px] font-black text-purple-600 uppercase tracking-[0.2em]">Carregando Dados Comerciais...</p>
+                <p className="text-[9px] font-black #0d3fd1 uppercase tracking-[0.2em]">Sincronizando Entidades Comerciais...</p>
               </div>
             )}
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#2d1b6e] text-white">
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">PT / Código</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Cliente / Razão Social</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Conta / Contrato</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Tipo Cliente</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Categoria Tarifa</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Divisão</th>
+                  <tr className="bg-[#243141] text-white">
+                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Proprietário / Razão Social</th>
+                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">NIF / Contrato</th>
+                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">PTs</th>
+                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Tipo / Tarifa</th>
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-right">Dívida (Kz)</th>
-                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Localização</th>
+                    <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Responsável Financeiro</th>
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#c4c5d7]/10">
-                  {Object.entries(groupedClientes).map(([subName, { items }]) => {
-                    // Sómente PTs com dados de cliente (proprietario ou conta_contrato)
-                    const clienteItems = items.filter(c => c.proprietario || c.conta_contrato || c.parceiro_negocios);
-                    if (clienteItems.length === 0) return null;
-                    return (
-                      <React.Fragment key={subName}>
-                        <tr onClick={() => toggleSub(subName + '_cli')} className="bg-purple-50/50 border-y border-purple-100/50 cursor-pointer hover:bg-purple-50 transition-colors">
-                          <td colSpan={9} className="px-6 py-3 font-black uppercase tracking-widest text-purple-700 text-[10px]">
-                            <div className="flex items-center gap-2">
-                              {!expandedSubestacoes[subName + '_cli'] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                              <Building2 className="w-3.5 h-3.5 opacity-40" />
-                              {subName}
-                              <span className="text-purple-700 text-[9px] ml-2 font-bold bg-purple-100 px-2 py-0.5 rounded-md">{clienteItems.length} clientes</span>
-                            </div>
-                          </td>
-                        </tr>
-                        {!expandedSubestacoes[subName + '_cli'] && clienteItems.map((cliente) => (
-                          <tr key={cliente.id} className="transition-colors group text-[#0f1c2c] text-[11px] hover:bg-purple-50/30">
-                            <td className="px-6 py-4 font-black text-purple-700 border-l-[3px] border-transparent group-hover:border-purple-400 transition-all">
-                              {cliente.id_pt}
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                                  <User className="w-3.5 h-3.5 text-purple-600" />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="font-black uppercase text-[11px] truncate max-w-[200px]">{cliente.proprietario || 'Sem denominação'}</span>
-                                  {cliente.parceiro_negocios && <span className="text-[8px] text-[#747686] truncate">{cliente.parceiro_negocios}</span>}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 font-mono font-bold text-[#747686]">{cliente.conta_contrato || '---'}</td>
-                            <td className="px-6 py-4">
-                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[#eff4ff] text-[#0d3fd1] border border-[#0d3fd1]/10">
-                                {cliente.tipo_cliente || 'N/D'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-[10px]">{cliente.categoria_tarifa || 'N/D'}</span>
-                                <span className="text-[8px] opacity-60">{cliente.txt_categoria_tarifa || ''}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-[10px]">{cliente.divisao || 'N/D'}</span>
-                                <span className="text-[8px] opacity-60 truncate max-w-[120px]">{cliente.denominacao_divisao || ''}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right whitespace-nowrap">
-                              <div className="flex flex-col items-end">
-                                <span className={`font-black ${Number(cliente.montante_divida) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                  {Number(cliente.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
-                                </span>
-                                {Number(cliente.num_facturas_atraso) > 0 && (
-                                  <span className="text-[8px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md border border-red-100 mt-0.5">
-                                    {cliente.num_facturas_atraso} fact. em atraso
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-1 text-[#747686]">
-                                <MapPin className="w-3 h-3 text-purple-500" />
-                                <span className="font-black uppercase text-[9px]">{cliente.municipio}</span>
-                                {cliente.bairro && <><span className="mx-1 opacity-20">|</span><span className="text-[9px] truncate max-w-[100px]">{cliente.bairro}</span></>}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                              <div className="flex justify-center gap-2">
-                                <button onClick={() => navigate(`/ficha-tecnica/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm" title="Ficha Técnica">
-                                  <FileText className="w-4 h-4" />
-                                </button>
-                                {isAdmin && (
-                                  <button onClick={() => navigate(`/subestacoes/${cliente.id_subestacao}/clientes/editar/${cliente.id_pt}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#243141] hover:bg-[#243141] hover:text-white transition-all shadow-sm" title="Editar">
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                  {clientes.filter(c => c.proprietario || c.conta_contrato).length === 0 && !loading && (
+                  {proprietarios.map((p) => (
+                    <tr key={p.id} className="transition-colors group text-[#0f1c2c] text-[11px] hover:bg-purple-50/30">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                            <Briefcase className="w-4 h-4 #0d3fd1" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-black uppercase text-[11px] truncate max-w-[250px]">{p.nome}</span>
+                            <span className="text-[9px] text-[#747686]">{p.municipio} {p.provincia ? `| ${p.provincia}` : ''}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-mono font-bold text-[#747686]">
+                        {p.nif || p.conta_contrato || '---'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="bg-[#eff4ff] text-[#0d3fd1] px-2 py-1 rounded-lg font-black text-[10px] border border-[#0d3fd1]/10">
+                          {p._count?.pts || 0}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-black text-[9px] text-purple-700 uppercase">{p.tipo_cliente || 'N/D'}</span>
+                          <span className="text-[8px] opacity-60 truncate max-w-[120px]">{p.categoria_tarifa || 'Geral'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="flex flex-col items-end">
+                          <span className={`font-black ${Number(p.montante_divida) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {Number(p.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                          </span>
+                          {Number(p.num_facturas_atraso) > 0 && (
+                            <span className="text-[8px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md border border-red-100 mt-0.5">
+                              {p.num_facturas_atraso} fact. em atraso
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-[10px]">{p.responsavel_financeiro || 'N/D'}</span>
+                          <span className="text-[9px] opacity-60">{p.contacto_resp_financeiro || ''}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => navigate(`/proprietarios/${p.id}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg #0d3fd1 hover:bg-purple-600 hover:text-white transition-all shadow-sm">
+                            <ArrowUpRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {proprietarios.length === 0 && !loadingProprietarios && (
                     <tr>
-                      <td colSpan={9} className="px-6 py-20 text-center text-sm font-bold text-[#747686] uppercase tracking-[0.2em] opacity-30 italic">
-                        Nenhum cliente com dados comerciais encontrado.
+                      <td colSpan={7} className="px-6 py-20 text-center text-sm font-bold text-[#747686] uppercase tracking-[0.2em] opacity-30 italic">
+                        Nenhum Proprietário encontrado.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            {/* Footer Clientes */}
             <div className="bg-[#fcfdff] px-8 py-4 border-t border-[#c4c5d7]/10 flex items-center justify-between">
-              <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest leading-none">
-                {hasActiveFilters ? <><span className="text-purple-600">{statsClientes.total}</span> clientes filtrados</> : <>Total de <span className="text-[#0f1c2c]">{statsClientes.total}</span> clientes com dados comerciais</>}
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[9px] font-black text-red-700 bg-red-50 px-2 py-1 rounded-lg border border-red-100">{statsClientes.comDivida} Com Dívida</span>
-                <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">{statsClientes.emAtraso} Em Atraso</span>
+              <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest">
+                Total de <span className="#0d3fd1 font-black">{proprietarios.length}</span> Entidades Comerciais
               </div>
             </div>
           </div>
@@ -852,7 +826,6 @@ export default function ClientManagement() {
           </div>
         </div>
       )}
-
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       <ExcelImportModal
         isOpen={isImportModalOpen}

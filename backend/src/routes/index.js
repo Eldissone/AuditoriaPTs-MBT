@@ -2,6 +2,7 @@ const { Router } = require('express');
 const utilizadorRoutes = require('../modules/utilizador/routes');
 const subestacaoRoutes = require('../modules/subestacao/routes');
 const clienteRoutes = require('../modules/cliente/routes');
+const proprietarioRoutes = require('../modules/proprietario/routes');
 const inspecaoRoutes = require('../modules/inspecao/routes');
 const tarefaRoutes = require('../modules/tarefa/routes');
 const dashboardRoutes = require('../modules/dashboard/routes');
@@ -10,7 +11,8 @@ const router = Router();
 
 router.use('/utilizadores', utilizadorRoutes);
 router.use('/subestacoes', subestacaoRoutes);
-router.use('/clientes', clienteRoutes);
+router.use('/clientes', clienteRoutes); // PTs Técnicos
+router.use('/proprietarios', proprietarioRoutes); // Entidades Comerciais
 router.use('/inspecoes', inspecaoRoutes);
 router.use('/tarefas', tarefaRoutes);
 router.use('/dashboard', dashboardRoutes);

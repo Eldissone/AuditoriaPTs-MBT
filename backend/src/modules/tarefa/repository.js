@@ -10,8 +10,9 @@ class TarefaRepository {
           gps: true,
           municipio: true,
           localizacao: true,
-          conta_contrato: true,
-          proprietario: true,
+          proprietario: {
+            select: { id: true, nome: true, nif: true, telefone: true, conta_contrato: true }
+          },
           subestacao: {
             select: {
               id: true,

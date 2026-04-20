@@ -1,12 +1,19 @@
 const prisma = require('../../database/client');
 
 class ClienteRepository {
+  // O repositório "Cliente" agora foca no Posto de Transformação (Entidade Técnica)
+  // Mas mantém o nome para não quebrar referências internas imediatas
+  
   async getAll(filters = {}) {
-    const { search, municipio, localidade, id_subestacao, estado_operacional, nivel_tensao, page, limit } = filters;
+    const { search, municipio, localidade, id_subestacao, estado_operacional, nivel_tensao, page, limit, id_proprietario } = filters;
     const where = { AND: [] };
 
     if (id_subestacao) {
       where.AND.push({ id_subestacao: Number(id_subestacao) });
+    }
+
+    if (id_proprietario) {
+      where.AND.push({ id_proprietario: Number(id_proprietario) });
     }
 
     if (estado_operacional) {
@@ -34,9 +41,8 @@ class ClienteRepository {
       where.AND.push({
         OR: [
           { id_pt: { contains: search, mode: 'insensitive' } },
-          { proprietario: { contains: search, mode: 'insensitive' } },
-          { conta_contrato: { contains: search, mode: 'insensitive' } },
-          { equipamento: { contains: search, mode: 'insensitive' } },
+          { proprietario: { nome: { contains: search, mode: 'insensitive' } } },
+          { proprietario: { conta_contrato: { contains: search, mode: 'insensitive' } } },
         ]
       });
     }
@@ -44,29 +50,34 @@ class ClienteRepository {
     if (where.AND.length === 0) delete where.AND;
 
     const orderBy = { id_pt: 'asc' };
-    const include = { subestacao: true, responsavel: true };
+    const include = { 
+      subestacao: true, 
+      responsavel: true,
+      proprietario: true // Inclui os dados comerciais do novo modelo
+    };
 
     if (page && limit) {
       const skip = (Number(page) - 1) * Number(limit);
       const take = Number(limit);
 
       const [data, total] = await Promise.all([
-        prisma.cliente.findMany({ where, include, orderBy, skip, take }),
-        prisma.cliente.count({ where })
+        prisma.postoTransformacao.findMany({ where, include, orderBy, skip, take }),
+        prisma.postoTransformacao.count({ where })
       ]);
 
       return { data, total, page: Number(page), limit: Number(limit) };
     }
 
-    return prisma.cliente.findMany({ where, include, orderBy });
+    return prisma.postoTransformacao.findMany({ where, include, orderBy });
   }
 
   async getByIdPt(id_pt) {
-    return prisma.cliente.findUnique({
+    return prisma.postoTransformacao.findUnique({
       where: { id_pt },
       include: {
         subestacao: true,
         responsavel: true,
+        proprietario: true, // Novo Relacionamento
         conformidade: true,
         transformadores: true,
         media_tensao: true,
@@ -85,9 +96,7 @@ class ClienteRepository {
   }
 
   async create(data) {
-    console.log('Criando Cliente com dados:', JSON.stringify(data, null, 2));
     const {
-      cliente,
       conformidade,
       transformador,
       media_tensao,
@@ -98,423 +107,110 @@ class ClienteRepository {
       manutencao,
       risco,
       identificacao,
+      id_proprietario: rootProprietario,
       ...restOfData
     } = data;
 
-    const rawBaseData = cliente || identificacao || restOfData;
+    const raw = identificacao || restOfData;
+    // id_proprietario pode vir dentro de identificacao (form) ou no nível raiz
+    const id_proprietario = raw.id_proprietario ?? rootProprietario ?? null;
 
-    const getYear = (val) => {
-      if (!val) return new Date().getFullYear();
-      if (typeof val === 'number') return val;
-      if (!isNaN(val) && !val.toString().includes('-')) return parseInt(val.toString());
-      return new Date(val).getFullYear() || new Date().getFullYear();
+    const basePT = {
+      id_pt: raw.id_pt,
+      id_subestacao: parseInt(raw.id_subestacao),
+      id_proprietario: id_proprietario ? Number(id_proprietario) : null,
+      localizacao: raw.localizacao || 'N/D',
+      gps: raw.gps || null,
+      potencia_kva: parseFloat(raw.potencia_kva) || 0,
+      ano_instalacao: raw.ano_instalacao ? new Date(raw.ano_instalacao).getFullYear() : new Date().getFullYear(),
+      tipo_instalacao: raw.tipo_instalacao || 'Cabine',
+      nivel_tensao: raw.nivel_tensao || 'MT/BT',
+      num_transformadores: Number(raw.num_transformadores || 1),
+      estado_operacional: raw.estado_operacional || 'Operacional',
+      municipio: raw.municipio || null,
+      provincia: raw.provincia || null,
+      bairro: raw.bairro || null,
+      distrito_comuna: raw.distrito_comuna || null,
+      rua: raw.rua || null,
+      instalacao: raw.instalacao || null,
+      equipamento: raw.equipamento || null,
+      num_serie: raw.num_serie || null,
+      divisao: raw.divisao || null,
+      denominacao_divisao: raw.denominacao_divisao || null,
+      unidade_leitura: raw.unidade_leitura || null,
+      num_localidade: raw.num_localidade || null,
+      bairro_num: raw.bairro_num || null,
+      contrato: raw.contrato || null,
+      fabricante: raw.fabricante || null,
+      regime_exploracao: raw.regime_exploracao || null,
     };
 
-    // Extract coordinates if available
-    let latitude = null, longitude = null;
-    if (rawBaseData.gps) {
-      const parts = rawBaseData.gps.split(/[,;]/);
-      if (parts.length >= 2) {
-        latitude = parseFloat(parts[0]);
-        longitude = parseFloat(parts[1]);
-      }
-    }
-
-    // 1. Base Cliente mapping
-    const baseCliente = {
-      id_pt: rawBaseData.id_pt,
-      localizacao: rawBaseData.localizacao || 'N/D',
-      gps: rawBaseData.gps || '',
-      latitude: latitude && !isNaN(latitude) ? latitude : null,
-      longitude: longitude && !isNaN(longitude) ? longitude : null,
-      morada: rawBaseData.morada || '',
-      municipio: rawBaseData.municipio || 'Luanda',
-      provincia: rawBaseData.provincia || 'Luanda',
-      tipo_instalacao: rawBaseData.tipo_instalacao || 'Cabine',
-      nivel_tensao: rawBaseData.nivel_tensao || 'MT/BT',
-      fabricante: rawBaseData.fabricante || '',
-      regime_exploracao: rawBaseData.regime_exploracao || 'Privado',
-      estado_operacional: rawBaseData.estado_operacional || 'Operacional',
-      conta_contrato: rawBaseData.conta_contrato || '',
-      instalacao: rawBaseData.instalacao || '',
-      equipamento: rawBaseData.equipamento || '',
-      parceiro_negocios: rawBaseData.parceiro_negocios || '',
-      categoria_tarifa: rawBaseData.categoria_tarifa || '',
-      txt_categoria_tarifa: rawBaseData.txt_categoria_tarifa || '',
-      distrito_comuna: rawBaseData.distrito_comuna || '',
-      bairro: rawBaseData.bairro || '',
-      contrato: rawBaseData.contrato || '',
-      num_serie: rawBaseData.num_serie || '',
-      divisao: rawBaseData.divisao || '',
-      denominacao_divisao: rawBaseData.denominacao_divisao || '',
-      unidade_leitura: rawBaseData.unidade_leitura || '',
-      num_localidade: rawBaseData.num_localidade || '',
-      bairro_num: rawBaseData.bairro_num || '',
-      rua: rawBaseData.rua || '',
-      tipo_cliente: rawBaseData.tipo_cliente || '',
-      montante_divida: rawBaseData.montante_divida ? Number(rawBaseData.montante_divida) : 0,
-      num_facturas_atraso: rawBaseData.num_facturas_atraso ? Number(rawBaseData.num_facturas_atraso) : 0,
-      id_subestacao: parseInt(rawBaseData.id_subestacao),
-      id_responsavel: rawBaseData.id_responsavel ? Number(rawBaseData.id_responsavel) : null,
-      potencia_kva: parseFloat(rawBaseData.potencia_kva) || 0,
-      num_transformadores: Number(rawBaseData.num_transformadores || rawBaseData.num_transformador || 1),
-      ano_instalacao: getYear(rawBaseData.ano_instalacao),
-    };
-
-    // Explicit validaton before Prisma
-    if (!baseCliente.id_pt || baseCliente.id_pt.trim() === '') {
-      throw new Error('O ID do PT/Cliente é obrigatório.');
-    }
-
-    if (isNaN(baseCliente.id_subestacao)) {
-      throw new Error(`ID de subestação inválido: ${rawBaseData.id_subestacao}`);
-    }
-
-    const subExists = await prisma.subestacao.findUnique({ where: { id: baseCliente.id_subestacao } });
-    if (!subExists) {
-      throw new Error(`A subestação com ID ${baseCliente.id_subestacao} não existe.`);
-    }
-
-    const existingPT = await prisma.cliente.findUnique({ where: { id_pt: baseCliente.id_pt } });
-    if (existingPT) {
-      throw new Error(`O Cliente/PT "${baseCliente.id_pt}" já está cadastrado.`);
-    }
-
-    // 2. Conformidade mapping
-    const conformidadeData = conformidade ? {
-      licenciamento: !!conformidade.licenciamento,
-      projeto_aprovado: !!conformidade.projeto_aprovado,
-      diagramas_unifilares: !!conformidade.diagramas_unifilares,
-      plano_manutencao: !!conformidade.plano_manutencao,
-      normas_iec: !!(conformidade.normas_iec || conformidade.normas_iec_ieee),
-      normas_ieee: !!(conformidade.normas_ieee || conformidade.normas_iec_ieee),
-      normas_locais: !!conformidade.normas_locais,
-    } : undefined;
-
-    // 3. Transformador mapping (Array)
-    const transformadoresArr = transformador ? (Array.isArray(transformador) ? transformador : [transformador]).map(t => ({
-      num_transformador: Number(t.num_transformador || 1),
-      potencia_kva: parseFloat(t.potencia_kva || t.potencia_nominal || 0) || 0,
-      tensao_primaria: parseFloat(t.tensao_primaria) || 30,
-      tensao_secundaria: parseFloat(t.tensao_secundaria) || 0.4,
-      tipo_isolamento: t.tipo_isolamento || t.tipo_oleo || 'Mineral',
-      estado_oleo: t.estado_oleo || 'Bom',
-      fugas: !!t.fugas,
-      estado_buchas: t.estado_buchas || 'Bom',
-      temperatura_operacao: parseFloat(t.temperatura_operacao || t.temperatura_topo || 40) || 40,
-    })) : undefined;
-
-    // 4. MT/BT mapping
-    const mtData = media_tensao ? {
-      tipo_celas: media_tensao.tipo_celas || '',
-      estado_disjuntores: media_tensao.estado_disjuntores || '',
-      estado_seccionadores: media_tensao.estado_seccionadores || '',
-      reles_protecao: media_tensao.reles_protecao || '',
-      coordenacao_protecoes: !!media_tensao.coordenacao_protecoes,
-      aterramento_mt: !!media_tensao.aterramento_mt,
-    } : undefined;
-
-    const btData = baixa_tensao ? {
-      estado_qgbt: baixa_tensao.estado_qgbt || '',
-      barramentos: baixa_tensao.barramentos || '',
-      disjuntores: baixa_tensao.disjuntores || '',
-      balanceamento_cargas: !!baixa_tensao.balanceamento_cargas,
-      corrente_fase_a: parseFloat(baixa_tensao.corrente_fase_a) || 0,
-      corrente_fase_b: parseFloat(baixa_tensao.corrente_fase_b) || 0,
-      corrente_fase_c: parseFloat(baixa_tensao.corrente_fase_c) || 0,
-      tensao: parseFloat(baixa_tensao.tensao) || 0,
-      fator_potencia: parseFloat(baixa_tensao.fator_potencia) || 0,
-    } : undefined;
-
-    // 5. Seguranca, Infra, Monitor, Manutencao mapping
-    const segurancaData = seguranca ? {
-      resistencia_terra: parseFloat(seguranca.resistencia_terra) || 0,
-      protecao_raios: !!seguranca.protecao_raios,
-      spd: !!seguranca.spd,
-      sinalizacao: !!seguranca.sinalizacao,
-      combate_incendio: !!seguranca.combate_incendio,
-      distancias_seguranca: !!seguranca.distancias_seguranca,
-    } : undefined;
-
-    const infraData = infraestrutura ? {
-      estado_cabine: infraestrutura.estado_cabine || '',
-      ventilacao: !!infraestrutura.ventilacao,
-      drenagem: !!infraestrutura.drenagem,
-      iluminacao: !!infraestrutura.iluminacao,
-      controlo_acesso: !!infraestrutura.controlo_acesso,
-    } : undefined;
-
-    const monitorData = monitorizacao ? {
-      scada: !!monitorizacao.scada,
-      comunicacao: monitorizacao.comunicacao || '',
-      sensores_temperatura: !!monitorizacao.sensores_temperatura,
-      sensores_corrente: !!monitorizacao.sensores_corrente,
-      sensores_vibracao: !!monitorizacao.sensores_vibracao,
-      observacoes: monitorizacao.estado_modem || monitorizacao.protocolo ? `Modem: ${monitorizacao.estado_modem || 'N/D'}, Protocolo: ${monitorizacao.protocolo || 'N/D'}` : undefined
-    } : undefined;
-
-    const manutData = manutencao ? {
-      plano_preventivo: !!manutencao.aperto_terminais,
-      observacoes: `Última limpeza: ${manutencao.ultima_limpeza || 'N/D'}, Termográfica: ${manutencao.inspecao_termografica || 'N/D'}`
-    } : undefined;
-
-    const riscosMapped = risco ? (Array.isArray(risco) ? risco : [risco]).map(r => ({
-      sobrecarga: !!r.sobrecarga,
-      desequilibrio_fases: !!r.desequilibrio_fases,
-      falhas_isolamento: !!r.falhas_isolamento,
-      redundancia: !!r.redundancia,
-      nivel_risco_geral: r.nivel_risco_geral || 'Nulo',
-      observacoes: r.recomendacoes || r.observacoes || ''
-    })) : undefined;
-
-    return prisma.cliente.create({
+    return prisma.postoTransformacao.create({
       data: {
-        ...baseCliente,
-        conformidade: conformidadeData ? { create: conformidadeData } : undefined,
-        media_tensao: mtData ? { create: mtData } : undefined,
-        baixa_tensao: btData ? { create: btData } : undefined,
-        seguranca: segurancaData ? { create: segurancaData } : undefined,
-        infraestrutura: infraData ? { create: infraData } : undefined,
-        monitorizacao: monitorData ? { create: monitorData } : undefined,
-        manutencao: manutData ? { create: manutData } : undefined,
-        transformadores: transformadoresArr ? { create: transformadoresArr } : undefined,
-        riscos: riscosMapped ? { create: riscosMapped } : undefined
-      }
+        ...basePT,
+        conformidade: conformidade ? { create: conformidade } : undefined,
+        transformadores: transformador ? { createMany: { data: Array.isArray(transformador) ? transformador : [transformador] } } : undefined,
+      },
+      include: { subestacao: true, proprietario: true }
     });
   }
 
   async update(id_pt, data) {
-    const {
-      cliente,
-      conformidade,
-      transformador,
-      media_tensao,
-      baixa_tensao,
-      seguranca,
-      infraestrutura,
-      monitorizacao,
-      manutencao,
-      risco,
-      identificacao,
-      ...restOfData
-    } = data;
+    // Extrair os campos da identificação (podem vir dentro de data.identificacao ou no nível raiz)
+    const raw = data.identificacao || data;
+    const id_proprietario = raw.id_proprietario ?? data.id_proprietario;
 
-    const rawBaseData = cliente || identificacao || restOfData;
-    
-    // Extract coordinates if available
-    let latitude = null, longitude = null;
-    if (rawBaseData.gps) {
-      const parts = rawBaseData.gps.split(/[,;]/);
-      if (parts.length >= 2) {
-        latitude = parseFloat(parts[0]);
-        longitude = parseFloat(parts[1]);
+    // Lista branca de campos escalares do modelo PostoTransformacao
+    const ALLOWED = [
+      'id_subestacao', 'id_responsavel',
+      'localizacao', 'gps', 'latitude', 'longitude', 'morada',
+      'municipio', 'provincia', 'tipo_instalacao', 'nivel_tensao',
+      'potencia_kva', 'ano_instalacao', 'fabricante', 'num_transformadores',
+      'regime_exploracao', 'estado_operacional',
+      'instalacao', 'equipamento', 'distrito_comuna', 'bairro', 'contrato',
+      'num_serie', 'divisao', 'denominacao_divisao', 'unidade_leitura',
+      'num_localidade', 'bairro_num', 'rua',
+      'responsavel_tecnico_cliente', 'contacto_resp_tecnico',
+      'canal_faturacao', 'fornece_terceiros', 'empresa_manutencao',
+      'data_ultima_manutencao',
+      // Campos legados de compatibilidade (que ainda existem na tabela PT)
+      'proprietario', 'concessionaria', 'zona', 'operador',
+    ];
+
+    const updateData = {};
+    for (const key of ALLOWED) {
+      if (raw[key] !== undefined) {
+        let val = raw[key];
+        if (key === 'id_subestacao' || key === 'id_responsavel' || key === 'num_transformadores') {
+          val = val !== null && val !== '' ? Number(val) : undefined;
+        } else if (key === 'potencia_kva' || key === 'latitude' || key === 'longitude') {
+          val = val !== null && val !== '' ? parseFloat(val) : null;
+        } else if (key === 'ano_instalacao') {
+          val = val ? new Date(val).getFullYear() : undefined;
+        } else if (key === 'data_ultima_manutencao') {
+          val = val ? new Date(val) : null;
+        } else if (key === 'fornece_terceiros') {
+          val = Boolean(val);
+        }
+        if (val !== undefined) updateData[key] = val;
       }
     }
 
-    // Same mapping logic for update
-    const baseCliente = {
-      localizacao: rawBaseData.localizacao,
-      gps: rawBaseData.gps,
-      latitude: latitude && !isNaN(latitude) ? latitude : undefined,
-      longitude: longitude && !isNaN(longitude) ? longitude : undefined,
-      morada: rawBaseData.morada,
-      municipio: rawBaseData.municipio,
-      provincia: rawBaseData.provincia,
-      tipo_instalacao: rawBaseData.tipo_instalacao,
-      nivel_tensao: rawBaseData.nivel_tensao,
-      fabricante: rawBaseData.fabricante,
-      regime_exploracao: rawBaseData.regime_exploracao,
-      estado_operacional: rawBaseData.estado_operacional,
-      conta_contrato: rawBaseData.conta_contrato,
-      instalacao: rawBaseData.instalacao,
-      equipamento: rawBaseData.equipamento,
-      parceiro_negocios: rawBaseData.parceiro_negocios,
-      categoria_tarifa: rawBaseData.categoria_tarifa,
-      txt_categoria_tarifa: rawBaseData.txt_categoria_tarifa,
-      distrito_comuna: rawBaseData.distrito_comuna,
-      bairro: rawBaseData.bairro,
-      contrato: rawBaseData.contrato,
-      num_serie: rawBaseData.num_serie,
-      divisao: rawBaseData.divisao,
-      denominacao_divisao: rawBaseData.denominacao_divisao,
-      unidade_leitura: rawBaseData.unidade_leitura,
-      num_localidade: rawBaseData.num_localidade,
-      bairro_num: rawBaseData.bairro_num,
-      rua: rawBaseData.rua,
-      tipo_cliente: rawBaseData.tipo_cliente,
-    };
-
-    if (rawBaseData.montante_divida !== undefined) baseCliente.montante_divida = rawBaseData.montante_divida ? Number(rawBaseData.montante_divida) : 0;
-    if (rawBaseData.num_facturas_atraso !== undefined) baseCliente.num_facturas_atraso = rawBaseData.num_facturas_atraso ? Number(rawBaseData.num_facturas_atraso) : 0;
-
-    if (rawBaseData.id_subestacao !== undefined) baseCliente.id_subestacao = Number(rawBaseData.id_subestacao);
-    if (rawBaseData.id_responsavel !== undefined) baseCliente.id_responsavel = rawBaseData.id_responsavel ? Number(rawBaseData.id_responsavel) : null;
-    if (rawBaseData.potencia_kva !== undefined) baseCliente.potencia_kva = parseFloat(rawBaseData.potencia_kva) || 0;
-    if (rawBaseData.num_transformadores !== undefined || rawBaseData.num_transformador !== undefined) {
-      baseCliente.num_transformadores = Number(rawBaseData.num_transformadores || rawBaseData.num_transformador || 1);
-    }
-    if (rawBaseData.ano_instalacao !== undefined) {
-      baseCliente.ano_instalacao = rawBaseData.ano_instalacao ? new Date(rawBaseData.ano_instalacao).getFullYear() : new Date().getFullYear();
+    if (id_proprietario !== undefined && id_proprietario !== '') {
+      updateData.id_proprietario = Number(id_proprietario);
+    } else if (id_proprietario === '' || id_proprietario === null) {
+      updateData.id_proprietario = null;
     }
 
-    const conformidadeData = conformidade ? {
-      licenciamento: !!conformidade.licenciamento,
-      projeto_aprovado: !!conformidade.projeto_aprovado,
-      diagramas_unifilares: !!conformidade.diagramas_unifilares,
-      plano_manutencao: !!conformidade.plano_manutencao,
-      normas_iec: !!(conformidade.normas_iec || conformidade.normas_iec_ieee),
-      normas_ieee: !!(conformidade.normas_ieee || conformidade.normas_iec_ieee),
-      normas_locais: !!conformidade.normas_locais,
-    } : undefined;
-
-    const transformadoresArr = transformador ? (Array.isArray(transformador) ? transformador : [transformador]).map(t => ({
-      num_transformador: Number(t.num_transformador || 1),
-      potencia_kva: parseFloat(t.potencia_kva || t.potencia_nominal || 0) || 0,
-      tensao_primaria: parseFloat(t.tensao_primaria) || 30,
-      tensao_secundaria: parseFloat(t.tensao_secundaria) || 0.4,
-      tipo_isolamento: t.tipo_isolamento || t.tipo_oleo || 'Mineral',
-      estado_oleo: t.estado_oleo || 'Bom',
-      fugas: !!t.fugas,
-      estado_buchas: t.estado_buchas || 'Bom',
-      temperatura_operacao: parseFloat(t.temperatura_operacao || t.temperatura_topo || 40) || 40
-    })) : undefined;
-
-    const mtData = media_tensao ? {
-      tipo_celas: media_tensao.tipo_celas || '',
-      estado_disjuntores: media_tensao.estado_disjuntores || '',
-      estado_seccionadores: media_tensao.estado_seccionadores || '',
-      reles_protecao: media_tensao.reles_protecao || '',
-      coordenacao_protecoes: !!media_tensao.coordenacao_protecoes,
-      aterramento_mt: !!media_tensao.aterramento_mt,
-    } : undefined;
-
-    const btData = baixa_tensao ? {
-      estado_qgbt: baixa_tensao.estado_qgbt || '',
-      barramentos: baixa_tensao.barramentos || '',
-      disjuntores: baixa_tensao.disjuntores || '',
-      balanceamento_cargas: !!baixa_tensao.balanceamento_cargas,
-      corrente_fase_a: parseFloat(baixa_tensao.corrente_fase_a) || 0,
-      corrente_fase_b: parseFloat(baixa_tensao.corrente_fase_b) || 0,
-      corrente_fase_c: parseFloat(baixa_tensao.corrente_fase_c) || 0,
-      tensao: parseFloat(baixa_tensao.tensao) || 0,
-      fator_potencia: parseFloat(baixa_tensao.fator_potencia) || 0,
-    } : undefined;
-
-    const segurancaData = seguranca ? {
-      resistencia_terra: parseFloat(seguranca.resistencia_terra) || 0,
-      protecao_raios: !!seguranca.protecao_raios,
-      spd: !!seguranca.spd,
-      sinalizacao: !!seguranca.sinalizacao,
-      combate_incendio: !!seguranca.combate_incendio,
-      distancias_seguranca: !!seguranca.distancias_seguranca,
-    } : undefined;
-
-    const infraData = infraestrutura ? {
-      estado_cabine: infraestrutura.estado_cabine || 'Bom',
-      ventilacao: !!infraestrutura.ventilacao,
-      drenagem: !!infraestrutura.drenagem,
-      iluminacao: !!infraestrutura.iluminacao,
-      controlo_acesso: !!infraestrutura.controlo_acesso,
-    } : undefined;
-
-    const monitorData = monitorizacao ? {
-      scada: !!monitorizacao.scada,
-      comunicacao: monitorizacao.comunicacao || '',
-      sensores_temperatura: !!monitorizacao.sensores_temperatura,
-      sensores_corrente: !!monitorizacao.sensores_corrente,
-      sensores_vibracao: !!monitorizacao.sensores_vibracao,
-      observacoes: monitorizacao.estado_modem || monitorizacao.protocolo ? `Modem: ${monitorizacao.estado_modem || 'N/D'}, Protocolo: ${monitorizacao.protocolo || 'N/D'}` : undefined
-    } : undefined;
-
-    const manutData = manutencao ? {
-      plano_preventivo: !!manutencao.aperto_terminais,
-      observacoes: `Última limpeza: ${manutencao.ultima_limpeza || 'N/D'}, Termográfica: ${manutencao.inspecao_termografica || 'N/D'}`
-    } : undefined;
-
-    const riscosMapped = risco ? (Array.isArray(risco) ? risco : [risco]).map(r => ({
-      sobrecarga: !!r.sobrecarga,
-      desequilibrio_fases: !!r.desequilibrio_fases,
-      falhas_isolamento: !!r.falhas_isolamento,
-      redundancia: !!r.redundancia,
-      nivel_risco_geral: r.nivel_risco_geral || 'Nulo',
-      observacoes: r.recomendacoes || r.observacoes || ''
-    })) : undefined;
-
-    return prisma.cliente.update({
+    return prisma.postoTransformacao.update({
       where: { id_pt },
-      data: {
-        // Campos Escalares Base (Mapeamento Explícito)
-        localizacao:          baseCliente.localizacao,
-        gps:                  baseCliente.gps,
-        latitude:             baseCliente.latitude,
-        longitude:            baseCliente.longitude,
-        morada:               baseCliente.morada,
-        municipio:            baseCliente.municipio,
-        provincia:            baseCliente.provincia,
-        tipo_instalacao:      baseCliente.tipo_instalacao,
-        nivel_tensao:         baseCliente.nivel_tensao,
-        fabricante:           baseCliente.fabricante,
-        regime_exploracao:    baseCliente.regime_exploracao,
-        estado_operacional:   baseCliente.estado_operacional,
-        conta_contrato:       baseCliente.conta_contrato,
-        instalacao:           baseCliente.instalacao,
-        equipamento:          baseCliente.equipamento,
-        parceiro_negocios:    baseCliente.parceiro_negocios,
-        categoria_tarifa:     baseCliente.categoria_tarifa,
-        txt_categoria_tarifa: baseCliente.txt_categoria_tarifa,
-        distrito_comuna:      baseCliente.distrito_comuna,
-        bairro:               baseCliente.bairro,
-        contrato:             baseCliente.contrato,
-        num_serie:            baseCliente.num_serie,
-        divisao:              baseCliente.divisao,
-        denominacao_divisao:  baseCliente.denominacao_divisao,
-        unidade_leitura:      baseCliente.unidade_leitura,
-        num_localidade:       baseCliente.num_localidade,
-        bairro_num:           baseCliente.bairro_num,
-        rua:                  baseCliente.rua,
-        tipo_cliente:         baseCliente.tipo_cliente,
-        
-        // Campos Numéricos com Cast Garantido
-        potencia_kva:         baseCliente.potencia_kva !== undefined ? Number(baseCliente.potencia_kva) : undefined,
-        ano_instalacao:       baseCliente.ano_instalacao !== undefined ? Number(baseCliente.ano_instalacao) : undefined,
-        num_transformadores:  baseCliente.num_transformadores !== undefined ? Number(baseCliente.num_transformadores) : undefined,
-        montante_divida:      baseCliente.montante_divida !== undefined ? Number(baseCliente.montante_divida) : undefined,
-        num_facturas_atraso:  baseCliente.num_facturas_atraso !== undefined ? Number(baseCliente.num_facturas_atraso) : undefined,
-        id_subestacao:        baseCliente.id_subestacao !== undefined ? Number(baseCliente.id_subestacao) : undefined,
-        id_responsavel:       baseCliente.id_responsavel !== undefined ? (baseCliente.id_responsavel ? Number(baseCliente.id_responsavel) : null) : undefined,
-
-        // Dados de Auditoria de Campo
-        responsavel_financeiro:      baseCliente.responsavel_financeiro,
-        contacto_resp_financeiro:    baseCliente.contacto_resp_financeiro,
-        responsavel_tecnico_cliente: baseCliente.responsavel_tecnico_cliente,
-        contacto_resp_tecnico:       baseCliente.contacto_resp_tecnico,
-        canal_faturacao:             baseCliente.canal_faturacao,
-        fornece_terceiros:           baseCliente.fornece_terceiros,
-        empresa_manutencao:          baseCliente.empresa_manutencao,
-        data_ultima_manutencao:      baseCliente.data_ultima_manutencao,
-
-        // Relações (Upsert/Nested)
-        conformidade: conformidadeData ? { upsert: { create: conformidadeData, update: conformidadeData } } : undefined,
-        media_tensao: mtData ? { upsert: { create: mtData, update: mtData } } : undefined,
-        baixa_tensao: btData ? { upsert: { create: btData, update: btData } } : undefined,
-        seguranca: segurancaData ? { upsert: { create: segurancaData, update: segurancaData } } : undefined,
-        infraestrutura: infraData ? { upsert: { create: infraData, update: infraData } } : undefined,
-        monitorizacao: monitorData ? { upsert: { create: monitorData, update: monitorData } } : undefined,
-        manutencao: manutData ? { upsert: { create: manutData, update: manutData } } : undefined,
-        transformadores: transformadoresArr ? {
-          deleteMany: {},
-          create: transformadoresArr
-        } : undefined,
-        riscos: riscosMapped ? {
-          deleteMany: {},
-          create: riscosMapped
-        } : undefined
-      }
+      data: updateData,
+      include: { subestacao: true, proprietario: true }
     });
   }
 
   async delete(id_pt) {
-    return prisma.cliente.delete({
+    return prisma.postoTransformacao.delete({
       where: { id_pt },
     });
   }

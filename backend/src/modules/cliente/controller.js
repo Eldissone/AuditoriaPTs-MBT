@@ -91,7 +91,7 @@ class IdentificacaoController {
       const pdfGenerator = require('../../utils/pdfGenerator');
 
       // Fetch full data including relations
-      const pt = await prisma.cliente.findUnique({
+      const pt = await prisma.postoTransformacao.findUnique({
         where: { id_pt },
         include: { subestacao: true }
       });

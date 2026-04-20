@@ -35,7 +35,7 @@ class IdentificacaoService {
     const subExists = await prisma.subestacao.findUnique({ where: { id: subDestino } });
     if (!subExists) throw new Error(`Subestação de destino (ID ${subDestino}) não encontrada.`);
 
-    const result = await prisma.cliente.updateMany({
+    const result = await prisma.postoTransformacao.updateMany({
       where: { id_pt: { in: id_pts } },
       data: { id_subestacao: subDestino },
     });
@@ -76,7 +76,7 @@ class IdentificacaoService {
         where: { status: 'Ativa' },
         select: { id: true, nome: true, municipio: true, latitude: true, longitude: true, gps: true }
       }),
-      prisma.cliente.findMany({ select: { id_pt: true } }),
+      prisma.postoTransformacao.findMany({ select: { id_pt: true } }),
     ]);
 
     // Cache de subestações com coordenadas para busca espacial rápida
@@ -156,7 +156,7 @@ class IdentificacaoService {
       const chunkIds = chunk.map(item => deriveStableKey(item)).filter(Boolean);
 
       // ── 3. Pre-fetch full records for comparison in this chunk ─────────────
-      const existingRecordsData = await prisma.cliente.findMany({
+      const existingRecordsData = await prisma.postoTransformacao.findMany({
         where: { id_pt: { in: chunkIds } }
       });
       const recordMap = new Map(existingRecordsData.map(r => [r.id_pt, r]));
@@ -219,12 +219,8 @@ class IdentificacaoService {
             potencia_kva: parseFloat(item['potência'] || item.potencia_kva || 0) || 0,
             ano_instalacao: new Date().getFullYear(),
             estado_operacional: 'Operacional',
-            conta_contrato: String(item['Conta de contrato'] || item.conta_contrato || ''),
             instalacao: String(item['Instalação'] || item.instalacao || ''),
             equipamento: String(item.Equipamento || item.equipamento || ''),
-            parceiro_negocios: String(item['Parceiro de negócios'] || item.parceiro_negocios || ''),
-            categoria_tarifa: String(item['Categoria de tarifa'] || item.categoria_tarifa || ''),
-            txt_categoria_tarifa: String(item['Txt.categoria tarifa'] || item.txt_categoria_tarifa || ''),
             gps: clientGpsStr || (clientCoords ? `${clientCoords.lat}, ${clientCoords.lng}` : null),
             contrato: String(item['Contrato'] || item.contrato || ''),
             num_serie: String(item['Nº de série'] || item.num_serie || ''),
@@ -234,16 +230,13 @@ class IdentificacaoService {
             num_localidade: String(item['Nº da localidade'] || item.num_localidade || ''),
             bairro_num: String(item['Bairro Nº'] || item.bairro_num || ''),
             rua: String(item['Rua'] || item.rua || ''),
-            tipo_cliente: String(item['Tipo de Cliente'] || item.tipo_cliente || ''),
-            montante_divida: parseFloat(item['Montante Divida'] || item.montante_divida || 0) || 0,
-            num_facturas_atraso: parseInt(item['Número de Facturas não pagas'] || item.num_facturas_atraso || 0) || 0,
           };
 
           const existingRecord = recordMap.get(stableKey);
 
           if (!existingRecord) {
             // ── CASO A: Novo PT (Adicionar) ──────────────────────────────────
-            await prisma.cliente.create({
+            await prisma.postoTransformacao.create({
               data: {
                 ...dataPayload,
                 id_pt: stableKey
@@ -271,7 +264,7 @@ class IdentificacaoService {
             });
 
             if (hasChanges) {
-              await prisma.cliente.update({
+              await prisma.postoTransformacao.update({
                 where: { id_pt: stableKey },
                 data: updatePayload
               });

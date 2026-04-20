@@ -62,7 +62,7 @@ class PDFGenerator {
         currentY += 45;
         this._drawField(doc, 'MUNICÍPIO / PROVÍNCIA', `${ptData.municipio || '---'} / ${ptData.provincia || '---'}`, 50, currentY, colors);
         this._drawField(doc, 'BAIRRO', ptData.bairro || ptData.distrito_comuna || '---', 230, currentY, colors);
-        
+
         const coords = ptData.latitude != null ? `${ptData.latitude.toFixed(6)}, ${ptData.longitude.toFixed(6)}` : 'N/D';
         this._drawField(doc, 'COORDENADAS GPS', coords, 410, currentY, colors);
 
@@ -188,7 +188,7 @@ class PDFGenerator {
 
         doc.fontSize(10).font('Helvetica-Bold').text('Entidade:', 50, currentY);
         doc.font('Helvetica').text(pt.proprietario || pt.subestacao?.nome || 'N/D', 110, currentY);
-        
+
         currentY += 15;
         doc.font('Helvetica-Bold').text('Técnico Executante:', 50, currentY);
         doc.font('Helvetica').text(auditData.auditor?.nome || 'N/D', 160, currentY);
@@ -210,7 +210,7 @@ class PDFGenerator {
 
         doc.font('Helvetica-Bold').text('Long:', 490, currentY);
         doc.font('Helvetica').text(lon, 525, currentY);
-        
+
         doc.moveDown(2);
 
         // Helper para grelhas
@@ -219,26 +219,26 @@ class PDFGenerator {
           doc.rect(startX, y, 495, 20).fill(colors.lightBg);
           doc.fillColor(colors.primary).fontSize(9).font('Helvetica-Bold');
           doc.text('Critérios / Componentes', startX + 5, y + 6);
-          
+
           doc.text('OK', startX + 310, y + 6);
           doc.text('A', startX + 340, y + 6);
           doc.text('B', startX + 370, y + 6);
           doc.text('C', startX + 400, y + 6);
           doc.text('NA', startX + 430, y + 6);
           doc.text('Obs', startX + 460, y + 6);
-          
+
           doc.rect(startX, y, 495, 20).strokeColor(colors.border).lineWidth(0.5).stroke();
-          
+
           return y + 20;
         };
 
         const drawRow = (text, value, itemPrio, y) => {
           const startX = 50;
           doc.rect(startX, y, 495, 20).strokeColor(colors.border).lineWidth(0.5).stroke();
-          
+
           doc.fillColor(colors.text).fontSize(8).font('Helvetica');
           doc.text(text, startX + 5, y + 6, { width: 300, height: 12, ellipsis: true });
-          
+
           // Draw dividing lines
           doc.moveTo(startX + 300, y).lineTo(startX + 300, y + 20).stroke();
           doc.moveTo(startX + 330, y).lineTo(startX + 330, y + 20).stroke();
@@ -246,7 +246,7 @@ class PDFGenerator {
           doc.moveTo(startX + 390, y).lineTo(startX + 390, y + 20).stroke();
           doc.moveTo(startX + 420, y).lineTo(startX + 420, y + 20).stroke();
           doc.moveTo(startX + 450, y).lineTo(startX + 450, y + 20).stroke();
-          
+
           // Render value logic: OK/A/B/C/NA or just a tick mark
           const markCol = (colIdx) => {
             doc.font('Helvetica-Bold').fontSize(10).text('X', startX + colIdx, y + 6);
@@ -254,9 +254,9 @@ class PDFGenerator {
 
           const resStr = String(value || '').toLowerCase();
           if (resStr === 'na') {
-             markCol(435);
+            markCol(435);
           } else if (resStr === 'ok') {
-             markCol(315);
+            markCol(315);
           } else if (resStr === 'nc') {
             if (itemPrio === 'A') markCol(345);
             else if (itemPrio === 'B') markCol(375);
@@ -278,22 +278,22 @@ class PDFGenerator {
         // --- TABELA PRINCIPAL DE INSPECÇÃO (DINÂMICA) ---
         let tblY = doc.y;
         tblY = drawGridHeaders(tblY);
-        
+
         const checklist = auditData.tarefa?.checklist || [];
-        
+
         if (checklist.length > 0) {
           // Group by section
           const secoes = [...new Set(checklist.map(i => i.secao))];
           secoes.forEach(secao => {
             const items = checklist.filter(i => i.secao === secao);
-            
+
             // Check for page break
             if (tblY > 700) {
               doc.addPage();
               tblY = 50;
               tblY = drawGridHeaders(tblY);
             }
-            
+
             tblY = drawCategoryHeading(secao, tblY);
             items.forEach(item => {
               // Row break
@@ -313,37 +313,37 @@ class PDFGenerator {
 
         doc.moveDown(2);
         const tf = auditData.transformadores?.[0] || {};
-        
+
         // --- DADOS DO TRANSFORMADOR ---
         currentY = tblY + 20;
         doc.fontSize(10).font('Helvetica-Bold').fillColor(colors.primary);
         doc.text('DADOS DO TRANSFORMADOR', 50, currentY);
         currentY += 20;
-        
+
         // Box
         doc.rect(50, currentY, 495, 40).stroke();
         doc.fontSize(8);
         doc.text('Nº TRANSFORMADOR:', 55, currentY + 5); doc.font('Helvetica').text(tf.num_transformador || '---', 55, currentY + 15);
-        
+
         doc.font('Helvetica-Bold').text('TIPO:', 180, currentY + 5); doc.font('Helvetica').text(tf.tipo_isolamento || '---', 180, currentY + 15);
-        
+
         doc.font('Helvetica-Bold').text('POTENCIA:', 300, currentY + 5); doc.font('Helvetica').text(tf.potencia_kva ? `${tf.potencia_kva} kVA` : '---', 300, currentY + 15);
-        
+
         doc.font('Helvetica-Bold').text('ANO:', 420, currentY + 5); doc.font('Helvetica').text(pt.ano_instalacao || '---', 420, currentY + 15);
 
         // --- RELATORIO DE MEDIÇÃO TERRA ---
         currentY += 60;
         doc.fontSize(10).font('Helvetica-Bold').text('RELATORIO DE MEDIÇÃO TERRA', 50, currentY);
         currentY += 20;
-        
+
         doc.rect(50, currentY, 495, 30).stroke();
-        
+
         doc.fontSize(9).font('Helvetica-Bold').text('Terra de Protecção (TP):', 60, currentY + 10);
         doc.font('Helvetica').text(`${auditData.terra_protecao || 'N/A'} Ω`, 180, currentY + 10);
-        
+
         doc.font('Helvetica-Bold').text('Terra de Serviço (TS):', 250, currentY + 10);
         doc.font('Helvetica').text(`${auditData.terra_servico || 'N/A'} Ω`, 370, currentY + 10);
-        
+
         // --- INCONGRUÊNCIAS DETECTADAS ---
         if (auditData.incongruencias && auditData.incongruencias.length > 0) {
           currentY += 60;
@@ -355,7 +355,7 @@ class PDFGenerator {
             doc.fontSize(8).font('Helvetica-Bold').text(`• ${inc.descricao}`, 60, currentY);
             doc.font('Helvetica').text(`  Sistema: ${inc.valor_cadastro || 'N/A'} | Campo: ${inc.valor_apurado || 'N/A'}`, 60, currentY + 10);
             currentY += 25;
-            
+
             if (currentY > 700) {
               doc.addPage();
               currentY = 50;
@@ -369,7 +369,7 @@ class PDFGenerator {
           doc.addPage();
           currentY = 700;
         }
-        
+
         doc.moveTo(150, currentY).lineTo(395, currentY).stroke();
         doc.fontSize(9).font('Helvetica-Bold').text('ASSINATURA DO CLIENTE', 50, currentY + 10, { align: 'center', width: 495 });
 

@@ -15,7 +15,10 @@ import {
   ClipboardCheck,
   History,
   HardDrive,
-  Activity
+  Activity,
+  Users,
+  Search,
+  Plus
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -26,9 +29,13 @@ export default function NewPT() {
 
   const [activeTab, setActiveTab] = useState(1);
   const [loading, setLoading] = useState(isEdit);
+  const [proprietarios, setProprietarios] = useState([]);
+  const [loadingProprietarios, setLoadingProprietarios] = useState(false);
+
   const [formData, setFormData] = useState({
     identificacao: {
       id_pt: '',
+      id_proprietario: '',
       localizacao: '',
       gps: '',
       tipo_instalacao: '',
@@ -50,7 +57,7 @@ export default function NewPT() {
       parceiro_negocios: '',
       categoria_tarifa: '',
       txt_categoria_tarifa: '',
-      proprietario: '',
+      proprietario: '', // Keep for legacy/temp display if needed
       concessionaria: '',
       zona: '',
       operador: '',
@@ -150,6 +157,22 @@ export default function NewPT() {
   });
 
   useEffect(() => {
+    fetchProprietarios();
+  }, []);
+
+  async function fetchProprietarios() {
+    try {
+      setLoadingProprietarios(true);
+      const res = await api.get('/proprietarios');
+      setProprietarios(res.data.data || res.data);
+    } catch (err) {
+      console.error('Erro ao buscar proprietários', err);
+    } finally {
+      setLoadingProprietarios(false);
+    }
+  }
+
+  useEffect(() => {
     if (isEdit) {
       async function fetchPT() {
         try {
@@ -174,6 +197,7 @@ export default function NewPT() {
             identificacao: {
               ...prev.identificacao,
               ...sPt,
+              id_proprietario: sPt.id_proprietario || '',
               id_pt: sPt.id_pt || '', // Ensure id_pt is handled correctly if renamed in response
               ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : ''
             },
@@ -387,8 +411,26 @@ export default function NewPT() {
                   </div>
 
                   <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Proprietário</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.proprietario} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, proprietario: e.target.value } })} />
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Proprietário (Comercial)</label>
+                    <div className="relative">
+                      <select
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] appearance-none outline-none focus:border-[#0d3fd1] focus:ring-1 focus:ring-[#0d3fd1]/10"
+                        value={formData.identificacao.id_proprietario}
+                        onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, id_proprietario: e.target.value } })}
+                      >
+                        <option value="">-- Seleccionar Proprietário --</option>
+                        {proprietarios.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome} {p.nif ? `(${p.nif})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    {loadingProprietarios && <p className="text-[9px] text-[#0d3fd1] animate-pulse ml-2">Carregando lista...</p>}
+                    {!loadingProprietarios && proprietarios.length === 0 && <p className="text-[9px] text-amber-600 ml-2">Nenhum proprietário encontrado.</p>}
                   </div>
                   <div className="space-y-2 lg:col-span-1">
                     <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concessionária</label>

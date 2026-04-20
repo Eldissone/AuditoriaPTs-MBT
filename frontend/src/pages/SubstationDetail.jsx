@@ -94,7 +94,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
     if (!localPts || localPts.length === 0) return 0;
     const set = new Set(
       localPts
-        .map((pt) => pt.subestacao?.proprietario || pt.proprietario)
+        .map((pt) => pt.proprietario?.nome || pt.proprietario)
         .filter(Boolean)
         .map((p) => String(p).trim().toLowerCase())
     );

@@ -90,31 +90,28 @@ class InspecaoRepository {
 
       // --- MOTOR DE INCONGRUÊNCIAS ---
       // 1) Descobrir divergências entre o cadastro e os dados de campo
-      const currentCliente = await tx.cliente.findUnique({ where: { id_pt: id_pt } });
+      const currentPT = await tx.postoTransformacao.findUnique({
+        where: { id_pt: id_pt },
+        include: { proprietario: true }
+      });
       
-      if (currentCliente && baseData.dados_cliente_campo) {
+      if (currentPT && baseData.dados_cliente_campo) {
         const dc = baseData.dados_cliente_campo;
-        const mapping = {
-          razao_social:       { campo: 'proprietario',                label: 'Nome/Razão Social' },
-          resp_financeiro:    { campo: 'responsavel_financeiro',      label: 'Resp. Financeiro' },
-          contacto_fin:       { campo: 'contacto_resp_financeiro',    label: 'Contacto Financeiro' },
-          resp_tecnico:       { campo: 'responsavel_tecnico_cliente', label: 'Resp. Técnico' },
-          contacto_tec:       { campo: 'contacto_resp_tecnico',       label: 'Contacto Técnico' },
-          canal_faturacao:    { campo: 'canal_faturacao',             label: 'Canal Facturação' },
-          empresa_manutencao: { campo: 'empresa_manutencao',          label: 'Empresa Manutenção' },
-          data_ultima_manutencao: { campo: 'data_ultima_manutencao',   label: 'Data Últ. Manutenção', isDate: true },
-        };
+        const prop = currentPT.proprietario; // Dados comerciais agora no modelo Proprietario
 
-        for (const [key, meta] of Object.entries(mapping)) {
-          let valorCampo = dc[key];
-          let valorCadastro = currentCliente[meta.campo];
+        const mapping = [
+          { key: 'razao_social',           valorCadastro: prop?.nome,                         label: 'Nome/Razão Social' },
+          { key: 'resp_financeiro',         valorCadastro: prop?.responsavel_financeiro,       label: 'Resp. Financeiro' },
+          { key: 'contacto_fin',            valorCadastro: prop?.contacto_resp_financeiro,     label: 'Contacto Financeiro' },
+          { key: 'resp_tecnico',            valorCadastro: currentPT.responsavel_tecnico_cliente, label: 'Resp. Técnico' },
+          { key: 'contacto_tec',            valorCadastro: currentPT.contacto_resp_tecnico,   label: 'Contacto Técnico' },
+          { key: 'canal_faturacao',         valorCadastro: currentPT.canal_faturacao,          label: 'Canal Facturação' },
+          { key: 'empresa_manutencao',      valorCadastro: currentPT.empresa_manutencao,       label: 'Empresa Manutenção' },
+        ];
 
-          // Normalize for comparison
-          if (meta.isDate) {
-            valorCampo = valorCampo ? new Date(valorCampo).toISOString().split('T')[0] : null;
-            valorCadastro = valorCadastro ? new Date(valorCadastro).toISOString().split('T')[0] : null;
-          }
-          
+        for (const meta of mapping) {
+          const valorCampo = dc[meta.key];
+          const valorCadastro = meta.valorCadastro;
           if (valorCampo && valorCadastro && String(valorCampo).trim() !== String(valorCadastro).trim()) {
             await tx.incongruencia.create({
               data: {
@@ -130,13 +127,13 @@ class InspecaoRepository {
         }
 
         // Fornecimento a terceiros
-        if (dc.fornece_terceiros != null && Boolean(dc.fornece_terceiros) !== Boolean(currentCliente.fornece_terceiros)) {
+        if (dc.fornece_terceiros != null && Boolean(dc.fornece_terceiros) !== Boolean(currentPT.fornece_terceiros)) {
           await tx.incongruencia.create({
             data: {
               id_inspecao: id_inspecao,
               tipo: 'ilegal',
               descricao: 'Alteração no estado de fornecimento a terceiros',
-              valor_cadastro: currentCliente.fornece_terceiros ? 'Sim' : 'Não',
+              valor_cadastro: currentPT.fornece_terceiros ? 'Sim' : 'Não',
               valor_apurado: dc.fornece_terceiros ? 'Sim' : 'Não',
               nivel_urgencia: 'u_alta'
             }
@@ -184,18 +181,16 @@ class InspecaoRepository {
           }
         }
 
-        await tx.cliente.update({
+        // Atualiza campos técnicos diretos no PT
+        await tx.postoTransformacao.update({
           where: { id_pt: baseData.id_pt },
           data: {
-            ...(dc.razao_social          && { proprietario: dc.razao_social }),
-            ...(dc.resp_financeiro       && { responsavel_financeiro: dc.resp_financeiro }),
-            ...(dc.contacto_fin          && { contacto_resp_financeiro: dc.contacto_fin }),
-            ...(dc.resp_tecnico          && { responsavel_tecnico_cliente: dc.resp_tecnico }),
-            ...(dc.contacto_tec          && { contacto_resp_tecnico: dc.contacto_tec }),
-            ...(dc.canal_faturacao        && { canal_faturacao: dc.canal_faturacao }),
-            ...(dc.empresa_manutencao     && { empresa_manutencao: dc.empresa_manutencao }),
-            ...(dc.fornece_terceiros      != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
-            ...(dc.data_ultima_manutencao && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
+            ...(dc.resp_tecnico           && { responsavel_tecnico_cliente: dc.resp_tecnico }),
+            ...(dc.contacto_tec           && { contacto_resp_tecnico: dc.contacto_tec }),
+            ...(dc.canal_faturacao         && { canal_faturacao: dc.canal_faturacao }),
+            ...(dc.empresa_manutencao      && { empresa_manutencao: dc.empresa_manutencao }),
+            ...(dc.fornece_terceiros       != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
+            ...(dc.data_ultima_manutencao  && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
             ...(lat !== null && !isNaN(lat) && { latitude: lat }),
             ...(lon !== null && !isNaN(lon) && { longitude: lon }),
             ...(dc.gps && { gps: dc.gps })
@@ -324,15 +319,12 @@ class InspecaoRepository {
         },
       });
 
-      // Actualiza dados comerciais do PT se vieram em campo
+      // Actualiza dados técnicos do PT se vieram em campo
       if (baseData.dados_cliente_campo) {
         const dc = baseData.dados_cliente_campo;
-        await tx.cliente.update({
+        await tx.postoTransformacao.update({
           where: { id_pt: id_pt },
           data: {
-            ...(dc.razao_social           && { proprietario: dc.razao_social }),
-            ...(dc.resp_financeiro        && { responsavel_financeiro: dc.resp_financeiro }),
-            ...(dc.contacto_fin           && { contacto_resp_financeiro: dc.contacto_fin }),
             ...(dc.resp_tecnico           && { responsavel_tecnico_cliente: dc.resp_tecnico }),
             ...(dc.contacto_tec           && { contacto_resp_tecnico: dc.contacto_tec }),
             ...(dc.canal_faturacao         && { canal_faturacao: dc.canal_faturacao }),

@@ -16,6 +16,7 @@ const TechnicalSheet = React.lazy(() => import('../pages/TechnicalSheet'));
 const UserManagement = React.lazy(() => import('../pages/UserManagement'));
 const TaskManagement = React.lazy(() => import('../pages/TaskManagement'));
 const MyTasks = React.lazy(() => import('../pages/MyTasks'));
+const ProprietarioDetails = React.lazy(() => import('../pages/ProprietarioDetails'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -160,6 +161,14 @@ export default function AppRoutes() {
           <PrivateRoute requiredPerm="/minhas-tarefas">
             <Suspense fallback={<PageLoader />}>
               <MyTasks />
+            </Suspense>
+          </PrivateRoute>
+        } />
+
+        <Route path="/proprietarios/:id" element={
+          <PrivateRoute requiredPerm="/clientes">
+            <Suspense fallback={<PageLoader />}>
+              <ProprietarioDetails />
             </Suspense>
           </PrivateRoute>
         } />

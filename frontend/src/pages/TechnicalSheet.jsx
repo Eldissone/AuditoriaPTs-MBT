@@ -218,7 +218,7 @@ export default function TechnicalSheet() {
 
   const tabs = [
     { id: 'pt', label: 'Ficha Técnica PT', icon: Cpu, color: '#0d3fd1' },
-    { id: 'cliente', label: 'Ficha do Cliente', icon: Users, color: '#8b5cf6' },
+    { id: 'cliente', label: 'Ficha do Cliente', icon: Users, color: '#0d3fd1' },
     { id: 'historico', label: `Histórico (${inspections.length})`, icon: History, color: '#059669' },
   ];
 
@@ -245,9 +245,9 @@ export default function TechnicalSheet() {
                   {pt.municipio && <><span className="mx-2 opacity-30">·</span>{pt.municipio}</>}
                   {pt.bairro && <><span className="mx-2 opacity-30">·</span>{pt.bairro}</>}
                 </p>
-                {pt.proprietario && (
+                {pt.proprietario?.nome && (
                   <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">
-                    Cliente: {pt.proprietario}
+                    Cliente: {pt.proprietario.nome}
                   </p>
                 )}
               </div>
@@ -376,7 +376,7 @@ export default function TechnicalSheet() {
           <div className="space-y-6">
             {/* Localização */}
             <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-6 shadow-sm">
-              <SectionTitle icon={MapPin} title="Localização" color="#8b5cf6" />
+              <SectionTitle icon={MapPin} title="Localização" color="#0d3fd1" />
               <div className="space-y-3">
                 {[
                   { label: 'Município', value: pt.municipio },
@@ -409,7 +409,11 @@ export default function TechnicalSheet() {
               <div className="space-y-2">
                 <p className="text-sm font-black text-[#0f1c2c] uppercase">{pt.subestacao?.nome || 'N/D'}</p>
                 {pt.subestacao?.municipio && <p className="text-[10px] font-bold text-[#747686] uppercase">{pt.subestacao.municipio}</p>}
-                {pt.subestacao?.proprietario && <p className="text-[10px] font-bold text-[#747686]">Proprietário: {pt.subestacao.proprietario}</p>}
+                {pt.proprietario?.nome && (
+                  <p className="text-[10px] font-bold #0d3fd1">
+                    <span className="text-[#747686]">Cliente:</span> {pt.proprietario.nome}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -458,18 +462,18 @@ export default function TechnicalSheet() {
 
             {/* Identidade do Cliente */}
             <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-7 shadow-sm">
-              <SectionTitle icon={Users} title="Identidade do Cliente" color="#8b5cf6" />
+              <SectionTitle icon={Users} title="Identidade do Cliente" color="#0d3fd1" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InfoCard icon={User} iconBg="bg-purple-50" iconColor="text-purple-600" label="Razão Social / Denominação" primary={pt.proprietario || 'Sem denominação'} secondary={`Tipo: ${pt.tipo_cliente || 'N/D'}`} />
-                <InfoCard icon={Briefcase} iconBg="bg-purple-50" iconColor="text-purple-600" label="Conta / Contrato" primary={pt.conta_contrato || '—'} secondary={`Nr. Contrato: ${pt.contrato || 'N/D'}`} />
-                <InfoCard icon={Hash} iconBg="bg-indigo-50" iconColor="text-indigo-600" label="Parceiro de Negócios (SAP)" primary={pt.parceiro_negocios || '—'} secondary="Código interno SAP" />
-                <InfoCard icon={Activity} iconBg="bg-indigo-50" iconColor="text-indigo-600" label="Categoria Tarifária" primary={pt.categoria_tarifa || 'N/D'} secondary={pt.txt_categoria_tarifa || ''} />
+                <InfoCard icon={User} iconBg="bg-purple-50" iconColor="#0d3fd1" label="Razão Social / Denominação" primary={pt.proprietario?.nome || 'Sem denominação'} secondary={`Tipo: ${pt.proprietario?.tipo_cliente || pt.tipo_cliente || 'N/D'}`} />
+                <InfoCard icon={Briefcase} iconBg="bg-purple-50" iconColor="#0d3fd1" label="Conta / Contrato" primary={pt.proprietario?.conta_contrato || pt.conta_contrato || '—'} secondary={`Nr. Contrato: ${pt.contrato || 'N/D'}`} />
+                <InfoCard icon={Hash} iconBg="bg-indigo-50" iconColor="text-indigo-600" label="Parceiro de Negócios (SAP)" primary={pt.proprietario?.parceiro_negocios || pt.parceiro_negocios || '—'} secondary="Código interno SAP" />
+                <InfoCard icon={Activity} iconBg="bg-indigo-50" iconColor="text-indigo-600" label="Categoria Tarifária" primary={pt.proprietario?.categoria_tarifa || pt.categoria_tarifa || 'N/D'} secondary={pt.proprietario?.txt_categoria_tarifa || pt.txt_categoria_tarifa || ''} />
               </div>
             </div>
 
             {/* Responsáveis do Cliente */}
             <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 p-7 shadow-sm">
-              <SectionTitle icon={Users} title="Responsáveis do Cliente" color="#8b5cf6" />
+              <SectionTitle icon={Users} title="Responsáveis do Cliente" color="#0d3fd1" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Responsável Financeiro */}
                 <div className="bg-[#f8faff] rounded-2xl p-5 border border-[#c4c5d7]/20">
@@ -558,19 +562,19 @@ export default function TechnicalSheet() {
           {/* Sidebar Cliente */}
           <div className="space-y-6">
             {/* Estado Financeiro */}
-            <div className={`rounded-3xl p-6 shadow-sm border ${Number(pt.montante_divida) > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
+            <div className={`rounded-3xl p-6 shadow-sm border ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
               <div className="flex items-center gap-2 mb-4">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${Number(pt.montante_divida) > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
-                  <CreditCard className={`w-4 h-4 ${Number(pt.montante_divida) > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                  <CreditCard className={`w-4 h-4 ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
                 </div>
-                <p className={`text-[10px] font-black uppercase tracking-widest ${Number(pt.montante_divida) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>Estado Financeiro</p>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>Estado Financeiro</p>
               </div>
-              <p className={`text-3xl font-black tracking-tighter mb-1 ${Number(pt.montante_divida) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                {Number(pt.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+              <p className={`text-3xl font-black tracking-tighter mb-1 ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                {Number(pt.proprietario?.montante_divida ?? pt.montante_divida ?? 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
                 <span className="text-sm ml-1 font-bold opacity-60">Kz</span>
               </p>
-              <p className={`text-[10px] font-bold uppercase ${Number(pt.montante_divida) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                {Number(pt.montante_divida) > 0 ? `${pt.num_facturas_atraso || 0} facturas em atraso` : 'Sem dívida registada'}
+              <p className={`text-[10px] font-bold uppercase ${Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                {Number(pt.proprietario?.montante_divida ?? pt.montante_divida) > 0 ? `${pt.proprietario?.num_facturas_atraso ?? pt.num_facturas_atraso ?? 0} facturas em atraso` : 'Sem dívida registada'}
               </p>
             </div>
 

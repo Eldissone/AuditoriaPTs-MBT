@@ -241,7 +241,7 @@ export default function TaskManagement() {
     .filter((t) => (tipoFiltro ? (t.tipo_tarefa || 'Auditoria') === tipoFiltro : true))
     .filter((t) => {
       if (!proprietarioFiltro) return true;
-      return (t.pt?.subestacao?.proprietario || '').toLowerCase().includes(proprietarioFiltro.toLowerCase());
+      return (t.pt?.proprietario?.nome || '').toLowerCase().includes(proprietarioFiltro.toLowerCase());
     });
 
   return (
@@ -292,7 +292,7 @@ export default function TaskManagement() {
         >
           <option value="">Filtrar por PT (Todos)</option>
           {pts.map((p) => (
-            <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.subestacao?.proprietario || p.subestacao?.nome || p.proprietario}</option>
+            <option key={p.id_pt} value={p.id_pt}>{p.id_pt} - {p.proprietario?.nome || p.subestacao?.nome || '---'}</option>
           ))}
         </select>
         <select
@@ -532,7 +532,7 @@ export default function TaskManagement() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">Cliente / Subestação</p>
                 <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem Cliente associado'}</p>
                 {detailTarefa.pt?.subestacao?.nome && <p className="text-xs font-bold text-[#444655]">Subestação: {detailTarefa.pt.subestacao.nome}</p>}
-                {detailTarefa.pt?.subestacao?.proprietario && <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.subestacao.proprietario}</p>}
+                {detailTarefa.pt?.proprietario?.nome && <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.proprietario.nome}</p>}
                 {detailTarefa.pt?.subestacao?.municipio && <p className="text-xs font-bold text-[#444655]">Localidade: {detailTarefa.pt.subestacao.municipio}</p>}
               </div>
 
@@ -879,7 +879,7 @@ export default function TaskManagement() {
                       {ptsFiltradosModal.length > 0 ? (
                         ptsFiltradosModal.map((p) => (
                           <option key={p.id_pt} value={p.id_pt}>
-                            {p.id_pt} — {(p.subestacao?.proprietario || p.proprietario || 'Sem proprietário')} — {(p.subestacao?.nome || 'Sem subestação')}
+                            {p.id_pt} — {(p.proprietario?.nome || p.proprietario || 'Sem proprietário')} — {(p.subestacao?.nome || 'Sem subestação')}
                           </option>
                         ))
                       ) : (

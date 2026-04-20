@@ -72,7 +72,7 @@ export default function PTDetail({ pt, onClose }) {
               <p className="text-sm font-bold text-[#0f1c2c] line-clamp-2">{pt.tipos || 'N/A'}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-[#8b5cf6]/10 to-[#a78bfa]/10 rounded-xl p-4 border border-[#a78bfa]/20">
+            <div className="bg-gradient-to-br from-[#0d3fd1]/10 to-[#a78bfa]/10 rounded-xl p-4 border border-[#a78bfa]/20">
               <p className="text-[10px] font-black text-[#6b21a8] uppercase tracking-widest mb-2">Bairro</p>
               <p className="text-sm font-bold text-[#0f1c2c]">{pt.bairro || 'N/A'}</p>
             </div>

@@ -14,7 +14,7 @@ class InspecaoService {
 
   async createInspecao(data) {
     // Validate that the PT exists
-    const ptExists = await prisma.cliente.findUnique({
+    const ptExists = await prisma.postoTransformacao.findUnique({
       where: { id_pt: data.id_pt }
     });
     if (!ptExists) {
@@ -49,7 +49,7 @@ class InspecaoService {
     }
     // If id_pt is provided, validate that the PT exists
     if (data.id_pt) {
-      const ptExists = await prisma.cliente.findUnique({
+      const ptExists = await prisma.postoTransformacao.findUnique({
         where: { id_pt: data.id_pt }
       });
       if (!ptExists) {

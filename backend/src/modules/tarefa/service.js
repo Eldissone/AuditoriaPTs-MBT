@@ -111,13 +111,11 @@ class TarefaService {
           
           if (inspecao && inspecao.dados_cliente_campo) {
             const dc = inspecao.dados_cliente_campo;
-            // Atualizar o registo do Cliente/PT com os dados submetidos pelo auditor
-            await prisma.cliente.update({
+            // Atualizar apenas os campos técnicos do PT com os dados submetidos pelo auditor
+            // (campos comerciais como razao_social, resp_financeiro pertencem ao modelo Proprietario)
+            await prisma.postoTransformacao.update({
               where: { id_pt: inspecao.id_pt },
               data: {
-                ...(dc.razao_social           && { proprietario: dc.razao_social }),
-                ...(dc.resp_financeiro        && { responsavel_financeiro: dc.resp_financeiro }),
-                ...(dc.contacto_fin           && { contacto_resp_financeiro: dc.contacto_fin }),
                 ...(dc.resp_tecnico           && { responsavel_tecnico_cliente: dc.resp_tecnico }),
                 ...(dc.contacto_tec           && { contacto_resp_tecnico: dc.contacto_tec }),
                 ...(dc.canal_faturacao         && { canal_faturacao: dc.canal_faturacao }),
