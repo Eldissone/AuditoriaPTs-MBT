@@ -619,8 +619,6 @@ export default function TaskManagement() {
                   </div>
                 </div>
               )}
-            </div>
-
             {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
             {(() => {
               const todasFotos = taskInspecoes.flatMap(ins =>
@@ -661,6 +659,7 @@ export default function TaskManagement() {
                 </div>
               );
             })()}
+            </div>
 
             <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff]">
               {detailTarefa.status === 'Aguardando Validação' && user?.role === 'admin' ? (
