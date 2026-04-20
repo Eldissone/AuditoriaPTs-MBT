@@ -164,6 +164,8 @@ export default function ClientManagement() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [proprietarios, setProprietarios] = useState([]);
   const [loadingProprietarios, setLoadingProprietarios] = useState(false);
+  const [showProprietariosList, setShowProprietariosList] = useState(false);
+  const [showPTsList, setShowPTsList] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -532,17 +534,30 @@ export default function ClientManagement() {
           <FilterBar />
 
           {/* PT Table */}
-          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative min-h-[400px]">
+          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative">
             {loading && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
                 <div className="w-10 h-10 border-4 border-[#0d3fd1] border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-[0.2em]">Sincronizando Cadastro Técnico...</p>
               </div>
             )}
-            <div className="overflow-x-auto custom-scrollbar">
+            {/* Toggle Header */}
+            <div
+              onClick={() => setShowPTsList(v => !v)}
+              className="flex items-center justify-between px-6 py-4 bg-[#243141] cursor-pointer hover:bg-[#2d3b4d] transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                {showPTsList ? <ChevronDown className="w-4 h-4 text-white/70" /> : <ChevronRight className="w-4 h-4 text-white/70" />}
+                <Database className="w-4 h-4 text-white/50" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Tabela de Postos de Transformação</span>
+                <span className="text-[9px] font-bold text-white/40 bg-white/10 px-2 py-0.5 rounded-md">{clientes.length} registos</span>
+              </div>
+              <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{showPTsList ? 'Clique para ocultar' : 'Clique para expandir'}</span>
+            </div>
+            {showPTsList && <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#243141] text-white">
+                  <tr className="bg-[#1a2736] text-white">
                     {isSelectionMode && (<th className="px-4 py-5 text-center w-12"><span className="text-[9px] font-black uppercase tracking-widest text-white/60">Sel.</span></th>)}
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">ID PT / Código</th>
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Tipo de PT</th>
@@ -571,7 +586,7 @@ export default function ClientManagement() {
                           )}
                           <td colSpan={8} className="px-6 py-3 font-black uppercase tracking-widest text-[#0d3fd1] text-[10px]">
                             <div className="flex items-center gap-2">
-                              {!expandedSubestacoes[subName] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              {expandedSubestacoes[subName] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               <Building2 className="w-3.5 h-3.5 opacity-40" />
                               {subName}
                               <span className="text-[#0d3fd1] text-[9px] ml-2 font-bold bg-[#d1dffe] px-2 py-0.5 rounded-md">{items.length} PTs</span>
@@ -583,7 +598,7 @@ export default function ClientManagement() {
                             </div>
                           </td>
                         </tr>
-                        {!expandedSubestacoes[subName] && items.map((cliente) => {
+                        {expandedSubestacoes[subName] && items.map((cliente) => {
                           const isSelected = selectedPTs.has(cliente.id_pt);
                           return (
                             <tr
@@ -663,7 +678,7 @@ export default function ClientManagement() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </div>}
             <div className="bg-[#fcfdff] px-8 py-4 border-t border-[#c4c5d7]/10 flex items-center justify-between">
               <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest leading-none">
                 {hasActiveFilters ? <><span className="text-[#0d3fd1]">{clientes.length}</span> PTs filtrados</> : <>Mostrando <span className="text-[#0f1c2c]">{clientes.length}</span> PTs cadastrados</>}
@@ -708,17 +723,30 @@ export default function ClientManagement() {
           <FilterBar />
 
           {/* Proprietarios Table */}
-          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative min-h-[400px]">
+          <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative">
             {loadingProprietarios && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
                 <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-[9px] font-black #0d3fd1 uppercase tracking-[0.2em]">Sincronizando Entidades Comerciais...</p>
+                <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-[0.2em]">Sincronizando Entidades Comerciais...</p>
               </div>
             )}
-            <div className="overflow-x-auto custom-scrollbar">
+            {/* Toggle Header */}
+            <div
+              onClick={() => setShowProprietariosList(v => !v)}
+              className="flex items-center justify-between px-6 py-4 bg-[#243141] cursor-pointer hover:bg-[#2d3b4d] transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                {showProprietariosList ? <ChevronDown className="w-4 h-4 text-white/70" /> : <ChevronRight className="w-4 h-4 text-white/70" />}
+                <Users className="w-4 h-4 text-white/50" />
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Tabela de Proprietários / Clientes</span>
+                <span className="text-[9px] font-bold text-white/40 bg-white/10 px-2 py-0.5 rounded-md">{proprietarios.length} registos</span>
+              </div>
+              <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{showProprietariosList ? 'Clique para ocultar' : 'Clique para expandir'}</span>
+            </div>
+            {showProprietariosList && <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#243141] text-white">
+                  <tr className="bg-[#1a2736] text-white">
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">Proprietário / Razão Social</th>
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap">NIF / Contrato</th>
                     <th className="px-6 py-5 text-[9px] font-black uppercase tracking-widest border-r border-white/5 whitespace-nowrap text-center">PTs</th>
@@ -734,7 +762,7 @@ export default function ClientManagement() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                            <Briefcase className="w-4 h-4 #0d3fd1" />
+                            <Briefcase className="w-4 h-4 text-[#0d3fd1]" />
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="font-black uppercase text-[11px] truncate max-w-[250px]">{p.nome}</span>
@@ -776,7 +804,7 @@ export default function ClientManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => navigate(`/proprietarios/${p.id}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg #0d3fd1 hover:bg-purple-600 hover:text-white transition-all shadow-sm">
+                          <button onClick={() => navigate(`/proprietarios/${p.id}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm">
                             <ArrowUpRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -792,10 +820,10 @@ export default function ClientManagement() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </div>}
             <div className="bg-[#fcfdff] px-8 py-4 border-t border-[#c4c5d7]/10 flex items-center justify-between">
               <div className="text-[10px] font-bold text-[#747686] uppercase tracking-widest">
-                Total de <span className="#0d3fd1 font-black">{proprietarios.length}</span> Entidades Comerciais
+                Total de <span className="text-[#0d3fd1] font-black">{proprietarios.length}</span> Entidades Comerciais
               </div>
             </div>
           </div>
