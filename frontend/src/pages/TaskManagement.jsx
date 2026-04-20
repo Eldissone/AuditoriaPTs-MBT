@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Calendar, User, MapPin, CheckSquare, Eye, CheckCircle, X, Camera, ZoomIn, ChevronLeft, ChevronRight, ClipboardCheck, Wrench, Search as SearchIcon, AlertTriangle, Layers } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getChecklistForType } from '../data/checklists';
 
 export default function TaskManagement() {
   const { user } = useAuth();
@@ -873,7 +874,14 @@ export default function TaskManagement() {
                     <select
                       className="w-full appearance-none bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl pl-12 pr-5 py-4 text-sm font-bold text-[#0f1c2c]"
                       value={formData.id_pt}
-                      onChange={(e) => setFormData({ ...formData, id_pt: e.target.value })}
+                      onChange={(e) => {
+                        const selectedPtId = e.target.value;
+                        const selectedPt = pts.find(p => p.id_pt === selectedPtId);
+                        const autoChecklist = selectedPt && !formData.id
+                          ? getChecklistForType(selectedPt.tipo_instalacao)
+                          : formData.checklist;
+                        setFormData({ ...formData, id_pt: selectedPtId, checklist: autoChecklist });
+                      }}
                     >
                       <option value="">Nenhum (Tarefa Geral)</option>
                       {ptsFiltradosModal.length > 0 ? (
@@ -896,9 +904,36 @@ export default function TaskManagement() {
                 </div>
 
                 <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CheckSquare className="w-5 h-5 text-[#0d3fd1]" />
-                    <h4 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">Checklist da Tarefa</h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <CheckSquare className="w-5 h-5 text-[#0d3fd1]" />
+                      <h4 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight">Checklist da Tarefa</h4>
+                      {formData.id_pt && (() => {
+                        const ptSel = pts.find(p => p.id_pt === formData.id_pt);
+                        const tipo = ptSel?.tipo_instalacao || '';
+                        const t = tipo.toUpperCase();
+                        const isPTC = t.includes('CABIN') || t === 'PTC' || t.includes('CABINE');
+                        return (
+                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${isPTC ? 'bg-violet-50 text-violet-700 border-violet-100' : 'bg-sky-50 text-sky-700 border-sky-100'}`}>
+                            {isPTC ? 'PTC — 37 itens' : 'PTA — 32 itens'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    {formData.id_pt && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ptSel = pts.find(p => p.id_pt === formData.id_pt);
+                          if (ptSel) {
+                            setFormData(prev => ({ ...prev, checklist: getChecklistForType(ptSel.tipo_instalacao) }));
+                          }
+                        }}
+                        className="text-[9px] font-black uppercase tracking-widest text-[#0d3fd1] hover:bg-[#eff4ff] px-3 py-1.5 rounded-lg transition-colors border border-[#0d3fd1]/10"
+                      >
+                        Recarregar Checklist Padrão
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-3 mb-4">
