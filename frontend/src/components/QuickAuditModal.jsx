@@ -200,9 +200,9 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const secoes = [...new Set(checklistBase.map(i => i.secao))];
 
   // Contagem checklist
-  const totalOK = Object.values(checklistMap).filter(v => v === 'ok').length;
-  const totalNC = Object.values(checklistMap).filter(v => v === 'nc').length;
-  const totalPendente = Object.values(checklistMap).filter(v => v === null).length;
+  const totalOK = checklistBase.filter(i => checklistMap[i.id] === 'ok').length;
+  const totalNC = checklistBase.filter(i => checklistMap[i.id] === 'nc').length;
+  const totalPendente = checklistBase.filter(i => checklistMap[i.id] !== 'ok' && checklistMap[i.id] !== 'nc' && checklistMap[i.id] !== 'na').length;
 
   // Validação de Integridade
   const infoCompleta = totalPendente === 0 && 
