@@ -428,121 +428,7 @@ export default function PTAudits() {
   const auditsParaExibicao = modoRelatorio === 'executivo' ? auditsFiltrados.slice(0, limiteExecutivo) : auditsFiltrados;
   const tarefasParaExibicao = modoRelatorio === 'executivo' ? tarefasFiltradas.slice(0, limiteExecutivo) : tarefasFiltradas;
 
-  const csvEscape = (value) => {
-    const text = String(value ?? '');
-    if (text.includes(';') || text.includes('"') || text.includes('\n')) {
-      return `"${text.replace(/"/g, '""')}"`;
-    }
-    return text;
-  };
 
-  const handleExportCSV = () => {
-    if (subView === 'inspecoes') {
-      if (auditsFiltrados.length === 0) {
-        alert('Sem dados para exportar no relatório atual.');
-        return;
-      }
-
-      const header = [
-        'Código Cliente',
-        'Proprietário',
-        'Tipo',
-        'Resultado',
-        'Urgência',
-        'Data da Auditoria',
-        'Subestação',
-        'Localidade',
-        'Tarefa',
-        'Auditor',
-        'Observações'
-      ];
-
-      const rows = auditsFiltrados.map((audit) => ([
-        audit.id_pt,
-        (audit.pt?.proprietario?.nome || audit.pt?.proprietario) || '',
-        audit.tipo || '',
-        audit.resultado || 'Em Avaliação',
-        audit.nivel_urgencia || 'N/A',
-        audit.data_inspecao ? new Date(audit.data_inspecao).toLocaleDateString('pt-PT') : '',
-        audit.pt?.subestacao?.nome || '',
-        audit.pt?.municipio || audit.pt?.subestacao?.municipio || '',
-        audit.tarefa?.titulo || '',
-        audit.auditor?.nome || '',
-        audit.observacoes || ''
-      ]));
-
-      const csv = [header, ...rows].map((line) => line.map(csvEscape).join(';')).join('\n');
-      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `relatorio-inspecoes-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    if (tarefas.length === 0) {
-      alert('Sem tarefas concluídas para exportar.');
-      return;
-    }
-
-    const header = [
-      'Auditor',
-      'Tarefa',
-      'Cliente',
-      'Data de Início',
-      'Data de Fim',
-      'Checklist Validado'
-    ];
-
-    const rows = tarefas.map((tarefa) => {
-      const totalChecklist = tarefa.checklist?.length || 0;
-      const checkedChecklist = tarefa.checklist?.filter((c) => c.checked).length || 0;
-      return [
-        tarefa.auditor?.nome || '',
-        tarefa.titulo || '',
-        tarefa.id_pt || '',
-        tarefa.data_inicio ? new Date(tarefa.data_inicio).toLocaleString('pt-PT') : '',
-        tarefa.data_fim ? new Date(tarefa.data_fim).toLocaleString('pt-PT') : '',
-        `${checkedChecklist}/${totalChecklist}`
-      ];
-    });
-
-    const csv = [header, ...rows].map((line) => line.map(csvEscape).join(';')).join('\n');
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `relatorio-tarefas-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadPDF = async (auditId) => {
-    try {
-      const response = await api.get(`/inspecoes/${auditId}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Relatorio_Inspecao_${auditId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Erro ao descarregar PDF:', err);
-      alert('Erro ao gerar o relatório PDF. Por favor, tente novamente.');
-    }
-  };
-
-  const handleExportPDF = () => {
-    window.print();
-  };
 
   const handleResetPreferencias = () => {
     setModoRelatorio('completo');
@@ -553,67 +439,8 @@ export default function PTAudits() {
 
   if (view === 'list') {
     return (
-      <div className={`max-w-full p-6 mx-auto space-y-8 animate-in fade-in duration-500 print-report ${modoRelatorio === 'executivo' ? 'executive-mode' : ''}`}>
-        <style>{`
-          @media print {
-            .print-hide { display: none !important; }
-            .print-only { display: block !important; }
-            .print-report { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
-            .print-compact { margin-bottom: 12px !important; }
-            .print-table-wrap { border: 1px solid #d1d5db !important; border-radius: 0 !important; box-shadow: none !important; }
-            .print-table-wrap table { font-size: 11px !important; }
-            .print-kpi { border: 1px solid #d1d5db !important; box-shadow: none !important; }
-            .print-footer {
-              position: fixed;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              border-top: 1px solid #d1d5db;
-              padding: 6px 12px;
-              font-size: 10px;
-              color: #4b5563;
-              display: flex !important;
-              justify-content: space-between;
-              align-items: center;
-              background: #fff;
-            }
-            .print-page::after {
-              content: "Página " counter(page);
-            }
-            .executive-mode .executive-hide {
-              display: none !important;
-            }
-            .executive-mode .print-table-wrap table th,
-            .executive-mode .print-table-wrap table td {
-              padding: 8px 10px !important;
-              font-size: 10px !important;
-            }
-            body { background: #fff !important; }
-          }
-          @media screen {
-            .print-only { display: none !important; }
-            .print-footer { display: none !important; }
-          }
-        `}</style>
-
-        <div className="print-only mb-4 border border-[#d1d5db] p-4">
-          <h1 className="text-lg font-black text-[#0f1c2c] uppercase">Relatório Técnico de Auditorias de Clientes</h1>
-          <div className="grid grid-cols-2 gap-2 mt-3 text-[11px]">
-            <p><strong>Emitido em:</strong> {emissaoRelatorio}</p>
-            <p><strong>Utilizador:</strong> {user?.nome || 'Operador'}</p>
-            <p><strong>Localidade:</strong> {localidadeFiltro || 'Todas'}</p>
-            <p><strong>Secção:</strong> {subView === 'inspecoes' ? 'Inspeções PT' : 'Tarefas Concluídas'}</p>
-            <p><strong>Modo:</strong> {modoRelatorio === 'executivo' ? 'Executivo (1 página)' : 'Completo'}</p>
-            {modoRelatorio === 'executivo' && <p><strong>Limite:</strong> {limiteExecutivo} linhas</p>}
-          </div>
-        </div>
-
-        <div className="print-footer">
-          <span>MBT Energia - Relatório Oficial de Auditorias</span>
-          <span className="print-page"></span>
-        </div>
-
-        <div className="flex justify-between items-center mb-6 print-compact">
+      <div className={`max-w-full p-6 mx-auto space-y-8 animate-in fade-in duration-500 ${modoRelatorio === 'executivo' ? 'executive-mode' : ''}`}>
+        <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4 items-center">
             <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Relatório de Atividades</h2>
             {localidadeFiltro && (
@@ -636,43 +463,8 @@ export default function PTAudits() {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 print-hide">            <button
-            onClick={() => setModoRelatorio((prev) => (prev === 'executivo' ? 'completo' : 'executivo'))}
-            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-          >  <LayoutGrid className="w-4 h-4" />
-            Rel.{modoRelatorio === 'executivo' ? 'Executivo' : 'Completo'}
-          </button>
-            <button
-              onClick={handleResetPreferencias}
-              className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-            >  <RefreshCw className="w-4 h-4" />
-              Repor
-            </button>
-            {modoRelatorio === 'executivo' && (
-              <select
-                value={limiteExecutivo}
-                onChange={(e) => setLimiteExecutivo(Number(e.target.value))}
-                className="bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest"
-              >
-                <option value={8}> 8</option>
-                <option value={12}> 12</option>
-                <option value={20}> 20</option>
-              </select>
-            )}
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-2 bg-[#38b000] border border-[#c4c5d7]/30 text-white px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#007200] transition-all"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              CSV
-            </button>
-            <button
-              onClick={handleExportPDF}
-              className="flex items-center gap-2 bg-[#d00000] text-white px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#9d0208] transition-all"
-            >
-              <FileText className="w-4 h-4" />
-              PDF
-            </button>
+          <div className="flex items-center gap-2">
+
 
             {user?.role === 'admin' && (
               <button
@@ -920,12 +712,7 @@ export default function PTAudits() {
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex gap-2 justify-center">
-                        <button
-                          onClick={() => setAuditTarefa(tarefa)}
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md"
-                        >
-                          Auditar Cliente
-                        </button>
+
                         {tarefa.data_fim && user?.role === 'admin' && (
                           <button
                             onClick={() => handleOpenFollowUp(tarefa)}
@@ -973,7 +760,7 @@ export default function PTAudits() {
   if (view === 'detail' && detailTarefa) {
     return (
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button onClick={() => setView('list')} className="p-3 bg-white border border-[#c4c5d7]/20 rounded-xl hover:bg-[#eff4ff] transition-all">
               <ArrowLeft className="w-5 h-5 text-[#444655]" />
@@ -982,14 +769,6 @@ export default function PTAudits() {
               <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Detalhes da Tarefa</h2>
               <p className="text-sm text-[#747686] font-medium opacity-60">Relatório técnico submetido para validação</p>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-            >
-              <Printer className="w-4 h-4" /> Imprimir
-            </button>
           </div>
         </div>
 
@@ -1619,45 +1398,45 @@ export default function PTAudits() {
                 </div>
               )}
 
-                  <div className="flex items-center gap-4 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
-                    <AlertCircle className="w-6 h-6 text-yellow-600" />
-                    <p className="text-xs font-bold text-yellow-800 uppercase tracking-tight leading-relaxed">
-                      Ao salvar, estes dados serão vinculados permanentemente ao histórico do PT. Verifique a precisão das informações técnicas.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-auto pt-10 flex justify-between border-t border-[#c4c5d7]/10">
-                {step > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setStep(s => s - 1)}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655]"
-                  >
-                    Voltar
-                  </button>
-                ) : <div></div>}
-
-                {step < 5 ? (
-                  <button
-                    type="button"
-                    onClick={() => setStep(s => s + 1)}
-                    disabled={!formData.id_pt && step === 1}
-                    className="flex items-center gap-2 px-10 py-3.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10 disabled:opacity-30"
-                  >
-                    Próximo
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="flex items-center gap-2 px-10 py-3.5 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest"
-                  >
-                    Salvar Auditoria
-                  </button>
-                )}
+              <div className="flex items-center gap-4 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
+                <AlertCircle className="w-6 h-6 text-yellow-600" />
+                <p className="text-xs font-bold text-yellow-800 uppercase tracking-tight leading-relaxed">
+                  Ao salvar, estes dados serão vinculados permanentemente ao histórico do PT. Verifique a precisão das informações técnicas.
+                </p>
               </div>
-            </form>
+            </div>
+          )}
+
+          <div className="mt-auto pt-10 flex justify-between border-t border-[#c4c5d7]/10">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={() => setStep(s => s - 1)}
+                className="flex items-center gap-2 px-8 py-3.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655]"
+              >
+                Voltar
+              </button>
+            ) : <div></div>}
+
+            {step < 5 ? (
+              <button
+                type="button"
+                onClick={() => setStep(s => s + 1)}
+                disabled={!formData.id_pt && step === 1}
+                className="flex items-center gap-2 px-10 py-3.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10 disabled:opacity-30"
+              >
+                Próximo
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-10 py-3.5 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest"
+              >
+                Salvar Auditoria
+              </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

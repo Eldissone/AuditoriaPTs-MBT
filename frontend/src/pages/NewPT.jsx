@@ -1026,7 +1026,6 @@ export default function NewPT() {
                       👉 Sem aterramento decente, as proteções perdem eficácia.
                     </p>
                   </div>
-                  </div>
                 </div>
               )}
 
@@ -1103,6 +1102,7 @@ export default function NewPT() {
                         </div>
                     </div>
                   </div>
+                </div>
                 </div>
               )}
 
