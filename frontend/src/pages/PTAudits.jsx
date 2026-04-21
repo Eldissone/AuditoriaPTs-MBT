@@ -428,7 +428,22 @@ export default function PTAudits() {
   const auditsParaExibicao = modoRelatorio === 'executivo' ? auditsFiltrados.slice(0, limiteExecutivo) : auditsFiltrados;
   const tarefasParaExibicao = modoRelatorio === 'executivo' ? tarefasFiltradas.slice(0, limiteExecutivo) : tarefasFiltradas;
 
-
+  const handleDownloadPDF = async (auditId) => {
+    try {
+      const response = await api.get(`/inspecoes/${auditId}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Relatorio_Inspecao_${auditId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao descarregar PDF:', err);
+      alert('Erro ao gerar o relatório PDF. Por favor, tente novamente.');
+    }
+  };
 
   const handleResetPreferencias = () => {
     setModoRelatorio('completo');
