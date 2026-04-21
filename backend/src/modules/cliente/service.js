@@ -172,6 +172,59 @@ class IdentificacaoService {
             return;
           }
 
+          // ── Lógica de Proprietário (Clientes) ────────────────────────────
+          const propNome = (item['Nome completo'] || item['Nome Proprietario'] || item.proprietario || item.parceiro_negocios || 'N/D').toString().trim();
+          const parceiroNegocios = String(item.parceiro_negocios || '');
+          const contaContrato = String(item['Conta de contrato'] || item.conta_contrato || '');
+          const categoriaTarifa = String(item.categoria_tarifa || '');
+          const txtCategoria = String(item.txt_categoria_tarifa || '');
+          const tipoCliente = String(item.tipo_cliente || '');
+          const montanteDividaRaw = parseFloat(item.montante_divida || 0) || 0;
+          const facturasAtrasoRaw = parseInt(item.num_facturas_atraso || 0, 10) || 0;
+
+          let propRecord = null;
+          if (contaContrato) {
+             propRecord = await prisma.proprietario.findFirst({ where: { conta_contrato: contaContrato } });
+          } else if (parceiroNegocios) {
+             propRecord = await prisma.proprietario.findFirst({ where: { parceiro_negocios: parceiroNegocios } });
+          }
+          
+          if (!propRecord && propNome && propNome !== 'N/D') {
+             propRecord = await prisma.proprietario.findFirst({ where: { nome: propNome } });
+          }
+
+          if (propRecord) {
+             const updatePropData = cleanPayload({
+                 conta_contrato: contaContrato || undefined,
+                 parceiro_negocios: parceiroNegocios || undefined,
+                 categoria_tarifa: categoriaTarifa || undefined,
+                 txt_categoria_tarifa: txtCategoria || undefined,
+                 tipo_cliente: tipoCliente || undefined,
+                 montante_divida: montanteDividaRaw !== 0 ? montanteDividaRaw : undefined,
+                 num_facturas_atraso: facturasAtrasoRaw !== 0 ? facturasAtrasoRaw : undefined,
+             });
+             
+             if (Object.keys(updatePropData).length > 0) {
+                 propRecord = await prisma.proprietario.update({
+                   where: { id: propRecord.id },
+                   data: updatePropData
+                 });
+             }
+          } else {
+             propRecord = await prisma.proprietario.create({
+               data: {
+                 nome: propNome,
+                 conta_contrato: contaContrato || null,
+                 parceiro_negocios: parceiroNegocios || null,
+                 categoria_tarifa: categoriaTarifa || null,
+                 txt_categoria_tarifa: txtCategoria || null,
+                 tipo_cliente: tipoCliente || null,
+                 montante_divida: montanteDividaRaw,
+                 num_facturas_atraso: facturasAtrasoRaw,
+               }
+             });
+          }
+
           // ── Determinação da Subestação com Hierarquia de Inteligência ────
           const clientGpsStr = item['GEO REFERENCIA'] || item.gps;
           const clientLocalidade = (item['Distrito/Comuna'] || item.distrito_comuna || item['Bairro'] || item.bairro || '').trim();
@@ -209,7 +262,7 @@ class IdentificacaoService {
           // Dados mapeados para criação/atualização
           const dataPayload = {
             id_subestacao: subestacaoId,
-            proprietario: (item['Nome completo'] || item['Nome Proprietario'] || item.proprietario || 'N/D'),
+            id_proprietario: propRecord.id,
             localizacao: (clientLocalidade || clientMunicipioName || 'N/A'),
             municipio: clientMunicipioName || null,
             bairro: item['Bairro'] || item.bairro ? String(item['Bairro'] || item.bairro) : null,
