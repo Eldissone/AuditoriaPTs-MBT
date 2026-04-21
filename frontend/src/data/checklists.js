@@ -1,45 +1,47 @@
 // ─── Checklist PTA — 32 itens ────────────────────────────────────────────────
 // Prioridade: A = Urgente (Segurança), B = Alta, C = Normal
 export const CHECKLIST_PTA = [
-  // 1. SEGURANÇA
-  { id: 'pta_01', secao: 'Segurança', prio: 'A', label: 'Vedação/muro em bom estado e sem danos' },
-  { id: 'pta_02', secao: 'Segurança', prio: 'A', label: 'Porta de acesso com fecho e cadeado funcional' },
-  { id: 'pta_03', secao: 'Segurança', prio: 'A', label: 'Sinalização de perigo visível e legível' },
-  { id: 'pta_04', secao: 'Segurança', prio: 'A', label: 'Distâncias de segurança a vegetação respeitadas (>3m)' },
-  { id: 'pta_05', secao: 'Segurança', prio: 'B', label: 'Extintor de incêndio presente e dentro da validade' },
-  { id: 'pta_06', secao: 'Segurança', prio: 'B', label: 'Ausência de objectos estranhos dentro da vedação' },
-  // 2. TRANSFORMADOR
-  { id: 'pta_07', secao: 'Transformador', prio: 'A', label: 'Transformador sem fugas de óleo visíveis' },
-  { id: 'pta_08', secao: 'Transformador', prio: 'A', label: 'Nível de óleo dentro dos limites' },
-  { id: 'pta_09', secao: 'Transformador', prio: 'A', label: 'Temperatura de operação normal (sem sobreaquecimento)' },
-  { id: 'pta_10', secao: 'Transformador', prio: 'B', label: 'Estado das buchas (sem fissuração ou contaminação)' },
-  { id: 'pta_11', secao: 'Transformador', prio: 'B', label: 'Placa de características legível e de acordo com cadastro' },
-  { id: 'pta_12', secao: 'Transformador', prio: 'C', label: 'Estado da pintura/carrossseria do transformador' },
-  // 3. MEDIA TENSÃO
-  { id: 'pta_13', secao: 'Média Tensão', prio: 'A', label: 'Isoladores de MT sem danos ou contaminações' },
-  { id: 'pta_14', secao: 'Média Tensão', prio: 'A', label: 'Para-raios de MT operacionais' },
-  { id: 'pta_15', secao: 'Média Tensão', prio: 'A', label: 'Fusíveis de MT presentes e corretos' },
-  { id: 'pta_16', secao: 'Média Tensão', prio: 'B', label: 'Cabos e ligações de MT sem danos' },
-  { id: 'pta_17', secao: 'Média Tensão', prio: 'B', label: 'Chave seccionadora operacional' },
-  // 4. BAIXA TENSÃO
-  { id: 'pta_18', secao: 'Baixa Tensão', prio: 'A', label: 'Caixa de BT com tampa e fechada' },
-  { id: 'pta_19', secao: 'Baixa Tensão', prio: 'A', label: 'Disjuntores gerais funcionais' },
-  { id: 'pta_20', secao: 'Baixa Tensão', prio: 'B', label: 'Barramento de BT sem oxidação ou danos' },
-  { id: 'pta_21', secao: 'Baixa Tensão', prio: 'B', label: 'Fusíveis de BT corretos e operacionais' },
-  { id: 'pta_22', secao: 'Baixa Tensão', prio: 'C', label: 'Identificação dos circuitos de BT' },
-  // 5. TERRA
-  { id: 'pta_23', secao: 'Terra', prio: 'A', label: 'Eléctrodo de terra visível e em bom estado' },
-  { id: 'pta_24', secao: 'Terra', prio: 'A', label: 'Condutores de terra sem corrosão ou danos' },
-  { id: 'pta_25', secao: 'Terra', prio: 'A', label: 'Terra de Protecção (TP) < 20Ω (registar medição)' },
-  { id: 'pta_26', secao: 'Terra', prio: 'A', label: 'Terra de Serviço (TS) < 20Ω (registar medição)' },
-  // 6. CONTADOR / MEDIÇÃO
-  { id: 'pta_27', secao: 'Contador', prio: 'B', label: 'Contador em funcionamento e sem danos' },
-  { id: 'pta_28', secao: 'Contador', prio: 'B', label: 'Lacres do contador intactos' },
-  { id: 'pta_29', secao: 'Contador', prio: 'C', label: 'Leitura do contador registada' },
-  // 7. INFRA
-  { id: 'pta_30', secao: 'Infraestrutura', prio: 'B', label: 'Postes em bom estado (sem inclinação > 15°)' },
-  { id: 'pta_31', secao: 'Infraestrutura', prio: 'B', label: 'Travessas e isoladores dos postes operacionais' },
-  { id: 'pta_32', secao: 'Infraestrutura', prio: 'C', label: 'Identificação do PT visível (número)' },
+  // TRAVESSA
+  { id: 'pta_01', secao: 'Travessa', prio: 'B', label: '1 Estado geral' },
+  // APOIO
+  { id: 'pta_02', secao: 'Apoio', prio: 'B', label: '2 Estado geral' },
+  { id: 'pta_03', secao: 'Apoio', prio: 'C', label: '3 Acessos' },
+  // PLATAFORMA
+  { id: 'pta_04', secao: 'Plataforma', prio: 'B', label: '4 Do seccionador – Estado geral' },
+  { id: 'pta_05', secao: 'Plataforma', prio: 'B', label: '5 Do quadro - Estado geral' },
+  { id: 'pta_06', secao: 'Plataforma', prio: 'A', label: '6 Ligação a terra de protecção' },
+  // SECCIONADOR
+  { id: 'pta_07', secao: 'Seccionador', prio: 'A', label: '7 Estado geral (Isoladores, facas e combinado)' },
+  { id: 'pta_08', secao: 'Seccionador', prio: 'C', label: '8 Numeração do órgão de corte' },
+  { id: 'pta_09', secao: 'Seccionador', prio: 'A', label: '9 Comando ligado a terra' },
+  // BARRAMENTO
+  { id: 'pta_10', secao: 'Barramento', prio: 'B', label: '10 Estado geral' },
+  // TRANSFORMADOR
+  { id: 'pta_11', secao: 'Transformador', prio: 'B', label: '11 Existência de focos de corrosão' },
+  { id: 'pta_12', secao: 'Transformador', prio: 'B', label: '12 Isoladores – Primário e Secundário' },
+  { id: 'pta_13', secao: 'Transformador', prio: 'C', label: '13 Chapa de característica visível' },
+  { id: 'pta_14', secao: 'Transformador', prio: 'A', label: '14 Nível de óleo' },
+  { id: 'pta_15', secao: 'Transformador', prio: 'A', label: '15 Fugas de óleo e estado das juntas de vedação' },
+  { id: 'pta_16', secao: 'Transformador', prio: 'B', label: '16 Estado da sílica gel b)' },
+  { id: 'pta_17', secao: 'Transformador', prio: 'C', label: '17 Suporte' },
+  // DESCARREGADORES
+  { id: 'pta_18', secao: 'Descarregadores', prio: 'A', label: '18 Estado geral e ligação directa à terra' },
+  // TUBOS DE PROTECÇÃO
+  { id: 'pta_19', secao: 'Tubos de Protecção', prio: 'B', label: '19 Estado geral e fixação' },
+  // QUADRO GERAL BT
+  { id: 'pta_20', secao: 'Quadro Geral BT', prio: 'B', label: '20 Invólucro – Estado geral, limpeza e pintura' },
+  { id: 'pta_21', secao: 'Quadro Geral BT', prio: 'C', label: '21 Placa de identificação e de “Perigo de Morte”' },
+  { id: 'pta_22', secao: 'Quadro Geral BT', prio: 'B', label: '22 Cadeado/Chave' },
+  { id: 'pta_23', secao: 'Quadro Geral BT', prio: 'A', label: '23 Interruptor geral/Disjuntor' },
+  { id: 'pta_24', secao: 'Quadro Geral BT', prio: 'B', label: '24 Indicação do sentido de rotação de fases' },
+  { id: 'pta_25', secao: 'Quadro Geral BT', prio: 'C', label: '25 Indicação de saídas BT' },
+  { id: 'pta_26', secao: 'Quadro Geral BT', prio: 'B', label: '26 Bases fusíveis' },
+  { id: 'pta_27', secao: 'Quadro Geral BT', prio: 'B', label: '27 Calibre de fusíveis conforme “Ficha de fusíveis” afixada' },
+  { id: 'pta_28', secao: 'Quadro Geral BT', prio: 'A', label: '28 Existência de pontos quentes barramentos/Ligações' },
+  { id: 'pta_29', secao: 'Quadro Geral BT', prio: 'A', label: '29 Mapa de registo de terra (TP: TS:)' },
+  { id: 'pta_30', secao: 'Quadro Geral BT', prio: 'C', label: '30 Croqui da localização de circuitos de terra' },
+  { id: 'pta_31', secao: 'Quadro Geral BT', prio: 'B', label: '31 Bainhas de cabos BT isolados/desligados' },
+  { id: 'pta_32', secao: 'Quadro Geral BT', prio: 'C', label: '32 Mapa de primeiros socorros' },
 ];
 
 // ─── Checklist PTC — 37 itens ────────────────────────────────────────────────
