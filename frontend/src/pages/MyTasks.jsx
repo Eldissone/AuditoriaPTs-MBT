@@ -112,7 +112,7 @@ export default function MyTasks() {
       )}
       {tarefa.pt?.subestacao?.proprietario && (
         <p className="text-[10px] font-black uppercase text-[#444655] mb-1">
-          {tarefa.pt.subestacao.proprietario}
+          {tarefa.pt.subestacao.proprietario?.nome || tarefa.pt.subestacao.proprietario}
         </p>
       )}
       {tarefa.pt?.subestacao?.municipio && (
@@ -367,7 +367,11 @@ export default function MyTasks() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#747686]">PT / Subestação</p>
                 <p className="text-sm font-black text-[#0f1c2c]">{detailTarefa.id_pt || 'Sem PT associada'}</p>
                 {detailTarefa.pt?.subestacao?.nome && <p className="text-xs font-bold text-[#444655]">Subestação: {detailTarefa.pt.subestacao.nome}</p>}
-                {detailTarefa.pt?.subestacao?.proprietario && <p className="text-xs font-bold text-[#444655]">Proprietário: {detailTarefa.pt.subestacao.proprietario}</p>}
+                {detailTarefa.pt?.subestacao?.proprietario && (
+                  <p className="text-xs font-bold text-[#444655]">
+                    Proprietário: {detailTarefa.pt.subestacao.proprietario?.nome || detailTarefa.pt.subestacao.proprietario}
+                  </p>
+                )}
                 {detailTarefa.pt?.subestacao?.municipio && <p className="text-xs font-bold text-[#444655]">Localidade: {detailTarefa.pt.subestacao.municipio}</p>}
               </div>
               {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 && (

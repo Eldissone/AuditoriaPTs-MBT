@@ -143,7 +143,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const [checklistMap, setChecklistMap] = useState(initialProgress?.checklistMap || Object.fromEntries(checklistBase.map(i => [i.id, null])));
   const [medicoes, setMedicoes] = useState(initialProgress?.medicoes || { terra_protecao: '', terra_servico: '', UA: '', UB: '', UC: '', UAB: '', UBC: '', UCA: '' });
   const [dadosCliente, setDadosCliente] = useState(initialProgress?.dadosCliente || {
-    razao_social: pt?.proprietario || '',
+    razao_social: pt?.proprietario?.nome || pt?.proprietario || '',
     resp_financeiro: pt?.responsavel_financeiro || '',
     contacto_fin: pt?.contacto_resp_financeiro || '',
     resp_tecnico: pt?.responsavel_tecnico_cliente || '',
@@ -365,7 +365,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                     { label: 'ID PT', val: tarefa.id_pt },
                     { label: 'Tipo', val: pt?.tipo_instalacao },
                     { label: 'Subestação', val: sub?.nome },
-                    { label: 'Proprietário', val: pt?.proprietario },
+                    { label: 'Proprietário', val: pt?.proprietario?.nome || pt?.proprietario },
                     { label: 'Município', val: pt?.municipio || sub?.municipio },
                     { label: 'Potência', val: pt?.potencia_kva ? `${pt.potencia_kva} kVA` : null },
                   ].map(({ label, val }) => val && (

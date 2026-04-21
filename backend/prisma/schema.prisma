@@ -93,10 +93,12 @@ model PostoTransformacao {
   id_proprietario     Int?
   proprietario        Proprietario? @relation(fields: [id_proprietario], references: [id])
   
+  // ── Secção 0 — Tipo de PT ──────────────────────────────────────────
   localizacao         String      @db.Text
   gps                 String?
   latitude            Float?
   longitude           Float?
+  altitude            Float?
   morada              String?     @db.Text
   municipio           String?     @db.VarChar(150)
   provincia           String?     @db.VarChar(150)
@@ -108,6 +110,42 @@ model PostoTransformacao {
   num_transformadores Int         @default(1) @db.SmallInt
   regime_exploracao   String?     @db.VarChar(100)
   estado_operacional  String      @default("Operacional") @db.VarChar(50)
+
+  // ── Secção 1 — Identificação Geral (PDF) ─────────────────────────
+  designacao              String?     @db.VarChar(200)
+  id_concessionaria       String?     @db.VarChar(50) // Código de identificação único
+  concessao_operador      String?     @db.VarChar(200)
+  concelho                String?     @db.VarChar(150)
+  freguesia               String?     @db.VarChar(150)
+  data_levantamento       DateTime?   @db.Date
+  tecnico_levantamento    String?     @db.VarChar(200)
+  num_habilitacao         String?     @db.VarChar(50)
+
+  // ── Secção 3 — Suporte/Poste (PTC/AS/AI) ─────────────────────────
+  tipo_poste              String?     @db.VarChar(50)
+  ref_poste               String?     @db.VarChar(50)
+  altura_poste            Float?
+  esforco_poste           Float?
+  esforco_poste_dan       Float?      // Esforço nominal em daN
+  material_poste          String?     @db.VarChar(50) // Betão, Metálico, Madeira
+  ano_poste               Int?        @db.SmallInt
+  estado_poste            String?     @db.VarChar(50)
+  equipamento_poste       Json?
+
+  // ── Secção 4 — Cabine/Invólucro (Cabinados) ──────────────────────
+  tipo_cabine             String?     @db.VarChar(50)
+  dim_comprimento         Float?
+  dim_largura             Float?
+
+  // ── Secção Validação e Assinaturas ──────────────────────────────
+  supervisor_obra           String?     @db.VarChar(200)
+  tecnico_assinatura_url    String?     @db.Text
+  supervisor_assinatura_url String?     @db.Text
+  data_validacao            DateTime?   @db.Date
+  validacao_status          String      @default("Pendente") @db.VarChar(20)
+
+  // Observações / Anomalias (Secção 8)
+  observacoes_gerais      String?     @db.Text
 
   // Dados de instalação legado compatíveis
   instalacao          String?     @db.VarChar(100)
@@ -224,6 +262,15 @@ model Transformador {
   resistencia_isolamento Float?
   ttr                    Float?
   dga                    String?            @db.Text
+  // Campos do Formulário PDF (Secção 2)
+  fabricante             String?            @db.VarChar(150)
+  numero_serie           String?            @db.VarChar(100)
+  ano_fabrico            Int?               @db.SmallInt
+  nivel_isolamento       Float?
+  ucc                    Float?
+  frequencia             Float?             @default(50)
+  grupo_ligacao          String?            @db.VarChar(20)
+  tipo_arrefecimento     String?            @db.VarChar(50)
   observacoes            String?            @db.Text
   criado_em              DateTime           @default(now())
   atualizado_em          DateTime           @updatedAt
@@ -244,6 +291,8 @@ model MediaTensao {
   reles_protecao        String?            @db.VarChar(150)
   coordenacao_protecoes Boolean            @default(false)
   aterramento_mt        Boolean            @default(false)
+  // Tabela de Celas (Secção 5 PDF) — JSON array [{num, funcao, tipo_fabricante, corrente_nominal, estado, obs}]
+  celas                 Json?
   observacoes           String?            @db.Text
   criado_em             DateTime           @default(now())
   atualizado_em         DateTime           @updatedAt
@@ -252,42 +301,62 @@ model MediaTensao {
 }
 
 model BaixaTensao {
-  id                   Int                @id @default(autoincrement())
-  id_pt                String             @unique @db.VarChar(50)
-  pt                   PostoTransformacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
-  id_inspecao          Int?
-  inspecao             Inspecao?          @relation(fields: [id_inspecao], references: [id])
-  estado_qgbt          String?            @db.VarChar(100)
-  barramentos          String?            @db.VarChar(100)
-  disjuntores          String?            @db.VarChar(100)
-  balanceamento_cargas Boolean            @default(false)
-  corrente_fase_a      Float?
-  corrente_fase_b      Float?
-  corrente_fase_c      Float?
-  tensao               Float?
-  fator_potencia       Float?
-  observacoes          String?            @db.Text
-  criado_em            DateTime           @default(now())
-  atualizado_em        DateTime           @updatedAt
+  id                       Int                @id @default(autoincrement())
+  id_pt                    String             @unique @db.VarChar(50)
+  pt                       PostoTransformacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  id_inspecao              Int?
+  inspecao                 Inspecao?          @relation(fields: [id_inspecao], references: [id])
+  estado_qgbt              String?            @db.VarChar(100)
+  barramentos              String?            @db.VarChar(100)
+  disjuntores              String?            @db.VarChar(100)
+  balanceamento_cargas     Boolean            @default(false)
+  corrente_fase_a          Float?
+  corrente_fase_b          Float?
+  corrente_fase_c          Float?
+  tensao                   Float?
+  fator_potencia           Float?
+  // Campos QGBT do Formulário PDF (Secção 6)
+  fabricante_qgbt          String?            @db.VarChar(150)
+  corrente_nominal_geral   Float?
+  corrente_nominal_saida   Float?
+  num_saidas_bt            Int?               @db.SmallInt
+  transformador_corrente   String?            @db.VarChar(100)
+  tipo_ligacao_neutro      String?            @db.VarChar(50)
+  disjuntor_geral          Boolean            @default(false)
+  fusiveis_gerais          Boolean            @default(false)
+  contagem_bt              Boolean            @default(false)
+  telecontagem             Boolean            @default(false)
+  observacoes              String?            @db.Text
+  criado_em                DateTime           @default(now())
+  atualizado_em            DateTime           @updatedAt
 
   @@map("baixa_tensao")
 }
 
 model Seguranca {
-  id                   Int                @id @default(autoincrement())
-  id_pt                String             @unique @db.VarChar(50)
-  pt                   PostoTransformacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
-  id_inspecao          Int?
-  inspecao             Inspecao?          @relation(fields: [id_inspecao], references: [id])
-  resistencia_terra    Float?
-  protecao_raios       Boolean            @default(false)
-  spd                  Boolean            @default(false)
-  sinalizacao          Boolean            @default(false)
-  combate_incendio     Boolean            @default(false)
-  distancias_seguranca Boolean            @default(false)
-  observacoes          String?            @db.Text
-  criado_em            DateTime           @default(now())
-  atualizado_em        DateTime           @updatedAt
+  id                       Int                @id @default(autoincrement())
+  id_pt                    String             @unique @db.VarChar(50)
+  pt                       PostoTransformacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  id_inspecao              Int?
+  inspecao                 Inspecao?          @relation(fields: [id_inspecao], references: [id])
+  resistencia_terra        Float?
+  protecao_raios           Boolean            @default(false)
+  spd                      Boolean            @default(false)
+  sinalizacao              Boolean            @default(false)
+  combate_incendio         Boolean            @default(false)
+  distancias_seguranca     Boolean            @default(false)
+  // Campos Proteção e Terra (Secção 7 PDF)
+  data_ultima_medicao      DateTime?          @db.Date
+  rele_protecao_marca      String?            @db.VarChar(150)
+  tipo_protecao_mt         String?            @db.VarChar(100)
+  fusiveis_mt_calibre      String?            @db.VarChar(50)
+  protecao_sobrecorrente   Boolean            @default(false)
+  protecao_neutro          Boolean            @default(false)
+  protecao_max_corrente    Boolean            @default(false)
+  protecao_diferencial     Boolean            @default(false)
+  observacoes              String?            @db.Text
+  criado_em                DateTime           @default(now())
+  atualizado_em            DateTime           @updatedAt
 
   @@map("seguranca")
 }

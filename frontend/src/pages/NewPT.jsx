@@ -35,43 +35,47 @@ export default function NewPT() {
   const [formData, setFormData] = useState({
     identificacao: {
       id_pt: '',
+      id_concessionaria: '', // Código único
+      designacao: '', // Nome do PT
+      concessao_operador: '', // Quem gere
       id_proprietario: '',
-      localizacao: '',
-      gps: '',
-      tipo_instalacao: '',
-      nivel_tensao: '',
+      morada: '', // Localização / Morada completa
+      freguesia: '',
+      concelho: '',
+      provincia: 'Luanda', // Distrito
+      latitude: '',
+      longitude: '',
+      altitude: '',
+      tipo_instalacao: '', // Secção 0
       potencia_kva: '',
-      ano_instalacao: '',
-      fabricante: '',
-      num_transformador: '',
-      regime_exploracao: '',
-      imagem_url: '',
-      id_subestacao: Number(subestacaoId),
-      municipio: '',
-      provincia: 'Luanda', // Default as per project scope
-      distrito_comuna: '',
-      bairro: '',
-      conta_contrato: '',
-      instalacao: '',
-      equipamento: '',
-      parceiro_negocios: '',
-      categoria_tarifa: '',
-      txt_categoria_tarifa: '',
-      proprietario: '', // Keep for legacy/temp display if needed
-      concessionaria: '',
-      zona: '',
-      operador: '',
-      contrato: '',
-      num_serie: '',
-      divisao: '',
-      denominacao_divisao: '',
-      unidade_leitura: '',
-      num_localidade: '',
-      bairro_num: '',
-      rua: '',
-      tipo_cliente: '',
-      montante_divida: 0,
-      num_facturas_atraso: 0,
+      data_levantamento: new Date().toISOString().split('T')[0],
+      tecnico_levantamento: '',
+      num_habilitacao: '',
+      // Suporte/Poste (Secção 3)
+      tipo_poste: '',
+      ref_poste: '',
+      altura_poste: '',
+      esforco_poste_dan: '',
+      ano_poste: '',
+      material_poste: '',
+      estado_poste: '',
+      equipamento_poste: {
+        interruptor: false,
+        seccionador: false,
+        para_raios: false,
+        amarracao: false
+      },
+      // Cabine (Secção 4)
+      tipo_cabine: '',
+      dim_comprimento: '',
+      dim_largura: '',
+      // Validação
+      supervisor_obra: '',
+      data_validacao: '',
+      validacao_status: 'Pendente',
+      tecnico_assinatura_url: '',
+      supervisor_assinatura_url: '',
+      observacoes_gerais: '' // Secção 8
     },
     conformidade: {
       licenciamento: false,
@@ -84,27 +88,36 @@ export default function NewPT() {
       termo_responsabilidade: false
     },
     transformador: {
-      fabricante: '',
+      potencia_kva: '',
+      tensao_primaria: '30000', // Tensão AT (kV)
+      tensao_secundaria: '400', // Tensão BT (V)
+      nivel_isolamento: '',
+      ucc: '',
+      frequencia: '50',
       numero_serie: '',
+      fabricante: '',
       ano_fabrico: '',
-      potencia_nominal: '',
-      tensao_primaria: '',
-      tensao_secundaria: '',
-      grupo_vectorial: '',
-      tipo_oleo: 'Mineral',
-      peso_total: '',
-      nivel_oleo: '100%',
-      temperatura_topo: 40,
-      fugas: false,
-      estado_buchas: 'Bom'
+      grupo_ligacao: '',
+      tipo_arrefecimento: '', // ONAN, Hermético, AN, AF
+      tipo_isolamento: 'Óleo Mineral',
+      observacoes: ''
     },
     seguranca: {
       resistencia_terra: '',
+      data_ultima_medicao: '',
       protecao_raios: false,
       spd: false,
       sinalizacao: false,
       combate_incendio: false,
-      distancias_seguranca: false
+      distancias_seguranca: false,
+      rele_protecao_marca: '',
+      tipo_protecao_mt: '',
+      fusiveis_mt_calibre: '',
+      protecao_sobrecorrente: false,
+      protecao_neutro: false,
+      protecao_max_corrente: false,
+      protecao_diferencial: false,
+      observacoes: ''
     },
     manutencao: {
       ultima_limpeza: '',
@@ -112,49 +125,57 @@ export default function NewPT() {
       inspecao_termografica: ''
     },
     media_tensao: {
-      tipo_celas: '',
-      estado_disjuntores: '',
-      estado_seccionadores: '',
-      reles_protecao: '',
-      coordenacao_protecoes: false,
-      aterramento_mt: false
+      celas: [], // Secção 5: [{num, funcao, tipo_fabricante, in_a, estado, obs}]
+      observacoes: ''
     },
     baixa_tensao: {
-      estado_qgbt: '',
-      barramentos: '',
-      disjuntores: '',
-      balanceamento_cargas: false,
-      corrente_fase_a: 0,
-      corrente_fase_b: 0,
-      corrente_fase_c: 0,
+      fabricante_qgbt: '',
+      corrente_nominal_geral: '',
+      corrente_nominal_saida: '',
+      num_saidas_bt: '',
+      transformador_corrente: '',
+      tipo_ligacao_neutro: '',
+      disjuntor_geral: false,
+      fusiveis_gerais: false,
+      contagem_bt: false,
+      telecontagem: false,
       tensao: 400,
-      fator_potencia: 0.95
+      balanceamento_cargas: false,
+      observacoes: ''
     },
     infraestrutura: {
-      estado_cabine: 'Bom',
-      ventilacao: true,
-      drenagem: true,
-      iluminacao: true,
-      controlo_acesso: true
-    },
-    monitorizacao: {
-      scada: false,
-      comunicacao: '',
-      estado_modem: '',
-      protocolo: '',
-      sensores_temperatura: false,
-      sensores_corrente: false,
-      sensores_vibracao: false
-    },
-    risco: {
-      nivel_risco_geral: '',
-      sobrecarga: false,
-      desequilibrio_fases: false,
-      falhas_isolamento: false,
-      redundancia: false,
-      recomendacoes: ''
+      tipo_cabine: '',
+      dim_comprimento: '',
+      dim_largura: ''
     }
   });
+
+  const initializeMTCells = () => {
+    const tipo = formData.identificacao.tipo_instalacao || '';
+    let template = [];
+    
+    if (tipo.includes('PTC') || tipo.includes('AS') || tipo.includes('AI')) {
+      // Template sem celas (Poste/Coluna)
+      template = [
+        { num: '1', funcao: 'Entrada / Saída', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '2', funcao: 'Proteção MT', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '3', funcao: 'Transformador', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' }
+      ];
+    } else {
+      // Template com celas (Cabinado)
+      template = [
+        { num: '1', funcao: 'Entrada', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '2', funcao: 'Saída', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '3', funcao: 'Corte Geral e Contagem', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '4', funcao: 'Proteção', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' },
+        { num: '5', funcao: 'Transformadores', tipo_fabricante: '', corrente_nominal: '', estado: 'Operacional', obs: '' }
+      ];
+    }
+    setFormData(prev => ({
+      ...prev,
+      media_tensao: { ...prev.media_tensao, celas: template }
+    }));
+  };
 
   useEffect(() => {
     fetchProprietarios();
@@ -198,18 +219,75 @@ export default function NewPT() {
               ...prev.identificacao,
               ...sPt,
               id_proprietario: sPt.id_proprietario || '',
-              id_pt: sPt.id_pt || '', // Ensure id_pt is handled correctly if renamed in response
-              ano_instalacao: sPt.ano_instalacao ? new Date(`${sPt.ano_instalacao}-01-01`).toISOString().split('T')[0] : ''
+              id_pt: sPt.id_pt || '',
+              id_concessionaria: sPt.id_concessionaria || sPt.id_pt || '',
+              tipo_instalacao: (() => {
+                let type = sPt.tipo_instalacao || '';
+                // Normalização para garantir que os botões do novo UI fiquem selecionados
+                if (type.includes('PTA') || type.toLowerCase().includes('aéreo')) {
+                  if (!type.includes('PTA (Aéreo)')) type = 'PTA (Aéreo)';
+                } else if (type.toLowerCase().includes('cabinado') || type.includes('PTC')) {
+                   if (!type.includes('PTC COM Contagem') && !type.includes('PTC SEM Contagem')) {
+                      type = type.includes('COM Contagem') ? 'PTC COM Contagem' : 'PTC SEM Contagem';
+                   }
+                }
+                
+                // Garantir categoria de potência se faltar
+                if (!type.includes('AI') && !type.includes('AS')) {
+                  type += (sPt.potencia_kva > 160) ? ' | AI (>160 kVA)' : ' | AS (≤160 kVA)';
+                } else {
+                  if (type.includes('AI') && !type.includes('AI (>160 kVA)')) type = type.replace('AI', 'AI (>160 kVA)');
+                  if (type.includes('AS') && !type.includes('AS (≤160 kVA)')) type = type.replace('AS', 'AS (≤160 kVA)');
+                }
+                
+                return type;
+              })(),
+              ano_instalacao: sPt.ano_instalacao || '',
+              data_levantamento: sPt.data_levantamento ? new Date(sPt.data_levantamento).toISOString().split('T')[0] : '',
+              latitude: sPt.latitude || '',
+              longitude: sPt.longitude || '',
+              equipamento_poste: sPt.equipamento_poste || prev.identificacao.equipamento_poste
             },
-            conformidade: { ...prev.conformidade, ...(sPt.conformidade || {}) },
-            transformador: { ...prev.transformador, ...(sPt.transformadores?.[0] || {}) },
-            seguranca: { ...prev.seguranca, ...(sPt.seguranca || {}) },
-            manutencao: { ...prev.manutencao, ...(sPt.manutencao || {}) },
-            media_tensao: { ...prev.media_tensao, ...(sPt.media_tensao || {}) },
-            baixa_tensao: { ...prev.baixa_tensao, ...(sPt.baixa_tensao || {}) },
-            infraestrutura: { ...prev.infraestrutura, ...(sPt.infraestrutura || {}) },
-            monitorizacao: { ...prev.monitorizacao, ...(sPt.monitorizacao || {}) },
-            risco: { ...prev.risco, ...(sPt.riscos?.[0] || {}) }
+            conformidade: { 
+              ...prev.conformidade, 
+              ...(sPt.conformidade || {}) 
+            },
+            transformador: { 
+              ...prev.transformador, 
+              ...(sPt.transformadores?.[0] || {}),
+              tipo_isolamento: sPt.transformadores?.[0]?.tipo_isolamento || 'Óleo Mineral'
+            },
+            media_tensao: { 
+              ...prev.media_tensao, 
+              ...(sPt.media_tensao || {}),
+              celas: sPt.media_tensao?.celas || []
+            },
+            baixa_tensao: { 
+              ...prev.baixa_tensao, 
+              ...(sPt.baixa_tensao || {}) 
+            },
+            seguranca: { 
+              ...prev.seguranca, 
+              ...(sPt.seguranca || {}),
+              data_ultima_medicao: sPt.seguranca?.data_ultima_medicao ? new Date(sPt.seguranca.data_ultima_medicao).toISOString().split('T')[0] : ''
+            },
+            infraestrutura: { 
+              ...prev.infraestrutura, 
+              ...(sPt.infraestrutura || {}) 
+            },
+            manutencao: { 
+              ...prev.manutencao, 
+              ...(sPt.manutencao || {}),
+              ultima_limpeza: sPt.manutencao?.ultima_limpeza ? new Date(sPt.manutencao.ultima_limpeza).toISOString().split('T')[0] : ''
+            },
+            monitorizacao: { 
+              ...prev.monitorizacao, 
+              ...(sPt.monitorizacao || {}) 
+            },
+            risco: { 
+              ...prev.risco, 
+              ...(sPt.riscos?.[0] || {}) 
+            }
           }));
         } catch (error) {
           alert('Erro ao carregar dados do PT.');
@@ -223,31 +301,46 @@ export default function NewPT() {
   }, [id, isEdit, navigate]);
 
   const tabs = [
-    { id: 1, name: 'Identificação', icon: Info },
-    { id: 2, name: 'Conformidade', icon: ClipboardCheck },
-    { id: 3, name: 'Transformador', icon: Settings },
-    { id: 4, name: 'Média Tensão', icon: Zap },
-    { id: 5, name: 'Baixa Tensão', icon: Database },
-    { id: 6, name: 'Segurança', icon: ShieldCheck },
-    { id: 7, name: 'Infraestrutura', icon: HardDrive },
-    { id: 8, name: 'Monitorização', icon: Activity },
-    { id: 9, name: 'Manutenção', icon: History },
-    { id: 10, name: 'Risco', icon: AlertTriangle }
+    { id: 0, name: '0. Tipo de PT', icon: Activity },
+    { id: 1, name: '1. Identificação', icon: Info },
+    { id: 2, name: '2. Transformador', icon: Settings },
+    { id: 3, name: '3. Suporte/Poste', icon: HardDrive },
+    { id: 4, name: '4. Cabine', icon: Database },
+    { id: 5, name: '5. Celas MT', icon: Zap },
+    { id: 6, name: '6. QGBT', icon: Zap },
+    { id: 7, name: '7. Proteção/Terra', icon: ShieldCheck },
+    { id: 8, name: '8. Anomalias', icon: AlertTriangle },
+    { id: 9, name: '9. Validação', icon: ClipboardCheck },
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
+
+      const payload = {
+        ...formData.identificacao,
+        id_subestacao: Number(subestacaoId),
+        transformadores: [formData.transformador],
+        media_tensao: formData.media_tensao,
+        baixa_tensao: formData.baixa_tensao,
+        seguranca: formData.seguranca,
+        infraestrutura: formData.infraestrutura
+      };
+
       if (isEdit) {
-        await api.put(`/clientes/${id}`, formData);
-        alert('Cliente atualizado com sucesso!');
+        await api.put(`/clientes/${id}`, payload);
+        alert('PT actualizado com sucesso!');
       } else {
-        await api.post('/clientes', formData);
-        alert('Cliente registado com sucesso!');
+        await api.post('/clientes', payload);
+        alert('PT criado com sucesso!');
       }
       navigate(`/subestacoes/${subestacaoId}/auditoria`);
-    } catch (err) {
-      alert('Erro ao guardar PT');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao guardar dados do PT.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -267,7 +360,7 @@ export default function NewPT() {
           </button>
           <div>
             <h2 className="text-2xl font-black text-[#0f1c2c] uppercase tracking-tight">
-              {isEdit ? 'Editar Cliente' : 'Cadastrar Cliente'}
+              {isEdit ? 'Editar Posto de Transformação' : 'Cadastrar Novo PT'}
             </h2>
           </div>
         </div>
@@ -309,597 +402,704 @@ export default function NewPT() {
           <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-xl overflow-hidden p-8 md:p-12 min-h-[600px] flex flex-col">
             <div className="flex items-center gap-4 mb-10 pb-6 border-b border-[#c4c5d7]/10">
               <div className="w-12 h-12 bg-[#eff4ff] rounded-2xl flex items-center justify-center text-[#0d3fd1] shadow-inner">
-                {React.createElement(tabs[activeTab - 1].icon, { className: "w-6 h-6" })}
+                {React.createElement((tabs.find(t => t.id === activeTab) || tabs[0]).icon, { className: "w-6 h-6" })}
               </div>
               <div>
-                <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">{tabs[activeTab - 1].name}</h3>
+                <h3 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">{(tabs.find(t => t.id === activeTab) || tabs[0]).name}</h3>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8 flex-1 flex flex-col">
-              {activeTab === 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10 animate-in slide-in-from-right-4 duration-300">
-                  {/* ID PT */}
-                  <div className="lg:col-span-1 space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Código do Cliente (PT)</label>
-                    <input
-                      type="text"
-                      className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:ring-2 focus:ring-[#0d3fd1]/10 outline-none"
-                      value={formData.identificacao.id_pt}
-                      onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, id_pt: e.target.value } })}
-                      placeholder="Ex: PT-LUA-001"
-                      required
-                    />
-                  </div>
-
-                  {/* Localização & GPS */}
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Localização (Rua/Bairro)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.localizacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, localizacao: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Município (Obrigatório)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.municipio} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, municipio: e.target.value } })} required />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Comuna</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.distrito_comuna} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, distrito_comuna: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Bairro</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.bairro} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, bairro: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Conta de Contrato</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.conta_contrato} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, conta_contrato: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Instalação</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.instalacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, instalacao: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Equipamento</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.equipamento} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, equipamento: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Parceiro de Negócios</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.parceiro_negocios} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, parceiro_negocios: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Categoria de Tarifa</label>
-                    <input type="text" placeholder="Ex: AT_TI" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.categoria_tarifa} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, categoria_tarifa: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Extenso Cat. Tarifa</label>
-                    <input type="text" placeholder="Ex: Indústria" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.txt_categoria_tarifa} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, txt_categoria_tarifa: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Coordenadas GPS (Lat, Long)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.gps} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, gps: e.target.value } })} placeholder="-8.123, 13.456" />
-                  </div>
-
-                  {/* Tipo, Nivel, Potencia */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Instalação</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.tipo_instalacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_instalacao: e.target.value } })} placeholder="Ex: Aérea / Cabine" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão (kV)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.nivel_tensao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, nivel_tensao: e.target.value } })} placeholder="Ex: 30/0.4 kV" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Potência (kVA)</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.potencia_kva} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, potencia_kva: e.target.value } })} />
-                  </div>
-
-                  {/* Ano, Fabricante, Num Trans, Regime */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Ano de Instalação</label>
-                    <input type="date" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.ano_instalacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, ano_instalacao: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Fabricante do Posto</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.fabricante} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, fabricante: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº de Transformadores</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.num_transformador} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_transformador: e.target.value } })} />
-                  </div>
-                  <div className="lg:col-span-3 space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Regime de Exploração</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.regime_exploracao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, regime_exploracao: e.target.value } })} placeholder="Ex: Privado / Público" />
-                  </div>
-
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Proprietário (Comercial)</label>
-                    <div className="relative">
-                      <select
-                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] appearance-none outline-none focus:border-[#0d3fd1] focus:ring-1 focus:ring-[#0d3fd1]/10"
-                        value={formData.identificacao.id_proprietario}
-                        onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, id_proprietario: e.target.value } })}
-                      >
-                        <option value="">-- Seleccionar Proprietário --</option>
-                        {proprietarios.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.nome} {p.nif ? `(${p.nif})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                        <Users className="w-4 h-4" />
-                      </div>
+              {/* Secção 0: Tipo de PT */}
+              {activeTab === 0 && (
+                <div className="space-y-12 animate-in slide-in-from-right-4 duration-300">
+                  {/* Grupo 1: Infraestrutura */}
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="w-2 h-6 bg-[#0d3fd1] rounded-full"></div>
+                      <h4 className="text-xs font-black text-[#0f1c2c] uppercase tracking-[0.2em]">1. Tipo de Infraestrutura</h4>
                     </div>
-                    {loadingProprietarios && <p className="text-[9px] text-[#0d3fd1] animate-pulse ml-2">Carregando lista...</p>}
-                    {!loadingProprietarios && proprietarios.length === 0 && <p className="text-[9px] text-amber-600 ml-2">Nenhum proprietário encontrado.</p>}
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concessionária</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.concessionaria} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concessionaria: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Zona / Área</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.zona} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, zona: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2 lg:col-span-1">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Operador</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.identificacao.operador} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, operador: e.target.value } })} />
-                  </div>
-
-                  {/* BLOCO SAP EXCLUSIVO */}
-                  <div className="lg:col-span-3 mt-4 mb-2 p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="w-1 h-4 bg-[#0d3fd1] rounded-full"></div>
-                      <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest">Informação Estrutural (SAP/ENDE)</h4>
-                    </div>
-
+                    
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº do Contrato</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.contrato} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, contrato: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº de Série</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.num_serie} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_serie: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Cliente</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.tipo_cliente} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_cliente: e.target.value } })} placeholder="Ex: MT / BT / IP" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Divisão</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.divisao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, divisao: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Denominação da Divisão</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.denominacao_divisao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, denominacao_divisao: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Unidade de Leitura</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.unidade_leitura} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, unidade_leitura: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº Localidade</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.num_localidade} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_localidade: e.target.value } })} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Rua (Endereço)</label>
-                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.rua} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, rua: e.target.value } })} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BLOCO FINANCEIRO */}
-                  <div className="lg:col-span-3 p-6 bg-red-50/30 rounded-3xl border border-red-100/50">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="w-1 h-4 bg-red-500 rounded-full"></div>
-                      <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Informação Financeira</h4>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Montante da Dívida (Kz)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600 focus:ring-1 focus:ring-red-200"
-                          value={formData.identificacao.montante_divida}
-                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, montante_divida: Number(e.target.value) } })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Faturas Não Pagas</label>
-                        <input
-                          type="number"
-                          className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-sm font-black text-red-600"
-                          value={formData.identificacao.num_facturas_atraso}
-                          onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_facturas_atraso: Number(e.target.value) } })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-3 space-y-4">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Documentação Fotográfica (Placa/Local)</label>
-                    <div className="relative group">
-                      <div className="w-full h-48 bg-[#f8faff] border-2 border-dashed border-[#c4c5d7]/40 rounded-3xl flex flex-col items-center justify-center gap-3 transition-all group-hover:border-[#0d3fd1]/40 group-hover:bg-[#f0f4ff] cursor-pointer overflow-hidden">
-                        {formData.identificacao.imagem_url ? (
-                          <div className="relative w-full h-full">
-                            <img src={formData.identificacao.imagem_url} alt="technical" className="w-full h-full object-cover opacity-60" />
-                            <div className="absolute inset-0 flex items-center justify-center bg-[#243141]/60">
-                              <span className="text-white text-[10px] font-black uppercase tracking-widest">Alterar Fotografia</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-[#0d3fd1]">
-                              <Camera className="w-6 h-6" />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs font-black text-[#0f1c2c] uppercase tracking-tight">Carregar Imagem Técnica</p>
-                              <p className="text-[9px] font-bold text-[#747686] uppercase tracking-widest mt-1 opacity-60">PNG, JPG ou PDF (Máx 5MB)</p>
-                            </div>
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) setFormData({ ...formData, identificacao: { ...formData.identificacao, imagem_url: URL.createObjectURL(file) } });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 2 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="md:col-span-2 bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
-                    <h4 className="text-xs font-black text-[#0d3fd1] uppercase tracking-[0.2em] mb-6">Conformidade Legal e Técnica (Checklist)</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {[
-                        { key: 'licenciamento', label: 'Licença de Exploração DGE' },
-                        { key: 'projeto_aprovado', label: 'Projeto Elétrico Aprovado' },
-                        { key: 'diagramas_unifilares', label: 'Diagramas Unifilares no Local' },
-                        { key: 'plano_manutencao', label: 'Plano de Manutenção Ativo' },
-                        { key: 'normas_iec_ieee', label: 'Conformidade Normas IEC/IEEE' },
-                        { key: 'seguro_responsabilidade', label: 'Seguro Responsabilidade Civil' },
-                        { key: 'certificacao_energetica', label: 'Certificação Energética' },
-                        { key: 'termo_responsabilidade', label: 'Termo de Responsabilidade Técnica' }
-                      ].map((item) => (
-                        <label key={item.key} className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:border-[#0d3fd1]/30 transition-all group">
-                          <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest">{item.label}</span>
-                          <input
-                            type="checkbox"
-                            className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1] focus:ring-[#0d3fd1]"
-                            checked={formData.conformidade[item.key]}
-                            onChange={(e) => setFormData({ ...formData, conformidade: { ...formData.conformidade, [item.key]: e.target.checked } })}
-                          />
-                        </label>
-                      ))}
+                        { id: 'PTA (Aéreo)', label: 'PTA', desc: 'Transformador em Poste / Antena.' },
+                        { id: 'PTC COM Contagem', label: 'PTC (CC)', desc: 'Cabine com medição em MT.' },
+                        { id: 'PTC SEM Contagem', label: 'PTC (SC)', desc: 'Cabine sem medição em MT.' }
+                      ].map((tipo) => {
+                        const isSelected = formData.identificacao.tipo_instalacao.includes(tipo.id);
+                        return (
+                          <button
+                            key={tipo.id}
+                            type="button"
+                            onClick={() => {
+                              const currentVal = formData.identificacao.tipo_instalacao;
+                              const otherParts = currentVal.split(' | ').filter(p => !['PTA (Aéreo)', 'PTC COM Contagem', 'PTC SEM Contagem'].includes(p));
+                              const newVal = [tipo.id, ...otherParts].join(' | ');
+                              setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_instalacao: newVal } });
+                            }}
+                            className={`
+                              p-6 rounded-2xl transition-all text-left border-2 flex flex-col gap-2
+                              ${isSelected 
+                                ? 'bg-[#0d3fd1] text-white border-[#0d3fd1] shadow-lg shadow-[#0d3fd1]/20' 
+                                : 'bg-white text-[#444655] border-[#c4c5d7]/20 hover:border-[#0d3fd1]/30'}
+                            `}
+                          >
+                            <span className="text-[11px] font-black uppercase tracking-tight">{tipo.label}</span>
+                            <span className={`text-[10px] ${isSelected ? 'text-white/70' : 'text-[#747686]'} leading-relaxed`}>
+                              {tipo.desc}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+
+                  {/* Grupo 2: Categoria de Potência */}
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="w-2 h-6 bg-[#00e47c] rounded-full"></div>
+                      <h4 className="text-xs font-black text-[#0f1c2c] uppercase tracking-[0.2em]">2. Categoria / Propriedade</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {[
+                        { id: 'AI (>160 kVA)', label: 'AI', desc: 'Alta Intensidade / Alta Potência.' },
+                        { id: 'AS (≤160 kVA)', label: 'AS', desc: 'Baixa Potência / Padrão.' }
+                      ].map((cat) => {
+                        const isSelected = formData.identificacao.tipo_instalacao.includes(cat.id);
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              const currentVal = formData.identificacao.tipo_instalacao;
+                              const otherParts = currentVal.split(' | ').filter(p => !['AI (>160 kVA)', 'AS (≤160 kVA)'].includes(p));
+                              const newVal = [...otherParts, cat.id].join(' | ');
+                              setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_instalacao: newVal } });
+                            }}
+                            className={`
+                              p-6 rounded-2xl transition-all text-left border-2 flex flex-col gap-2
+                              ${isSelected 
+                                ? 'bg-[#00e47c] text-[#005229] border-[#00e47c] shadow-lg shadow-[#00e47c]/20' 
+                                : 'bg-white text-[#444655] border-[#c4c5d7]/20 hover:border-[#00e47c]/30'}
+                            `}
+                          >
+                            <span className="text-[11px] font-black uppercase tracking-tight">{cat.label}</span>
+                            <span className={`text-[10px] ${isSelected ? 'text-[#005229]/70' : 'text-[#747686]'} leading-relaxed`}>
+                              {cat.desc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-[#eff4ff] rounded-2xl flex items-start gap-4">
+                     <Info className="w-5 h-5 text-[#0d3fd1] mt-0.5" />
+                     <p className="text-[11px] font-bold text-[#0d3fd1] leading-relaxed">
+                       👉 Agora podes definir a infraestrutura e a potência em simultâneo. Ex: <b>{formData.identificacao.tipo_instalacao || 'Aguardando seleção...'}</b>
+                     </p>
                   </div>
                 </div>
               )}
 
+              {/* Secção 1: Identificação Geral */}
+              {activeTab === 1 && (
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+                    <div className="lg:col-span-1 space-y-2">
+                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">ID PT / Código de Identificação</label>
+                      <input 
+                        type="text" 
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" 
+                        value={formData.identificacao.id_concessionaria} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData({ 
+                            ...formData, 
+                            identificacao: { 
+                              ...formData.identificacao, 
+                              id_concessionaria: val,
+                              id_pt: val 
+                            } 
+                          });
+                        }} 
+                        placeholder="Ex: 2001990636" 
+                        required 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concessão / Operador</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.concessao_operador} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concessao_operador: e.target.value } })} placeholder="Ex: ENDE / EP" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Proprietário / Titular do Ativo</label>
+                       <select 
+                         className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold"
+                         value={formData.identificacao.id_proprietario}
+                         onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, id_proprietario: e.target.value } })}
+                       >
+                         <option value="">Selecione um proprietário...</option>
+                         {proprietarios.map(p => (
+                           <option key={p.id} value={p.id}>{p.nome}</option>
+                         ))}
+                       </select>
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Localização / Morada Completa</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.morada} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, morada: e.target.value } })} />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Freguesia / Comuna</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.freguesia} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, freguesia: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concelho / Município</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.concelho} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concelho: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Província</label>
+                       <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.provincia} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, provincia: e.target.value } })}>
+                          {['Luanda', 'Bengo', 'Benguela', 'Cabinda', 'Cunene', 'Huambo', 'Huíla', 'Kuando Kubango', 'Kwanza Norte', 'Kwanza Sul', 'Lunda Norte', 'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'].map(p => <option key={p} value={p}>{p}</option>)}
+                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Latitude</label>
+                       <input type="number" step="any" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.latitude} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, latitude: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Longitude</label>
+                       <input type="number" step="any" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.longitude} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, longitude: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Altitude (m)</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.altitude} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, altitude: e.target.value } })} />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Data do Levantamento</label>
+                       <input type="date" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.data_levantamento} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, data_levantamento: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Técnico Responsável</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.tecnico_levantamento} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tecnico_levantamento: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">N.º de Habilitação</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.num_habilitacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, num_habilitacao: e.target.value } })} />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8 p-4 bg-orange-50 rounded-2xl flex items-start gap-4 border border-orange-100">
+                     <FileText className="w-5 h-5 text-orange-400 mt-0.5" />
+                     <p className="text-[11px] font-bold text-orange-600 leading-relaxed">
+                       👉 Isto é governança + rastreabilidade. Sem isso, o PT “não existe” oficialmente.
+                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Secção 2: Transformador */}
+              {activeTab === 2 && (
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Potência Nominal (kVA)</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.potencia_kva} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, potencia_kva: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão AT (kV)</label>
+                       <input type="number" step="any" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.tensao_primaria} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tensao_primaria: e.target.value } })} placeholder="Ex: 15 ou 30" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão BT (V)</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.tensao_secundaria} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tensao_secundaria: e.target.value } })} placeholder="Ex: 400" />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Isolamento (kV)</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.nivel_isolamento} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, nivel_isolamento: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Ucc (%)</label>
+                       <input type="number" step="any" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.ucc} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, ucc: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Frequência (Hz)</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.frequencia} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, frequencia: e.target.value } })} />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Número de Série</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.numero_serie} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, numero_serie: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Marca / Fabricante</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.fabricante} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, fabricante: e.target.value } })} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Ano de Fabrico</label>
+                       <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.ano_fabrico} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, ano_fabrico: e.target.value } })} />
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Grupo de Ligação</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.grupo_ligacao} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, grupo_ligacao: e.target.value } })} placeholder="Ex: Dyn11" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Arrefecimento</label>
+                       <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.tipo_arrefecimento} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tipo_arrefecimento: e.target.value } })}>
+                          <option value="">-- Seleccionar --</option>
+                          <option value="ONAN">ONAN (Óleo Natural)</option>
+                          <option value="Hermético">Hermético (Selado)</option>
+                          <option value="AN">AN (Seco Natural)</option>
+                          <option value="AF">AF (Seco com Ventilação)</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Isolamento</label>
+                        <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.transformador.tipo_isolamento} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tipo_isolamento: e.target.value } })}>
+                           <option value="Óleo Mineral">Óleo Mineral</option>
+                           <option value="Resina (Seco)">Resina (Seco)</option>
+                           <option value="Silicone">Silicone</option>
+                        </select>
+                     </div>
+                  </div>
+                  
+                  <div className="mb-4 p-4 bg-red-50 rounded-2xl flex items-start gap-4 border border-red-100">
+                     <Settings className="w-5 h-5 text-red-400 mt-0.5" />
+                     <p className="text-[11px] font-bold text-red-600 leading-relaxed">
+                       👉 Esse bloco define o “coração do PT”. Se isso falha, tudo para.
+                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Secção 3: Suporte — Poste */}
               {activeTab === 3 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Fabricante Trafo</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.fabricante} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, fabricante: e.target.value } })} placeholder="Ex: Efacec" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nº de Série</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.numero_serie} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, numero_serie: e.target.value } })} placeholder="SN-123456" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Ano de Fabrico</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.ano_fabrico} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, ano_fabrico: e.target.value } })} placeholder="2024" />
-                  </div>
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Poste</label>
+                          <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.tipo_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_poste: e.target.value } })} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Referência / Tipo</label>
+                          <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.ref_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, ref_poste: e.target.value } })} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Altura (m)</label>
+                          <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.altura_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, altura_poste: e.target.value } })} />
+                       </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Potência Nominal (kVA)</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.potencia_nominal} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, potencia_nominal: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Primária (kV)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.tensao_primaria} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tensao_primaria: e.target.value } })} placeholder="30 kV" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tensão Secundária (V)</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.tensao_secundaria} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tensao_secundaria: e.target.value } })} placeholder="400 V" />
-                  </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Esforço Nominal (daN)</label>
+                          <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.esforco_poste_dan} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, esforco_poste_dan: e.target.value } })} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Ano de Instalação</label>
+                          <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.ano_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, ano_poste: e.target.value } })} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado do Poste</label>
+                          <select className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.estado_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, estado_poste: e.target.value } })}>
+                             <option value="Muito Bom">Muito Bom</option>
+                             <option value="Bom">Bom</option>
+                             <option value="Razoável">Razoável</option>
+                             <option value="Mau">Mau</option>
+                          </select>
+                       </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Grupo Vectorial</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.grupo_vectorial} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, grupo_vectorial: e.target.value } })} placeholder="Dyn11" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Isolação</label>
-                    <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.tipo_oleo} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, tipo_oleo: e.target.value } })}>
-                      <option value="Mineral">Óleo Mineral</option>
-                      <option value="Silicone">Silicone</option>
-                      <option value="Seco">Resina (Seco)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Peso Total (kg)</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.peso_total} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, peso_total: e.target.value } })} />
-                  </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Material</label>
+                          <select className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.material_poste} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, material_poste: e.target.value } })}>
+                             <option value="">-- Seleccionar --</option>
+                             <option value="Betão">Betão</option>
+                             <option value="Metálico">Metálico</option>
+                             <option value="Madeira">Madeira</option>
+                          </select>
+                       </div>
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Óleo / Pressão</label>
-                    <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.nivel_oleo} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, nivel_oleo: e.target.value } })} placeholder="Ex: 95%" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Temperatura de Topo (ºC)</label>
-                    <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.transformador.temperatura_topo} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, temperatura_topo: Number(e.target.value) } })} />
-                  </div>
-                  <div className="flex items-center justify-between p-6 bg-[#fcfdff] rounded-2xl border border-[#c4c5d7]/10">
-                    <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest">Fugas / Buchas OK</span>
-                    <div className="flex gap-4">
-                      <input type="checkbox" className="w-6 h-6 rounded-lg border-[#c4c5d7] text-[#0d3fd1]" checked={formData.transformador.fugas} onChange={(e) => setFormData({ ...formData, transformador: { ...formData.transformador, fugas: e.target.checked } })} />
-                      <span className="text-[8px] font-bold text-[#747686] uppercase self-center">Fugas</span>
+                    <div className="mt-10 pt-10 border-t border-[#c4c5d7]/10">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-6 block">Equipamentos no Topo</label>
+                       <div className="flex flex-wrap gap-8">
+                          {[
+                            { key: 'interruptor', label: 'Interruptor MT' },
+                            { key: 'seccionador', label: 'Seccionador' },
+                            { key: 'para_raios', label: 'Para-raios' },
+                            { key: 'amarracao', label: 'Amarração de Linha' }
+                          ].map(item => (
+                            <label key={item.key} className="flex items-center gap-4 cursor-pointer group">
+                               <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.identificacao.equipamento_poste?.[item.key] ? 'bg-[#0d3fd1] border-[#0d3fd1] shadow-lg shadow-[#0d3fd1]/20' : 'bg-white border-[#c4c5d7]/30 group-hover:border-[#0d3fd1]/40'}`}>
+                                  {formData.identificacao.equipamento_poste?.[item.key] && <Zap className="w-3 h-3 text-white" />}
+                               </div>
+                               <input type="checkbox" className="hidden" checked={formData.identificacao.equipamento_poste?.[item.key]} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, equipamento_poste: { ...formData.identificacao.equipamento_poste, [item.key]: e.target.checked } } })} />
+                               <span className="text-[10px] font-black text-[#444655] uppercase tracking-tight">{item.label}</span>
+                            </label>
+                          ))}
+                       </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {activeTab === 6 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="md:col-span-2 space-y-2 mb-4">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Resistência de Terra (Ohms)</label>
-                    <input
-                      type="text"
-                      className="w-full max-w-sm bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]"
-                      value={formData.seguranca.resistencia_terra}
-                      onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, resistencia_terra: e.target.value } })}
-                      placeholder="Ex: 2.5 Ohms"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {[
-                      { key: 'protecao_raios', label: 'Proteção contra Raios (IP)' },
-                      { key: 'spd', label: 'Descarregadores de Sobretensão (SPD)' },
-                      { key: 'sinalizacao', label: 'Sinalização de Segurança' },
-                      { key: 'combate_incendio', label: 'Equipamentos Combate Incêndio' },
-                      { key: 'distancias_seguranca', label: 'Distâncias de Segurança Verificadas' }
-                    ].map((item) => (
-                      <label key={item.key} className="flex items-center justify-between p-4 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:bg-[#eff4ff] transition-all">
-                        <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest">{item.label}</span>
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]"
-                          checked={formData.seguranca[item.key]}
-                          onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, [item.key]: e.target.checked } })}
-                        />
-                      </label>
-                    ))}
+                  <div className="p-4 bg-yellow-50 rounded-2xl flex items-start gap-4 border border-yellow-100">
+                     <HardDrive className="w-5 h-5 text-yellow-400 mt-0.5" />
+                     <p className="text-[11px] font-bold text-yellow-600 leading-relaxed">
+                       👉 Aqui avalias risco estrutural. Poste ruim = perigo real.
+                     </p>
                   </div>
                 </div>
               )}
 
-              {activeTab === 9 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Data da Última Limpeza Técnica</label>
-                    <input type="date" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.manutencao.ultima_limpeza} onChange={(e) => setFormData({ ...formData, manutencao: { ...formData.manutencao, ultima_limpeza: e.target.value } })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Última Inspecção Termográfica</label>
-                    <input type="date" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c]" value={formData.manutencao.inspecao_termografica} onChange={(e) => setFormData({ ...formData, manutencao: { ...formData.manutencao, inspecao_termografica: e.target.value } })} />
-                  </div>
-                  <div className="md:col-span-2 flex items-center justify-between p-6 bg-[#fcfdff] rounded-2xl border border-[#c4c5d7]/10">
-                    <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest">Reaperto de Terminais Verificado?</span>
-                    <input type="checkbox" className="w-6 h-6 rounded-lg border-[#c4c5d7] text-[#0d3fd1]" checked={formData.manutencao.aperto_terminais} onChange={(e) => setFormData({ ...formData, manutencao: { ...formData.manutencao, aperto_terminais: e.target.checked } })} />
-                  </div>
-                </div>
-              )}
-
+              {/* Secção 4: Cabine / Invólucro */}
               {activeTab === 4 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  {[
-                    { key: 'tipo_celas', label: 'Tipo de Celas', placeholder: 'Ex: SF6 / Ar' },
-                    { key: 'estado_disjuntores', label: 'Estado dos Disjuntores', placeholder: 'Ex: Operacional' },
-                    { key: 'estado_seccionadores', label: 'Estado dos Seccionadores', placeholder: 'Ex: Bom' },
-                    { key: 'reles_protecao', label: 'Relés de Proteção', placeholder: 'Ex: Digital' },
-                    { key: 'coordenacao_protecoes', label: 'Coordenação de Proteções', placeholder: 'Ex: Verificada' },
-                    { key: 'aterramento_mt', label: 'Aterramento de Média Tensão', placeholder: 'Ex: Conforme' }
-                  ].map((item) => (
-                    <div key={item.key} className="space-y-2">
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
-                      <input
-                        type="text"
-                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-[#0d3fd1] focus:ring-1 focus:ring-[#0d3fd1] transition-all"
-                        value={formData.media_tensao[item.key] || ''}
-                        onChange={(e) => setFormData({ ...formData, media_tensao: { ...formData.media_tensao, [item.key]: e.target.value } })}
-                        placeholder={item.placeholder}
-                      />
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Cabine</label>
+                        <select className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.tipo_cabine} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, tipo_cabine: e.target.value } })}>
+                          <option value="">-- Seleccionar --</option>
+                          <option value="Pré-fabricada (betão)">Pré-fabricada (Betão)</option>
+                          <option value="Alvenaria">Alvenaria</option>
+                          <option value="Container metálico">Container Metálico</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Dimensões (CxL - m)</label>
+                        <div className="flex items-center gap-2">
+                          <input type="number" placeholder="Dim. A" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.dim_comprimento} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, dim_comprimento: e.target.value } })} />
+                          <span className="font-bold text-[#c4c5d7]">x</span>
+                          <input type="number" placeholder="Dim. B" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.dim_largura} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, dim_largura: e.target.value } })} />
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="p-4 bg-gray-50 rounded-2xl flex items-start gap-4 border border-gray-100">
+                    <Database className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <p className="text-[11px] font-bold text-gray-600 leading-relaxed">
+                      👉 Define proteção física e acessibilidade.
+                    </p>
+                  </div>
                 </div>
               )}
 
+              {/* Secção 5: Celas de Média Tensão */}
               {activeTab === 5 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-right-4 duration-300">
-                  {[
-                    { key: 'estado_qgbt', label: 'Estado do QGBT', col: 'md:col-span-1' },
-                    { key: 'barramentos', label: 'Estado dos Barramentos', col: 'md:col-span-1' },
-                    { key: 'disjuntores', label: 'Estado dos Disjuntores', col: 'md:col-span-1' },
-                    { key: 'balanceamento_cargas', label: 'Balanceamento de Cargas', col: 'md:col-span-1' },
-                    { key: 'tensao', label: 'Tensão (V)', col: 'md:col-span-1' },
-                    { key: 'fator_potencia', label: 'Fator de Potência', col: 'md:col-span-1' },
-                    { key: 'corrente_fase_a', label: 'Corrente Fase A (A)', col: 'md:col-span-1' },
-                    { key: 'corrente_fase_b', label: 'Corrente Fase B (A)', col: 'md:col-span-1' },
-                    { key: 'corrente_fase_c', label: 'Corrente Fase C (A)', col: 'md:col-span-1' }
-                  ].map((item) => (
-                    <div key={item.key} className={`space-y-2 ${item.col}`}>
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
-                      <input
-                        type="text"
-                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-[#00e47c] focus:ring-1 focus:ring-[#00e47c] transition-all"
-                        value={formData.baixa_tensao[item.key] || ''}
-                        onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, [item.key]: e.target.value } })}
-                        placeholder="---"
-                      />
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="flex justify-between items-center bg-[#f8faff] p-6 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-5 h-5 text-[#0d3fd1]" />
+                      <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest">Secção 5: Celas de Média Tensão</h4>
                     </div>
-                  ))}
+                    <button type="button" onClick={initializeMTCells} className="bg-[#eff4ff] text-[#0d3fd1] px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all">
+                      Gerar Template de Celas
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-3xl border border-[#c4c5d7]/20">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#1a2533] text-white/50 text-[9px] font-black uppercase tracking-widest">
+                          <th className="px-6 py-4">Nº</th>
+                          <th className="px-6 py-4">Função</th>
+                          <th className="px-6 py-4">Tipo / Fabricante</th>
+                          <th className="px-6 py-4">In (A)</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4 text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#c4c5d7]/10 text-sm">
+                        {formData.media_tensao.celas?.map((cela, idx) => (
+                          <tr key={idx} className="bg-white hover:bg-[#f8faff] transition-all">
+                            <td className="px-6 py-4 font-bold text-[#0f1c2c]">{cela.num}</td>
+                            <td className="px-6 py-4">
+                              <select className="bg-transparent border-none text-[13px] font-bold text-[#0d3fd1] outline-none" value={cela.funcao} onChange={(e) => {
+                                const newCelas = [...formData.media_tensao.celas];
+                                newCelas[idx].funcao = e.target.value;
+                                setFormData({ ...formData, media_tensao: { ...formData.media_tensao, celas: newCelas } });
+                              }}>
+                                <option value="Entrada">Entrada</option>
+                                <option value="Saída">Saída</option>
+                                <option value="Proteção">Proteção</option>
+                                <option value="Medição">Medição</option>
+                              </select>
+                            </td>
+                            <td className="px-6 py-4">
+                              <input type="text" className="w-full bg-transparent border-none text-[13px] font-bold outline-none" value={cela.tipo_fabricante} onChange={(e) => {
+                                const newCelas = [...formData.media_tensao.celas];
+                                newCelas[idx].tipo_fabricante = e.target.value;
+                                setFormData({ ...formData, media_tensao: { ...formData.media_tensao, celas: newCelas } } );
+                              }} />
+                            </td>
+                            <td className="px-6 py-4">
+                              <input type="number" className="w-20 bg-transparent border-none text-[13px] font-bold outline-none" value={cela.corrente_nominal} onChange={(e) => {
+                                const newCelas = [...formData.media_tensao.celas];
+                                newCelas[idx].corrente_nominal = e.target.value;
+                                setFormData({ ...formData, media_tensao: { ...formData.media_tensao, celas: newCelas } } );
+                              }} />
+                            </td>
+                            <td className="px-6 py-4">
+                              <select className="bg-transparent border-none text-[13px] font-bold text-[#0d3fd1] outline-none" value={cela.estado} onChange={(e) => {
+                                const newCelas = [...formData.media_tensao.celas];
+                                newCelas[idx].estado = e.target.value;
+                                setFormData({ ...formData, media_tensao: { ...formData.media_tensao, celas: newCelas } } );
+                              }}>
+                                <option value="Operacional">Operacional</option>
+                                <option value="Não Operacional">Não Operacional</option>
+                              </select>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button type="button" onClick={() => {
+                                const newCelas = formData.media_tensao.celas.filter((_, i) => i !== idx);
+                                setFormData({ ...formData, media_tensao: { ...formData.media_tensao, celas: newCelas } } );
+                              }} className="text-red-400 hover:text-red-600 transition-colors">
+                                <AlertTriangle className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="p-4 bg-indigo-50 rounded-2xl flex items-start gap-4 border border-indigo-100">
+                    <Zap className="w-5 h-5 text-indigo-400 mt-0.5" />
+                    <p className="text-[11px] font-bold text-indigo-600 leading-relaxed">
+                      👉 Isso é o “quadro de comando” da média tensão.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Secção 6: Quadro Geral de Baixa Tensão (QGBT) */}
+              {activeTab === 6 && (
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Fabricante</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.fabricante_qgbt} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, fabricante_qgbt: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Corrente Nominal Saída (A)</label>
+                        <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.corrente_nominal_saida} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, corrente_nominal_saida: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">N.º de Saídas BT</label>
+                        <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.num_saidas_bt} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, num_saidas_bt: e.target.value } })} />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Transf. de Corrente (TC)</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.transformador_corrente} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, transformador_corrente: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Corrente Nominal Geral (A)</label>
+                        <input type="number" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.corrente_nominal_geral} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, corrente_nominal_geral: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Tipo de Neutro</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.baixa_tensao.tipo_ligacao_neutro} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, tipo_ligacao_neutro: e.target.value } })} placeholder="Ex: TN-S, IT, TT" />
+                      </div>
+                    </div>
+
+                    <div className="mt-10 pt-10 border-t border-[#c4c5d7]/10">
+                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-6 block">Componentes</label>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[
+                          { key: 'disjuntor_geral', label: 'Disjuntor Geral' },
+                          { key: 'fusiveis_gerais', label: 'Fusíveis' },
+                          { key: 'contagem_bt', label: 'Contagem' },
+                          { key: 'telecontagem', label: 'Telecontagem' }
+                        ].map(item => (
+                          <label key={item.key} className="flex items-center gap-4 p-4 bg-white border border-[#c4c5d7]/20 rounded-2xl cursor-pointer hover:border-[#0d3fd1]/40 transition-all">
+                            <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]" checked={formData.baixa_tensao[item.key]} onChange={(e) => setFormData({ ...formData, baixa_tensao: { ...formData.baixa_tensao, [item.key]: e.target.checked } })} />
+                            <span className="text-[10px] font-black text-[#444655] uppercase tracking-tight">{item.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-emerald-50 rounded-2xl flex items-start gap-4 border border-emerald-100">
+                    <Zap className="w-5 h-5 text-emerald-400 mt-0.5" />
+                    <p className="text-[11px] font-bold text-emerald-600 leading-relaxed">
+                      👉 Aqui é onde a energia vira “distribuição real”.
+                    </p>
+                  </div>
                 </div>
               )}
 
               {activeTab === 7 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Físico da Cabine</label>
-                    <select
-                      className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-[#d15f0d] focus:ring-1 focus:ring-[#d15f0d] transition-all"
-                      value={formData.infraestrutura.estado_cabine || ''}
-                      onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, estado_cabine: e.target.value } })}
-                    >
-                      <option value="Excelente">Excelente</option>
-                      <option value="Bom">Bom</option>
-                      <option value="Degradado">Degradado</option>
-                    </select>
+                <div className="space-y-12 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Físico (Paredes/Tecto)</label>
+                       <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.infraestrutura.estado_paredes} onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, estado_paredes: e.target.value } })}>
+                          <option value="Bom">Bom</option>
+                          <option value="Degradado">Degradado</option>
+                          <option value="Fissuras">Com Fissuras</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Portas / Acessos</label>
+                       <select className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.infraestrutura.estado_portas} onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, estado_portas: e.target.value } })}>
+                          <option value="Bom">Bom / Fechado</option>
+                          <option value="Avariado">Fechaduras Avariadas</option>
+                          <option value="Inexistente">Sem Porta</option>
+                       </select>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {[
-                      { key: 'ventilacao', label: 'Ventilação' },
-                      { key: 'drenagem', label: 'Drenagem' },
-                      { key: 'iluminacao', label: 'Iluminação' },
-                      { key: 'controlo_acesso', label: 'Controlo de Acesso' }
-                    ].map((item) => (
-                      <label key={item.key} className="flex flex-col items-start gap-2 p-4 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:bg-[#eff4ff] transition-all">
+                      { key: 'ventilacao', label: 'Ventilação Adequada' },
+                      { key: 'iluminacao_interior', label: 'Iluminação Interior' },
+                      { key: 'iluminacao_exterior', label: 'Iluminação Exterior' },
+                      { key: 'drenagem_oleo', label: 'Bacia / Drenagem Óleo' }
+                    ].map(item => (
+                      <label key={item.key} className="flex flex-col items-start gap-4 p-6 bg-[#fcfdff] border border-[#c4c5d7]/10 rounded-2xl cursor-pointer hover:bg-[#eff4ff] transition-all">
                         <span className="text-[9px] font-black text-[#747686] uppercase tracking-widest">{item.label}</span>
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 rounded border-[#c4c5d7] text-[#d15f0d] focus:ring-[#d15f0d]"
-                          checked={formData.infraestrutura[item.key]}
-                          onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, [item.key]: e.target.checked } })}
-                        />
+                        <input type="checkbox" className="w-6 h-6 rounded-lg border-[#c4c5d7] text-[#d15f0d]" checked={formData.infraestrutura[item.key]} onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, [item.key]: e.target.checked } })} />
                       </label>
                     ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Outras Notas de Infraestrutura</label>
+                    <textarea className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-3xl py-4 px-6 text-sm font-bold min-h-[100px]" value={formData.infraestrutura.observacoes} onChange={(e) => setFormData({ ...formData, infraestrutura: { ...formData.infraestrutura, observacoes: e.target.value } })} />
                   </div>
                 </div>
               )}
 
-              {activeTab === 10 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Risco Global</label>
-                      <select
-                        className={`w-full border-2 rounded-2xl py-5 px-8 text-sm font-black transition-all ${formData.risco.nivel_risco_geral === 'Crítico' ? 'bg-red-50 border-red-500 text-red-700' :
-                          formData.risco.nivel_risco_geral === 'Alto' ? 'bg-orange-50 border-orange-500 text-orange-700' :
-                            'bg-[#f8faff] border-[#c4c5d7]/30 text-[#0f1c2c]'
-                          }`}
-                        value={formData.risco.nivel_risco_geral}
-                        onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, nivel_risco_geral: e.target.value } })}
-                      >
-                        <option value="">-- Avalie o Risco --</option>
-                        <option value="Baixo">Baixo (Normal)</option>
-                        <option value="Médio">Médio (Observação)</option>
-                        <option value="Alto">Alto (Urgente)</option>
-                        <option value="Crítico">Crítico (Imediato)</option>
-                      </select>
+              {/* Secção 7: Proteção e Ligação à Terra */}
+              {activeTab === 7 && (
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Resistência de Terra (ohm)</label>
+                        <input type="number" step="any" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.seguranca.resistencia_terra} onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, resistencia_terra: e.target.value } })} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Data da Medição</label>
+                        <input type="date" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.seguranca.data_ultima_medicao} onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, data_ultima_medicao: e.target.value } })} />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Relé de Proteção</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.seguranca.rele_protecao_marca} onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, rele_protecao_marca: e.target.value } })} placeholder="Ex: Siemens / ABB / Schneider" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Fusíveis MT (A)</label>
+                        <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.seguranca.fusiveis_mt_calibre} onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, fusiveis_mt_calibre: e.target.value } })} />
+                      </div>
                     </div>
 
-                    <div className="p-8 bg-[#f8faff] rounded-3xl border border-[#c4c5d7]/10">
-                      <span className="text-[10px] font-black text-[#444655] uppercase tracking-widest mb-6 block">Fatores de Risco Detetados</span>
-                      <div className="grid grid-cols-1 gap-4">
+                    <div className="mt-10 pt-10 border-t border-[#c4c5d7]/10">
+                      <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-6 block">Tipo de Proteção</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
-                          { key: 'sobrecarga', label: 'Sobrecarga' },
-                          { key: 'desequilibrio_fases', label: 'Desequilíbrio de Fases' },
-                          { key: 'falhas_isolamento', label: 'Falhas de Isolamento' },
-                          { key: 'redundancia', label: 'Falta de Redundância' }
-                        ].map((fator) => (
-                          <label key={fator.key} className="flex items-center justify-between p-4 bg-white border border-[#c4c5d7]/10 rounded-xl cursor-pointer hover:border-red-500/30 transition-all group">
-                            <span className="text-[10px] font-bold text-[#747686] uppercase group-hover:text-[#0f1c2c] transition-colors">{fator.label}</span>
-                            <input
-                              type="checkbox"
-                              className="w-5 h-5 rounded border-[#c4c5d7] text-red-600 focus:ring-red-600"
-                              checked={formData.risco[fator.key]}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                risco: {
-                                  ...formData.risco,
-                                  [fator.key]: e.target.checked
-                                }
-                              })}
-                            />
+                          { key: 'protecao_sobrecorrente', label: 'Sobrecorrente' },
+                          { key: 'protecao_neutro', label: 'Neutro' },
+                          { key: 'protecao_diferencial', label: 'Diferencial' }
+                        ].map(item => (
+                          <label key={item.key} className="flex items-center gap-4 p-4 bg-white border border-[#c4c5d7]/20 rounded-2xl cursor-pointer hover:border-[#0d3fd1]/40 transition-all">
+                            <input type="checkbox" className="w-5 h-5 rounded border-[#c4c5d7] text-[#0d3fd1]" checked={formData.seguranca[item.key]} onChange={(e) => setFormData({ ...formData, seguranca: { ...formData.seguranca, [item.key]: e.target.checked } })} />
+                            <span className="text-[10px] font-black text-[#444655] uppercase tracking-tight">{item.label}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Recomendações Técnicas / Observações</label>
-                    <textarea
-                      className="w-full h-[320px] bg-[#f8faff] border border-[#c4c5d7]/30 rounded-3xl p-8 text-sm font-medium text-[#0f1c2c] focus:border-[#0d3fd1] focus:ring-1 focus:ring-[#0d3fd1] transition-all resize-none"
-                      placeholder="Descreva as medidas corretivas necessárias..."
-                      value={formData.risco.Recomendacoes}
-                      onChange={(e) => setFormData({ ...formData, risco: { ...formData.risco, recomendacoes: e.target.value } })}
-                    />
+                  <div className="p-4 bg-blue-50 rounded-2xl flex items-start gap-4 border border-blue-100">
+                    <ShieldCheck className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <p className="text-[11px] font-bold text-blue-600 leading-relaxed">
+                      👉 Sem aterramento decente, as proteções perdem eficácia.
+                    </p>
                   </div>
                 </div>
               )}
 
+              {/* Secção 8: Observações / Anomalias */}
               {activeTab === 8 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-right-4 duration-300">
-                  <div className="md:col-span-2 bg-[#0f1c2c] p-8 rounded-[1rem] border border-[#0d3fd1]/30 shadow-2xl shadow-[#0d3fd1]/10">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-3 h-3 rounded-full bg-[#00e47c] animate-pulse shadow-[0_0_15px_#00e47c]" />
-                      <h4 className="text-xs font-black text-[#5fff9b] uppercase tracking-[0.3em]">Sistema de Monitorização SCADA</h4>
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#f8faff] p-8 rounded-3xl border border-[#c4c5d7]/20 space-y-8">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-orange-500" />
+                      <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Registo de Defeitos, Riscos e Melhorias</h4>
                     </div>
+                    <textarea className="w-full bg-white border border-[#c4c5d7]/30 rounded-3xl py-6 px-8 text-sm font-bold min-h-[300px] leading-relaxed outline-none focus:ring-1 focus:ring-[#0d3fd1]/30 transition-all" value={formData.identificacao.observacoes_gerais} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, observacoes_gerais: e.target.value } })} placeholder="Descreva aqui todas as anomalias, riscos observados e sugestões de melhoria técnica..." />
+                  </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                      {[
-                        { key: 'SCADA', label: 'Integração SCADA', options: ['Integrado', 'Pendente', 'Semi-Automático', 'N/A'] },
-                        { key: 'Comunicacoes', label: 'Meio de Comunicação', options: ['GPRS/4G', 'Fibra Óptica', 'Rádio Link', 'Satélite'] },
-                        { key: 'Estado_Modem', label: 'Estado do Gateway/Modem', options: ['Operacional', 'Falha de Link', 'Sem Alimentação', 'Em Manutenção'] },
-                        { key: 'Protocolo', label: 'Protocolo de Comunicação', options: ['IEC-104', 'DNP3', 'Modbus TCP', 'SNMP'] }
-                      ].map((item) => (
-                        <div key={item.key} className="space-y-2">
-                          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">{item.label}</label>
-                          <select
-                            className="w-full bg-[#16293d] border border-[#0d3fd1]/20 rounded-xl py-4 px-6 text-sm font-bold text-white focus:border-[#00e47c] focus:ring-1 focus:ring-[#00e47c] transition-all cursor-pointer"
-                            value={formData.monitorizacao[item.key.toLowerCase()] || ''}
-                            onChange={(e) => setFormData({ ...formData, monitorizacao: { ...formData.monitorizacao, [item.key.toLowerCase()]: e.target.value } })}
-                          >
-                            <option value="">-- Selecione --</option>
-                            {item.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
+                  <div className="p-4 bg-orange-50 rounded-2xl flex items-start gap-4 border border-orange-100">
+                    <Activity className="w-5 h-5 text-orange-400 mt-0.5" />
+                    <p className="text-[11px] font-bold text-orange-600 leading-relaxed">
+                      👉 Aqui entra a inteligência do técnico. É o diagnóstico final.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Secção 9: Validação e Assinaturas */}
+              {activeTab === 9 && (
+                <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="bg-[#fcfdff] p-10 rounded-3xl border border-[#c4c5d7]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      {/* Técnico */}
+                      <div className="space-y-6">
+                        <div className="p-4 bg-[#eff4ff] rounded-2xl inline-flex items-center gap-3">
+                          <Users className="w-4 h-4 text-[#0d3fd1]" />
+                          <span className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest">Técnico de Levantamento</span>
                         </div>
-                      ))}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nome Completo</label>
+                          <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.tecnico_levantamento} readOnly />
+                        </div>
+                        <div className="w-full h-32 bg-[#f8faff] border border-dashed border-[#c4c5d7]/40 rounded-2xl flex flex-col items-center justify-center gap-2">
+                          <Camera className="w-6 h-6 text-[#c4c5d7]" />
+                          <span className="text-[9px] font-black text-[#c4c5d7] uppercase tracking-widest text-center px-4">Área reservada para Assinatura + Carimbo</span>
+                        </div>
+                      </div>
+
+                      {/* Supervisor */}
+                      <div className="space-y-6">
+                        <div className="p-4 bg-emerald-50 rounded-2xl inline-flex items-center gap-3">
+                          <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Responsável / Supervisor</span>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Nome Completo</label>
+                          <input type="text" className="w-full bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.supervisor_obra} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, supervisor_obra: e.target.value } })} />
+                        </div>
+                        <div className="w-full h-32 bg-[#f8faff] border border-dashed border-[#c4c5d7]/40 rounded-2xl flex flex-col items-center justify-center gap-2">
+                          <Camera className="w-6 h-6 text-[#c4c5d7]" />
+                          <span className="text-[9px] font-black text-[#c4c5d7] uppercase tracking-widest text-center px-4">Área reservada para Assinatura + Carimbo</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-10 pt-10 border-t border-[#0d3fd1]/10">
-                      <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest mb-6 block">Sensores IoT Instalados</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {[
-                          { key: 'sensores_temperatura', label: 'Temperatura' },
-                          { key: 'sensores_corrente', label: 'Corrente' },
-                          { key: 'sensores_vibracao', label: 'Vibração' }
-                        ].map((sensor) => (
-                          <label key={sensor.key} className="flex items-center justify-between p-4 bg-[#16293d] border border-[#0d3fd1]/10 rounded-xl cursor-pointer hover:border-[#00e47c]/50 transition-all group">
-                            <span className="text-[10px] font-bold text-[#c4c5d7] uppercase group-hover:text-white transition-colors">{sensor.label}</span>
-                            <input
-                              type="checkbox"
-                              className="w-5 h-5 rounded border-[#0d3fd1]/30 text-[#00e47c] focus:ring-[#00e47c]"
-                              checked={formData.monitorizacao[sensor.key]}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                monitorizacao: {
-                                  ...formData.monitorizacao,
-                                  [sensor.key]: e.target.checked
-                                }
-                              })}
-                            />
-                          </label>
-                        ))}
+                    <div className="mt-12 flex flex-col md:flex-row justify-between items-center gap-8 pt-10 border-t border-[#c4c5d7]/10">
+                      <div className="space-y-2 w-full md:w-auto">
+                        <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest ml-1">Data de Validação Oficial</label>
+                        <input type="date" className="w-full md:w-64 bg-white border border-[#c4c5d7]/30 rounded-xl py-3 px-5 text-xs font-bold" value={formData.identificacao.data_validacao} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, data_validacao: e.target.value } })} />
+                      </div>
+                      <div className="flex items-center gap-4 bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                          <ShieldCheck className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-emerald-900 uppercase tracking-tight">Estado da Ficha Técnica</p>
+                          <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest mt-0.5">Validada e Pronta para Relatório</p>
+                        </div>
                       </div>
                     </div>
                   </div>
