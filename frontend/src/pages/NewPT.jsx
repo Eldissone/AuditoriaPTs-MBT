@@ -1026,6 +1026,7 @@ export default function NewPT() {
                       👉 Sem aterramento decente, as proteções perdem eficácia.
                     </p>
                   </div>
+                  </div>
                 </div>
               )}
 
@@ -1100,7 +1101,6 @@ export default function NewPT() {
                           <p className="text-[10px] font-black text-emerald-900 uppercase tracking-tight">Estado da Ficha Técnica</p>
                           <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest mt-0.5">Validada e Pronta para Relatório</p>
                         </div>
-                      </div>
                     </div>
                   </div>
                 </div>

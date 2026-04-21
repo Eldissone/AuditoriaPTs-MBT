@@ -878,7 +878,7 @@ export default function TaskManagement() {
                         const selectedPtId = e.target.value;
                         const selectedPt = pts.find(p => p.id_pt === selectedPtId);
                         const autoChecklist = selectedPt && !formData.id
-                          ? getChecklistForType(selectedPt.tipo_instalacao)
+                          ? getChecklistForType(selectedPt.tipo_instalacao, formData.titulo)
                           : formData.checklist;
                         setFormData({ ...formData, id_pt: selectedPtId, checklist: autoChecklist });
                       }}
@@ -912,7 +912,8 @@ export default function TaskManagement() {
                         const ptSel = pts.find(p => p.id_pt === formData.id_pt);
                         const tipo = ptSel?.tipo_instalacao || '';
                         const t = tipo.toUpperCase();
-                        const isPTC = t.includes('CABIN') || t === 'PTC' || t.includes('CABINE');
+                        const tit = formData.titulo.toUpperCase();
+                        const isPTC = t.includes('CABIN') || t === 'PTC' || t.includes('CABINE') || tit.includes('PTC') || tit.includes('CABINE');
                         return (
                           <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${isPTC ? 'bg-violet-50 text-violet-700 border-violet-100' : 'bg-sky-50 text-sky-700 border-sky-100'}`}>
                             {isPTC ? 'PTC — 37 itens' : 'PTA — 32 itens'}
@@ -926,7 +927,7 @@ export default function TaskManagement() {
                         onClick={() => {
                           const ptSel = pts.find(p => p.id_pt === formData.id_pt);
                           if (ptSel) {
-                            setFormData(prev => ({ ...prev, checklist: getChecklistForType(ptSel.tipo_instalacao) }));
+                            setFormData(prev => ({ ...prev, checklist: getChecklistForType(ptSel.tipo_instalacao, prev.titulo) }));
                           }
                         }}
                         className="text-[9px] font-black uppercase tracking-widest text-[#0d3fd1] hover:bg-[#eff4ff] px-3 py-1.5 rounded-lg transition-colors border border-[#0d3fd1]/10"

@@ -134,8 +134,17 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const pt = tarefa.pt;
   const sub = pt?.subestacao;
 
-  // Detectar tipo PT (PTA vs PTC)
-  const isPTC = tarefa?.id_pt?.toUpperCase().includes('PTC') || tarefa?.pt?.tipo_instalacao === 'PTC';
+  // Detectar tipo PT (PTC vs PTA) - Mais robusto com .includes e fallback para título/tamanho
+  const tipoInstalacao = (tarefa?.pt?.tipo_instalacao || '').toUpperCase();
+  const tituloTarefa = (tarefa?.titulo || '').toUpperCase();
+  const isPTC = tipoInstalacao.includes('PTC') || 
+                tipoInstalacao.includes('CABINE') || 
+                tipoInstalacao.includes('EDIFICIO') ||
+                tarefa?.id_pt?.toUpperCase().includes('PTC') ||
+                tituloTarefa.includes('PTC') ||
+                tituloTarefa.includes('CABINE') ||
+                (tarefa?.checklist?.length === 37);
+
   const checklistBase = isPTC ? CHECKLIST_PTC : CHECKLIST_PTA;
 
   // Estados Base — Inicializados com progresso carregado ou valor padrão

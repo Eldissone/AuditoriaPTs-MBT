@@ -93,11 +93,21 @@ export const CHECKLIST_PTC = [
 /**
  * Retorna o checklist adequado com base no tipo de instalação do PT.
  * @param {string} tipoInstalacao - ex: 'Cabine', 'PTC', 'PTA', 'Posto de Transformação Aéreo', etc.
+ * @param {string} titulo - Opcional, título da tarefa para reforçar a detecção.
  * @returns {Array} checklist items com { id, secao, prio, label, checked: false, resultado: '' }
  */
-export function getChecklistForType(tipoInstalacao) {
+export function getChecklistForType(tipoInstalacao, titulo = '') {
   const t = (tipoInstalacao || '').toUpperCase();
-  const isPTC = t.includes('CABIN') || t === 'PTC' || t.includes('CABINE');
+  const tit = (titulo || '').toUpperCase();
+  
+  // Detecção robusta: se for Cabine, Edifício ou mencionar PTC no tipo ou título
+  const isPTC = t.includes('CABIN') || 
+                t.includes('EDIFICIO') || 
+                t === 'PTC' || 
+                t.includes('CABINE') ||
+                tit.includes('PTC') ||
+                tit.includes('CABINE');
+                
   const base = isPTC ? CHECKLIST_PTC : CHECKLIST_PTA;
   return base.map(item => ({ ...item, checked: false, resultado: '' }));
 }

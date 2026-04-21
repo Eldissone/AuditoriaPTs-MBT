@@ -20,10 +20,14 @@ import {
   LayoutGrid,
   Minimize2,
   CheckCircle,
+  XCircle,
+  Wrench,
+  Printer,
   ClipboardList,
   FileSpreadsheet,
   FileText,
-  FilePlus
+  FilePlus,
+  AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
@@ -41,6 +45,16 @@ export default function PTAudits() {
   const [audits, setAudits] = useState([]);
   const [tarefas, setTarefas] = useState([]);
   const [subestacoes, setSubestacoes] = useState([]);
+  const [auditores, setAuditores] = useState([]);
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [followUpData, setFollowUpData] = useState({
+    id_pt: '',
+    titulo: '',
+    tipo: 'Inspeção',
+    auditor_id: '',
+    data: new Date().toISOString().split('T')[0],
+    prioridade: 'Normal'
+  });
   const [selectedAuditId, setSelectedAuditId] = useState(null);
   const localidadeFiltro = searchParams.get('localidade') || '';
   const [subestacaoFiltro, setSubestacaoFiltro] = useState('');
@@ -115,7 +129,11 @@ export default function PTAudits() {
           : (auditsRes.data || []);
         setAudits(filteredAudits);
         setTarefas(tarefasRes.data || []);
-        setSubestacoes(substRes.data || []);
+        setSubestacoes(Array.isArray(substRes.data) ? substRes.data : []);
+
+        // Fetch auditores for follow-up assignment
+        const usersRes = await api.get('/utilizadores');
+        setAuditores((usersRes.data || []).filter(u => u.role === 'auditor' || u.role === 'admin'));
       } catch (err) {
         console.error(err);
       }
@@ -146,6 +164,39 @@ export default function PTAudits() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const handleOpenFollowUp = (item) => {
+    setFollowUpData({
+      id_pt: item.id_pt || '',
+      titulo: `Seguimento: ${item.titulo || item.id_pt}`,
+      tipo: 'Inspeção',
+      auditor_id: item.id_auditor || '',
+      data: new Date().toISOString().split('T')[0],
+      prioridade: 'Normal'
+    });
+    setIsFollowUpModalOpen(true);
+  };
+
+  const handleSubmitFollowUp = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/tarefas', {
+        titulo: followUpData.titulo,
+        id_pt: followUpData.id_pt,
+        id_auditor: Number(followUpData.auditor_id),
+        data_prevista: followUpData.data,
+        tipo_tarefa: followUpData.tipo,
+        prioridade: followUpData.prioridade,
+        status: 'Pendente',
+        checklist: [] // Default empty for follow-up, can be set later in management
+      });
+      setIsFollowUpModalOpen(false);
+      alert('Seguimento agendado com sucesso!');
+      setView('list'); // Refresh trigger
+    } catch (err) {
+      alert('Erro ao agendar seguimento: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleSelectTask = (taskId) => {
     const normalized = taskId ? Number(taskId) : null;
     if (!normalized) {
@@ -160,6 +211,22 @@ export default function PTAudits() {
       // Se a tarefa tiver PT associado, preenche automaticamente a auditoria
       id_pt: task?.id_pt || prev.id_pt,
     }));
+  };
+
+  const handleValidarTarefa = async (id, scheduleFollowup = false) => {
+    try {
+      const task = tarefas.find(t => t.id === id);
+      await api.patch(`/tarefas/${id}/status`, { status: 'Concluída' });
+
+      if (scheduleFollowup) {
+        handleOpenFollowUp(task);
+      } else {
+        alert('Tarefa validada e concluída com sucesso!');
+        setView('list'); // Refresh trigger
+      }
+    } catch (err) {
+      alert('Erro ao validar tarefa: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   // Se o utilizador mudar o PT manualmente e a tarefa selecionada não for desse PT, limpa a associação
@@ -569,13 +636,12 @@ export default function PTAudits() {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 print-hide">
-            <button
-              onClick={() => setModoRelatorio((prev) => (prev === 'executivo' ? 'completo' : 'executivo'))}
-              className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-            >  <LayoutGrid className="w-4 h-4" />
-              Rel.{modoRelatorio === 'executivo' ? 'Executivo' : 'Completo'}
-            </button>
+          <div className="flex items-center gap-2 print-hide">            <button
+            onClick={() => setModoRelatorio((prev) => (prev === 'executivo' ? 'completo' : 'executivo'))}
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+          >  <LayoutGrid className="w-4 h-4" />
+            Rel.{modoRelatorio === 'executivo' ? 'Executivo' : 'Completo'}
+          </button>
             <button
               onClick={handleResetPreferencias}
               className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#444655] px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
@@ -607,6 +673,7 @@ export default function PTAudits() {
               <FileText className="w-4 h-4" />
               PDF
             </button>
+
             {user?.role === 'admin' && (
               <button
                 onClick={() => {
@@ -673,7 +740,7 @@ export default function PTAudits() {
             className="bg-white border border-[#c4c5d7]/20 rounded-xl px-4 py-3 text-[11px] font-bold uppercase text-[#0f1c2c]"
           >
             <option value="">Todas as Subestações</option>
-            {subestacoes
+            {(Array.isArray(subestacoes) ? subestacoes : [])
               .filter(s => !localidadeFiltro || s.municipio === localidadeFiltro)
               .map(s => (
                 <option key={s.id} value={s.id}>{s.nome}</option>
@@ -797,12 +864,7 @@ export default function PTAudits() {
                         </button>
                         {user?.role === 'admin' && (
                           <>
-                            <button
-                              onClick={() => handleEdit(audit)}
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
-                            >
-                              Editar
-                            </button>
+
                             <button
                               onClick={() => handleDelete(audit.id)}
                               className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
@@ -864,6 +926,14 @@ export default function PTAudits() {
                         >
                           Auditar Cliente
                         </button>
+                        {tarefa.data_fim && user?.role === 'admin' && (
+                          <button
+                            onClick={() => handleOpenFollowUp(tarefa)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#f8faff] border border-[#c4c5d7]/30 text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
+                          >
+                            <Wrench className="w-3.5 h-3.5" /> Agendar Seguimento
+                          </button>
+                        )}
                         {tarefa.data_fim && (
                           <span className="flex items-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md">
                             Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
@@ -900,8 +970,216 @@ export default function PTAudits() {
     );
   }
 
+  if (view === 'detail' && detailTarefa) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setView('list')} className="p-3 bg-white border border-[#c4c5d7]/20 rounded-xl hover:bg-[#eff4ff] transition-all">
+              <ArrowLeft className="w-5 h-5 text-[#444655]" />
+            </button>
+            <div>
+              <h2 className="text-[#0f1c2c] text-2xl font-black uppercase tracking-tight">Detalhes da Tarefa</h2>
+              <p className="text-sm text-[#747686] font-medium opacity-60">Relatório técnico submetido para validação</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all"
+            >
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-xl overflow-hidden">
+          <div className="bg-[#243141] px-10 py-6 border-b border-white/5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[#0d3fd1] rounded-xl">
+                  <CheckCircle className="w-5 h-5 text-[#5fff9b]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest">Estado: {detailTarefa.status}</span>
+                  <h3 className="text-white text-lg font-bold uppercase">{detailTarefa.titulo}</h3>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black text-white/40 uppercase block mb-1">PT Associado</span>
+                <p className="text-white font-black">{detailTarefa.id_pt || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-10 space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest border-b border-[#0d3fd1]/10 pb-2">Informações Gerais</h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-[#c4c5d7]/10">
+                    <span className="text-xs font-bold text-[#747686] uppercase">Técnico</span>
+                    <span className="text-sm font-black text-[#0f1c2c]">{detailTarefa.auditor?.nome}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-[#c4c5d7]/10">
+                    <span className="text-xs font-bold text-[#747686] uppercase">Data Conclusão</span>
+                    <span className="text-sm font-black text-[#0f1c2c]">{detailTarefa.data_fim ? new Date(detailTarefa.data_fim).toLocaleString('pt-PT') : 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest border-b border-[#0d3fd1]/10 pb-2">Checklist de Auditoria</h4>
+                <div className="space-y-2">
+                  {detailTarefa.checklist?.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-[#f8faff] rounded-xl border border-[#c4c5d7]/10">
+                      <span className="text-[11px] font-bold text-[#444655]">{item.label}</span>
+                      {item.checked ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-400" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-10 border-t border-[#c4c5d7]/20 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-black text-[#747686] uppercase mb-1">Decisória de Gestão</p>
+                <p className="text-xs text-[#444655] font-medium max-w-sm">Valide os itens acima para concluir o ciclo desta tarefa no sistema.</p>
+              </div>
+
+              {detailTarefa.status === 'Aguardando Validação' && user?.role === 'admin' ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleValidarTarefa(detailTarefa.id)}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Validar Somente
+                  </button>
+                  <button
+                    onClick={() => handleValidarTarefa(detailTarefa.id, true)}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-500/30 transition-all font-bold"
+                  >
+                    <Wrench className="w-4 h-4" /> Validar e Agendar Seguimento
+                  </button>
+                </div>
+              ) : (
+                <div className="px-6 py-3 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase">
+                  Tarefa Concluída e Validada
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {isFollowUpModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-md p-4">
+          <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+            <div className="bg-[#243141] px-8 py-6 flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest block mb-1">Encaminhamento Técnico</span>
+                <h3 className="text-white text-lg font-black uppercase">Agendar Seguimento de PT</h3>
+              </div>
+              <button
+                onClick={() => setIsFollowUpModalOpen(false)}
+                className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition-all"
+              >
+                <Minimize2 className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitFollowUp} className="p-8 space-y-5">
+              <div>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Título da Intervenção</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                  value={followUpData.titulo}
+                  onChange={e => setFollowUpData({ ...followUpData, titulo: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Tipo</label>
+                  <select
+                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                    value={followUpData.tipo}
+                    onChange={e => setFollowUpData({ ...followUpData, tipo: e.target.value })}
+                  >
+                    <option value="Inspeção">Inspeção Técnica</option>
+                    <option value="Manutenção Preventiva">Manutenção Prev.</option>
+                    <option value="Manutenção Corretiva">Manutenção Corr.</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Prioridade</label>
+                  <select
+                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                    value={followUpData.prioridade}
+                    onChange={e => setFollowUpData({ ...followUpData, prioridade: e.target.value })}
+                  >
+                    <option value="Normal">Normal</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Urgente">Urgente</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Atribuir Técnico</label>
+                <select
+                  required
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                  value={followUpData.auditor_id}
+                  onChange={e => setFollowUpData({ ...followUpData, auditor_id: e.target.value })}
+                >
+                  <option value="">Escolha um técnico...</option>
+                  {auditores.map(a => (
+                    <option key={a.id} value={a.id}>{a.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Data Alvo</label>
+                <input
+                  type="date"
+                  required
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                  value={followUpData.data}
+                  onChange={e => setFollowUpData({ ...followUpData, data: e.target.value })}
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsFollowUpModalOpen(false)}
+                  className="flex-1 px-6 py-4 rounded-2xl text-[10px] font-black uppercase text-[#444655] hover:bg-[#f8faff] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#0d3fd1] text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase shadow-xl shadow-[#0d3fd1]/20 hover:bg-[#0034cc] transition-all"
+                >
+                  Agendar Agora
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <button onClick={() => setView('list')} className="p-3 bg-white border border-[#c4c5d7]/20 rounded-xl hover:bg-[#eff4ff] transition-all">
@@ -1338,48 +1616,47 @@ export default function PTAudits() {
                       </div>
                     ))}
                   </div>
+              )}
+
+                  <div className="flex items-center gap-4 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
+                    <AlertCircle className="w-6 h-6 text-yellow-600" />
+                    <p className="text-xs font-bold text-yellow-800 uppercase tracking-tight leading-relaxed">
+                      Ao salvar, estes dados serão vinculados permanentemente ao histórico do PT. Verifique a precisão das informações técnicas.
+                    </p>
+                  </div>
                 </div>
               )}
 
-              <div className="flex items-center gap-4 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
-                <AlertCircle className="w-6 h-6 text-yellow-600" />
-                <p className="text-xs font-bold text-yellow-800 uppercase tracking-tight leading-relaxed">
-                  Ao salvar, estes dados serão vinculados permanentemente ao histórico do PT. Verifique a precisão das informações técnicas.
-                </p>
+              <div className="mt-auto pt-10 flex justify-between border-t border-[#c4c5d7]/10">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep(s => s - 1)}
+                    className="flex items-center gap-2 px-8 py-3.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655]"
+                  >
+                    Voltar
+                  </button>
+                ) : <div></div>}
+
+                {step < 5 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep(s => s + 1)}
+                    disabled={!formData.id_pt && step === 1}
+                    className="flex items-center gap-2 px-10 py-3.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10 disabled:opacity-30"
+                  >
+                    Próximo
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-10 py-3.5 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest"
+                  >
+                    Salvar Auditoria
+                  </button>
+                )}
               </div>
-            </div>
-          )}
-
-          <div className="mt-auto pt-10 flex justify-between border-t border-[#c4c5d7]/10">
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={() => setStep(s => s - 1)}
-                className="flex items-center gap-2 px-8 py-3.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655]"
-              >
-                Voltar
-              </button>
-            ) : <div></div>}
-
-            {step < 5 ? (
-              <button
-                type="button"
-                onClick={() => setStep(s => s + 1)}
-                disabled={!formData.id_pt && step === 1}
-                className="flex items-center gap-2 px-10 py-3.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10 disabled:opacity-30"
-              >
-                Próximo
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-10 py-3.5 bg-[#00e47c] text-[#005229] rounded-xl text-[10px] font-black uppercase tracking-widest"
-              >
-                Salvar Auditoria
-              </button>
-            )}
-          </div>
-        </form>
+            </form>
       </div>
     </div>
   );
