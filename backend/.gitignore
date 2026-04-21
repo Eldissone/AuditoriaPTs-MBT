@@ -1,0 +1,96 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+package-lock.json
+npm-debug.log*
+npm-err.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend (Vite + React)
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
+
+# Backend (Express + Node)
+backend/dist/
+backend/build/
+backend/logs/
+backend/*.log
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/.env
+backend/.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Development
+.tmp/
+tmp/
+temp/
+cache/
+
+# Build outputs
+dist/
+build/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+
+# Git
+.git/
+
+# IDE Settings (but allow .vscode/settings.json templates)
+.vscode/launch.json
+.vscode/tasks.json
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Lock files (optional - uncomment if you want to track them)
+# frontend/package-lock.json
+# backend/package-lock.json
+
+# OS specific
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Misc
+.cache/
+.parcel-cache/
+
+# Production
+build/
+dist/
