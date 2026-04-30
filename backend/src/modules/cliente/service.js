@@ -50,7 +50,7 @@ class IdentificacaoService {
     if (!Array.isArray(dataArray)) throw new Error('Dados inválidos para importação.');
 
     const prisma = require('../../database/client');
-    const { getGpsForMunicipio, parseGps, calcularDistanciaHaversine } = require('../../utils/angolaGps');
+    const { getGpsForMunicipio, parseGps, calcularDistanciaHaversine, getMunicipioByLocalidade } = require('../../utils/angolaGps');
     const results = { pts: 0, updated: 0, skipped: 0, errors: [] };
 
     // ── 1. Garantir existência da Subestação Geral ───────────────────────────
