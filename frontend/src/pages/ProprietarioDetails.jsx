@@ -27,6 +27,7 @@ export default function ProprietarioDetails() {
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { fetchProprietario(); }, [id]);
 
@@ -214,8 +215,8 @@ export default function ProprietarioDetails() {
 
         {/* ── Right Col: PTs ────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm overflow-hidden min-h-[500px]">
-            <div className="px-8 py-6 border-b border-[#c4c5d7]/10 flex items-center justify-between">
+          <div className="bg-white rounded-3xl border border-[#c4c5d7]/20 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
+            <div className="px-8 py-6 border-b border-[#c4c5d7]/10 flex items-center justify-between bg-white z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
                   <Layers className="w-5 h-5 text-blue-600" />
@@ -230,10 +231,11 @@ export default function ProprietarioDetails() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Scrollable Container for Table */}
+            <div className={`overflow-x-auto custom-scrollbar ${proprietario.pts?.length > 15 ? 'max-h-[650px] overflow-y-auto' : ''}`}>
               <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-[#f8faff] text-[#747686]">
+                <thead className="sticky top-0 bg-[#f8faff] z-20 shadow-sm">
+                  <tr className="text-[#747686]">
                     <th className="px-8 py-4 text-[9px] font-black uppercase tracking-widest">ID PT / Código</th>
                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest">Potência</th>
                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest">Localidade</th>
@@ -243,44 +245,83 @@ export default function ProprietarioDetails() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#c4c5d7]/10">
-                  {proprietario.pts?.map(pt => (
-                    <tr key={pt.id} className="hover:bg-[#f8faff] transition-colors group">
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-black text-[#0d3fd1] uppercase">{pt.id_pt}</span>
-                          <span className="text-[9px] font-bold text-[#747686]">{pt.tipo_instalacao}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5"><span className="text-[11px] font-black text-[#0f1c2c]">{pt.potencia_kva} kVA</span></td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#747686]">
-                          <MapPin className="w-3 h-3 text-purple-400" />
-                          {pt.bairro || pt.localizacao || pt.municipio}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg border ${pt.estado_operacional === 'Operacional' ? 'bg-green-50 text-green-700 border-green-100' :
-                            pt.estado_operacional === 'Crítico' ? 'bg-red-50 text-red-700 border-red-100' :
-                              'bg-yellow-50 text-yellow-700 border-yellow-100'
-                          }`}>{pt.estado_operacional}</span>
-                      </td>
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="text-[10px] font-black text-[#0f1c2c]">{pt._count?.inspecoes || 0}</span>
-                          <span className="text-[8px] font-bold text-[#c4c5d7] uppercase">Total</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <button
-                          onClick={() => navigate(`/ficha-tecnica/${pt.id_pt}`)}
-                          className="p-2.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm active:scale-90"
-                          title="Ficha Técnica"
-                        >
-                          <ArrowUpRight className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const ITEMS_PER_PAGE = 15;
+                    const totalItems = proprietario.pts?.length || 0;
+                    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+                    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+                    const paginatedItems = (proprietario.pts || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+                    return (
+                      <>
+                        {paginatedItems.map(pt => (
+                          <tr key={pt.id} className="hover:bg-[#f8faff] transition-colors group">
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-[11px] font-black text-[#0d3fd1] uppercase">{pt.id_pt}</span>
+                                <span className="text-[9px] font-bold text-[#747686]">{pt.tipo_instalacao}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5"><span className="text-[11px] font-black text-[#0f1c2c]">{pt.potencia_kva} kVA</span></td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#747686]">
+                                <MapPin className="w-3 h-3 text-purple-400" />
+                                {pt.bairro || pt.localizacao || pt.municipio}
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                              <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg border ${pt.estado_operacional === 'Operacional' ? 'bg-green-50 text-green-700 border-green-100' :
+                                  pt.estado_operacional === 'Crítico' ? 'bg-red-50 text-red-700 border-red-100' :
+                                    'bg-yellow-50 text-yellow-700 border-yellow-100'
+                                }`}>{pt.estado_operacional}</span>
+                            </td>
+                            <td className="px-6 py-5 text-center">
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] font-black text-[#0f1c2c]">{pt._count?.inspecoes || 0}</span>
+                                <span className="text-[8px] font-bold text-[#c4c5d7] uppercase">Total</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <button
+                                onClick={() => navigate(`/ficha-tecnica/${pt.id_pt}`)}
+                                className="p-2.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm active:scale-90"
+                                title="Ficha Técnica"
+                              >
+                                <ArrowUpRight className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {totalPages > 1 && (
+                          <tr className="bg-[#fcfdff]">
+                            <td colSpan={6} className="px-8 py-4">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">
+                                  Página {currentPage} de {totalPages} <span className="mx-2 opacity-20">|</span> Total {totalItems} PTs
+                                </p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 bg-white border border-[#c4c5d7]/30 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#eff4ff] disabled:opacity-30 transition-all"
+                                  >
+                                    Anterior
+                                  </button>
+                                  <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 bg-white border border-[#c4c5d7]/30 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#eff4ff] disabled:opacity-30 transition-all"
+                                  >
+                                    Próxima
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })()}
                   {!proprietario.pts?.length && (
                     <tr>
                       <td colSpan={6} className="px-8 py-20 text-center text-[10px] font-black text-[#747686] uppercase tracking-widest opacity-30 italic">
@@ -292,7 +333,7 @@ export default function ProprietarioDetails() {
               </table>
             </div>
 
-            <div className="p-8 bg-[#fcfdff] border-t border-[#c4c5d7]/10 flex items-center justify-between">
+            <div className="mt-auto p-8 bg-[#fcfdff] border-t border-[#c4c5d7]/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-purple-500" />
                 <p className="text-[10px] font-black text-[#747686] uppercase tracking-widest">
