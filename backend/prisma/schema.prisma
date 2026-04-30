@@ -11,8 +11,8 @@ datasource db {
 model Subestacao {
   id                   Int                   @id @default(autoincrement())
   nome                 String                @db.VarChar(100)
-  codigo_operacional   String                @unique @db.VarChar(20)
-  tipo                 String                @db.VarChar(20) // Transporte ou Distribuição
+  codigo_operacional   String                @unique @db.VarChar(50)
+  tipo                 String                @db.VarChar(50) // Transporte ou Distribuição
   tensao_kv_entrada    Float?
   tensao_kv_saida      Float?
   capacidade_total_mva Float?
@@ -20,7 +20,7 @@ model Subestacao {
   latitude             Float?
   longitude            Float?
   gps                  String?
-  status               String                @default("Ativa") @db.VarChar(20)
+  status               String                @default("Ativa") @db.VarChar(50)
   data_instalacao      DateTime?             @db.Date
 
   criado_em     DateTime             @default(now())
