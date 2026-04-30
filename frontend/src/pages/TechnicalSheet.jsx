@@ -163,17 +163,29 @@ export default function TechnicalSheet() {
   const handleExportPDF = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/clientes/${id_pt}/pdf`, { responseType: 'blob' });
+      
+      // Detetar automaticamente qual ficha gerar com base na aba ativa ou dados disponíveis
+      const isClientSheet = activeTab === 'cliente';
+      const endpoint = isClientSheet 
+        ? `/proprietarios/${pt.id_proprietario}/pdf` 
+        : `/clientes/${id_pt}/pdf`;
+      
+      const fileName = isClientSheet 
+        ? `Ficha_Cliente_${pt.proprietario?.nome?.replace(/\s+/g, '_') || pt.id_proprietario}.pdf`
+        : `Ficha_Tecnica_${id_pt}.pdf`;
+
+      const response = await api.get(endpoint, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Ficha_Tecnica_${id_pt}.pdf`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Erro ao gerar o relatório PDF. Por favor, tente novamente.');
+      console.error('Erro ao exportar PDF:', err);
+      alert('Erro ao gerar o relatório PDF. Verifique se o proprietário está vinculado corretamente.');
     } finally {
       setLoading(false);
     }

@@ -8,5 +8,6 @@ router.get('/:id', controller.show);
 router.post('/', controller.store);
 router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
+router.get('/:id/pdf', controller.generatePDF);
 
 module.exports = router;

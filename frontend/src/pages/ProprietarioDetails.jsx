@@ -15,7 +15,8 @@ import {
   Briefcase,
   Edit3,
   X,
-  Save
+  Save,
+  Download
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -87,6 +88,26 @@ export default function ProprietarioDetails() {
     }
   }
 
+  async function handleExportPDF() {
+    try {
+      setLoading(true);
+      const response = await api.get(`/proprietarios/${id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Ficha_Cliente_${proprietario.nome?.replace(/\s+/g, '_') || id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao exportar PDF do cliente:', err);
+      alert('Erro ao gerar a ficha do cliente. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const field = (k, label, type = 'text') => (
     <div className="space-y-1.5">
       <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">{label}</label>
@@ -132,13 +153,22 @@ export default function ProprietarioDetails() {
             </div>
           </div>
         </div>
-        <button
-          onClick={openEdit}
-          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 active:scale-95"
-        >
-          <Edit3 className="w-4 h-4" />
-          Editar Cadastro
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 bg-white border border-[#c4c5d7]/30 text-[#0f1c2c] px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f8faff] transition-all active:scale-95 shadow-sm"
+          >
+            <Download className="w-4 h-4 text-purple-500" />
+            Exportar PDF
+          </button>
+          <button
+            onClick={openEdit}
+            className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 active:scale-95"
+          >
+            <Edit3 className="w-4 h-4" />
+            Editar Cadastro
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

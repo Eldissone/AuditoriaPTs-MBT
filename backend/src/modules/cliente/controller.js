@@ -93,7 +93,17 @@ class IdentificacaoController {
       // Fetch full data including relations
       const pt = await prisma.postoTransformacao.findUnique({
         where: { id_pt },
-        include: { subestacao: true }
+        include: { 
+          subestacao: true,
+          proprietario: true,
+          transformadores: {
+            orderBy: { num_transformador: 'asc' }
+          },
+          media_tensao: true,
+          baixa_tensao: true,
+          seguranca: true,
+          infraestrutura: true
+        }
       });
 
       if (!pt) return res.status(404).json({ error: 'PT não encontrado' });

@@ -43,130 +43,254 @@ class PDFGenerator {
 
         // --- 0 & 1: IDENTIFICAÇÃO GERAL ---
         this._drawSectionTitle(doc, '1. IDENTIFICAÇÃO E ENQUADRAMENTO', currentY, colors);
-        currentY += 30;
+        currentY += 25;
 
         const col1 = 40, col2 = 220, col3 = 400;
         
         this._drawField(doc, 'PROPRIETÁRIO / NOME', ptData.proprietario?.nome || ptData.designacao || '---', col1, currentY, colors);
-        this._drawField(doc, 'OPERADOR / CONCESSÃO', ptData.concessao_operador || '---', col2, currentY, colors);
+        this._drawField(doc, 'SUBESTAÇÃO ORIGEM', ptData.subestacao?.nome || '---', col2, currentY, colors);
         this._drawField(doc, 'TIPO DE POSTO', ptData.tipo_instalacao || '---', col3, currentY, colors);
 
-        currentY += 40;
-        this._drawField(doc, 'LOCALIZAÇÃO / MORADA', ptData.morada || '---', col1, currentY, colors);
-        this._drawField(doc, 'FREGUESIA / CONCELHO', `${ptData.freguesia || '--'} / ${ptData.concelho || '--'}`, col3, currentY, colors);
+        currentY += 35;
+        this._drawField(doc, 'LOCALIZAÇÃO / MORADA', ptData.morada || ptData.localizacao || '---', col1, currentY, colors);
+        this._drawField(doc, 'MUNICÍPIO / PROVÍNCIA', `${ptData.municipio || '--'} / ${ptData.provincia || '--'}`, col3, currentY, colors);
 
-        currentY += 40;
-        this._drawField(doc, 'COORDENADAS GPS', `${ptData.latitude || '0'}, ${ptData.longitude || '0'}`, col1, currentY, colors);
-        this._drawField(doc, 'ALTITUDE (m)', `${ptData.altitude || '---'} m`, col2, currentY, colors);
+        currentY += 35;
+        this._drawField(doc, 'COORDENADAS GPS', ptData.gps || (ptData.latitude ? `${ptData.latitude}, ${ptData.longitude}` : '---'), col1, currentY, colors);
+        this._drawField(doc, 'NÍVEL TENSÃO', ptData.nivel_tensao || '---', col2, currentY, colors);
         this._drawField(doc, 'CÓDIGO CONCESSIONÁRIA', ptData.id_concessionaria || '---', col3, currentY, colors);
 
-        currentY += 60;
+        currentY += 50;
 
         // --- 2: TRANSFORMADOR ---
         this._drawSectionTitle(doc, '2. ESPECIFICAÇÕES DO TRANSFORMADOR', currentY, colors);
-        currentY += 30;
+        currentY += 25;
 
-        const tf = ptData.transformadores?.[0] || {};
+        const tf = (ptData.transformadores && ptData.transformadores.length > 0) ? ptData.transformadores[0] : ptData;
+        
         this._drawField(doc, 'FABRICANTE', tf.fabricante || '---', col1, currentY, colors);
-        this._drawField(doc, 'Nº DE SÉRIE', tf.numero_serie || '---', col2, currentY, colors);
-        this._drawField(doc, 'ANO FABRICO', String(tf.ano_fabrico || '---'), col3, currentY, colors);
+        this._drawField(doc, 'Nº DE SÉRIE', tf.num_serie || tf.numero_serie || '---', col2, currentY, colors);
+        this._drawField(doc, 'ANO FABRICO / INST.', String(tf.ano_fabrico || tf.ano_instalacao || '---'), col3, currentY, colors);
 
-        currentY += 40;
+        currentY += 35;
         this._drawField(doc, 'POTÊNCIA (kVA)', `${tf.potencia_kva || '0'} kVA`, col1, currentY, colors);
-        this._drawField(doc, 'TENSÃO (V)', `${tf.tensao_primaria || '---'}/${tf.tensao_secundaria || '---'} V`, col2, currentY, colors);
+        this._drawField(doc, 'TENSÃO (V)', (tf.tensao_primaria && tf.tensao_secundaria) ? `${tf.tensao_primaria}/${tf.tensao_secundaria} V` : '---', col2, currentY, colors);
         this._drawField(doc, 'GRUPO LIGAÇÃO', tf.grupo_ligacao || '---', col3, currentY, colors);
 
-        currentY += 40;
+        currentY += 35;
         this._drawField(doc, 'ARREFECIMENTO', tf.tipo_arrefecimento || '---', col1, currentY, colors);
-        this._drawField(doc, 'Ucc (%)', `${tf.ucc || '---'} %`, col2, currentY, colors);
-        this._drawField(doc, 'ISOLAMENTO (kV)', `${tf.nivel_isolamento || '---'} kV`, col3, currentY, colors);
+        this._drawField(doc, 'Ucc (%)', tf.ucc ? `${tf.ucc} %` : '---', col2, currentY, colors);
+        this._drawField(doc, 'TIPO ISOLAMENTO', tf.tipo_isolamento || '---', col3, currentY, colors);
 
-        currentY += 60;
+        currentY += 50;
 
         // --- 3 & 4: INFRAESTRUTURA FÍSICA ---
         this._drawSectionTitle(doc, '3 & 4. INFRAESTRUTURA E MEIO FÍSICO', currentY, colors);
-        currentY += 30;
+        currentY += 25;
 
-        if (ptData.tipo_instalacao?.includes('PTC') || ptData.tipo_instalacao?.includes('Poste')) {
+        const isPoste = ptData.tipo_instalacao?.toLowerCase().includes('poste') || ptData.tipo_instalacao?.toLowerCase().includes('ptc');
+        
+        if (isPoste) {
           this._drawField(doc, 'TIPO DE POSTE', ptData.tipo_poste || '---', col1, currentY, colors);
           this._drawField(doc, 'MATERIAL', ptData.material_poste || '---', col2, currentY, colors);
           this._drawField(doc, 'ALTURA (m)', ptData.altura_poste ? `${ptData.altura_poste} m` : '---', col3, currentY, colors);
-          currentY += 40;
+          currentY += 35;
           this._drawField(doc, 'ESFORÇO (daN)', ptData.esforco_poste_dan ? `${ptData.esforco_poste_dan} daN` : '---', col1, currentY, colors);
+          this._drawField(doc, 'ESTADO POSTE', ptData.estado_poste || '---', col2, currentY, colors);
         } else {
           this._drawField(doc, 'TIPO DE CABINE', ptData.tipo_cabine || '---', col1, currentY, colors);
-          this._drawField(doc, 'DIMENSÕES (CxL)', `${ptData.dim_comprimento || '--'} x ${ptData.dim_largura || '--'} m`, col2, currentY, colors);
+          this._drawField(doc, 'DIMENSÕES (CxL)', (ptData.dim_comprimento && ptData.dim_largura) ? `${ptData.dim_comprimento} x ${ptData.dim_largura} m` : '---', col2, currentY, colors);
+          this._drawField(doc, 'ESTADO ESTRUTURA', ptData.infraestrutura?.estado_cabine || '---', col3, currentY, colors);
         }
 
-        currentY += 60;
+        currentY += 50;
 
         // --- 5 & 6: MT / BT ---
         this._drawSectionTitle(doc, '5 & 6. QUADROS E PROTEÇÕES (MT / BT)', currentY, colors);
-        currentY += 30;
+        currentY += 25;
 
         const mt = ptData.media_tensao || {};
         const bt = ptData.baixa_tensao || {};
         
-        this._drawField(doc, 'Nº CELAS MT', String(mt.celas?.length || 0), col1, currentY, colors);
+        this._drawField(doc, 'TIPO CELAS MT', mt.tipo_celas || '---', col1, currentY, colors);
         this._drawField(doc, 'QGBT FABRICANTE', bt.fabricante_qgbt || '---', col2, currentY, colors);
         this._drawField(doc, 'Nº SAÍDAS BT', String(bt.num_saidas_bt || 0), col3, currentY, colors);
 
-        currentY += 40;
+        currentY += 35;
         this._drawField(doc, 'DISJUNTOR GERAL BT', bt.disjuntor_geral ? 'PRESENTE' : 'AUSENTE', col1, currentY, colors);
         this._drawField(doc, 'TIPO DE NEUTRO', bt.tipo_ligacao_neutro || '---', col2, currentY, colors);
         this._drawField(doc, 'CONTAGEM BT', bt.contagem_bt ? 'SIM' : 'NÃO', col3, currentY, colors);
 
-        // Check for page break
-        if (currentY > 700) {
+        // Conditional Page Break
+        if (currentY > 720) {
+          doc.addPage();
+          currentY = 50;
+        } else {
+          currentY += 50;
+        }
+
+        // --- 7: PROTEÇÕES E TERRA ---
+        this._drawSectionTitle(doc, '7. SEGURANÇA, PROTEÇÃO E TERRA', currentY, colors);
+        currentY += 25;
+
+        const seg = ptData.seguranca || {};
+        this._drawField(doc, 'RESISTÊNCIA TERRA', seg.resistencia_terra ? `${seg.resistencia_terra} ohm` : '---', col1, currentY, colors);
+        this._drawField(doc, 'DATA MEDIÇÃO', seg.data_ultima_medicao ? new Date(seg.data_ultima_medicao).toLocaleDateString('pt-PT') : '---', col2, currentY, colors);
+        this._drawField(doc, 'RELÉ PROTEÇÃO', seg.rele_protecao_marca || '---', col3, currentY, colors);
+
+        currentY += 35;
+        this._drawField(doc, 'PROT. SOBRECORRENTE', seg.protecao_sobrecorrente ? 'SIM' : 'NÃO', col1, currentY, colors);
+        this._drawField(doc, 'PROT. DIFERENCIAL', seg.protecao_diferencial ? 'SIM' : 'NÃO', col2, currentY, colors);
+        this._drawField(doc, 'FUSÍVEIS MT (A)', seg.fusiveis_mt_calibre || '---', col3, currentY, colors);
+
+        currentY += 50;
+
+        // --- 8: ANOMALIAS ---
+        this._drawSectionTitle(doc, '8. ANOMALIAS E OBSERVAÇÕES CRÍTICAS', currentY, colors);
+        currentY += 20;
+
+        doc.fillColor(colors.text).fontSize(8).font('Helvetica');
+        const obs = ptData.observacoes_gerais || 'Nenhuma anomalia crítica reportada durante o levantamento.';
+        doc.text(obs, 40, currentY, { width: 500, align: 'justify' });
+
+        // Ensure validation is always visible, maybe push to next page if tight
+        if (currentY > 650) {
           doc.addPage();
           currentY = 50;
         } else {
           currentY += 60;
         }
 
-        // --- 7: PROTEÇÕES E TERRA ---
-        this._drawSectionTitle(doc, '7. SEGURANÇA, PROTEÇÃO E TERRA', currentY, colors);
-        currentY += 30;
-
-        const seg = ptData.seguranca || {};
-        this._drawField(doc, 'RESISTÊNCIA TERRA', `${seg.resistencia_terra || '---'} ohm`, col1, currentY, colors);
-        this._drawField(doc, 'DATA MEDIÇÃO', seg.data_ultima_medicao ? new Date(seg.data_ultima_medicao).toLocaleDateString('pt-PT') : '---', col2, currentY, colors);
-        this._drawField(doc, 'RELÉ PROTEÇÃO', seg.rele_protecao_marca || '---', col3, currentY, colors);
-
-        currentY += 40;
-        this._drawField(doc, 'PROT. SOBRECORRENTE', seg.protecao_sobrecorrente ? 'SIM' : 'NÃO', col1, currentY, colors);
-        this._drawField(doc, 'PROT. DIFERENCIAL', seg.protecao_diferencial ? 'SIM' : 'NÃO', col2, currentY, colors);
-        this._drawField(doc, 'FUSÍVEIS MT (A)', seg.fusiveis_mt_calibre || '---', col3, currentY, colors);
-
-        currentY += 60;
-
-        // --- 8: ANOMALIAS ---
-        this._drawSectionTitle(doc, '8. ANOMALIAS E OBSERVAÇÕES CRÍTICAS', currentY, colors);
-        currentY += 25;
-
-        doc.fillColor(colors.text).fontSize(8).font('Helvetica');
-        const obs = ptData.observacoes_gerais || 'Nenhuma anomalia crítica reportada durante o levantamento.';
-        doc.text(obs, 40, currentY, { width: 500, align: 'justify' });
-
-        currentY += 100;
-
         // --- 9: VALIDAÇÃO ---
         this._drawSectionTitle(doc, '9. VALIDAÇÃO TÉCNICA', currentY, colors);
-        currentY += 30;
+        currentY += 25;
 
-        doc.rect(40, currentY, 240, 100).strokeColor(colors.border).stroke();
+        doc.rect(40, currentY, 240, 80).strokeColor(colors.border).stroke();
         doc.text('TECNICO EXECUTANTE', 50, currentY + 10);
         doc.font('Helvetica-Bold').text(ptData.tecnico_levantamento || '---', 50, currentY + 25);
-        doc.fontSize(7).font('Helvetica').text('Assinatura Eletrónica / Carimbo', 50, currentY + 80);
+        doc.fontSize(7).font('Helvetica').text('Assinatura Eletrónica / Carimbo', 50, currentY + 65);
 
-        doc.rect(300, currentY, 240, 100).strokeColor(colors.border).stroke();
+        doc.rect(300, currentY, 240, 80).strokeColor(colors.border).stroke();
         doc.text('SUPERVISOR / RESPONSÁVEL', 310, currentY + 10);
         doc.font('Helvetica-Bold').text(ptData.supervisor_obra || '---', 310, currentY + 25);
-        doc.fontSize(7).font('Helvetica').text('Assinatura Eletrónica / Carimbo', 310, currentY + 80);
+        doc.fontSize(7).font('Helvetica').text('Assinatura Eletrónica / Carimbo', 310, currentY + 65);
 
         // Footer
         doc.fontSize(7).fillColor(colors.lightText)
-           .text('Este documento é um registo eletrónico oficial gerado pelo Sistema PTAS MBT. A integridade dos dados é de responsabilidade dos técnicos validadores.', 40, 770, { align: 'center', width: 500 });
+           .text('Este documento é um registo eletrónico oficial gerado pelo Sistema PTAS MBT. A integridade dos dados é de responsabilidade dos técnicos validadores.', 40, 785, { align: 'center', width: 500 });
+        
+        doc.end();
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // --- FICHA DO CLIENTE (COMMERCIAL/SUMMARY) ---
+  async generateClientSheet(clientData, res) {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({
+          margin: 40,
+          size: 'A4',
+          info: {
+            Title: `Ficha do Cliente - ${clientData.nome}`,
+            Author: 'Sistema PTAS - MBT Energia',
+          }
+        });
+
+        doc.pipe(res);
+
+        const colors = {
+          primary: '#0f1c2c',
+          accent: '#7c3aed', // Purple for Client/Commercial
+          danger: '#dc2626',
+          success: '#16a34a',
+          text: '#444655',
+          lightText: '#747686',
+          border: '#e5e7eb',
+          bgHeader: '#0f1c2c'
+        };
+
+        // --- Header ---
+        doc.rect(0, 0, doc.page.width, 80).fill(colors.bgHeader);
+        doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text('FICHA DE CADASTRO COMERCIAL (CLIENTE)', 40, 25);
+        doc.fillColor('#a78bfa').fontSize(9).font('Helvetica').text('GESTAO DE ACTIVOS E PERFIL COMERCIAL — REV. 01', 40, 50);
+
+        const emissionDate = new Date().toLocaleDateString('pt-PT');
+        doc.fillColor('#ffffff').fontSize(8).text(`EMISSAO: ${emissionDate}`, 450, 35, { align: 'right' });
+
+        let currentY = 100;
+
+        // --- 1. DADOS DE IDENTIFICAÇÃO ---
+        this._drawSectionTitle(doc, '1. IDENTIFICAÇÃO DO CLIENTE', currentY, colors);
+        currentY += 25;
+
+        const col1 = 40, col2 = 220, col3 = 400;
+        this._drawField(doc, 'NOME / RAZÃO SOCIAL', clientData.nome || '---', col1, currentY, colors);
+        this._drawField(doc, 'NIF', clientData.nif || '---', col2, currentY, colors);
+        this._drawField(doc, 'TIPO DE CLIENTE', clientData.tipo_cliente || '---', col3, currentY, colors);
+
+        currentY += 35;
+        this._drawField(doc, 'TELEFONE', clientData.telefone || '---', col1, currentY, colors);
+        this._drawField(doc, 'E-MAIL', clientData.email || '---', col2, currentY, colors);
+        this._drawField(doc, 'CONTA CONTRATO', clientData.conta_contrato || '---', col3, currentY, colors);
+
+        currentY += 50;
+
+        // --- 2. SITUAÇÃO FINANCEIRA ---
+        this._drawSectionTitle(doc, '2. PERFIL COMERCIAL E FINANCEIRO', currentY, colors);
+        currentY += 25;
+
+        const divida = Number(clientData.montante_divida || 0);
+        this._drawField(doc, 'DÍVIDA TOTAL', `${divida.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} Kz`, col1, currentY, colors);
+        this._drawField(doc, 'FATURAS EM ATRASO', String(clientData.num_facturas_atraso || 0), col2, currentY, colors);
+        this._drawField(doc, 'CATEGORIA TARIFÁRIA', clientData.categoria_tarifa || '---', col3, currentY, colors);
+
+        currentY += 35;
+        this._drawField(doc, 'ZONA / ÁREA COMERCIAL', clientData.zona || '---', col1, currentY, colors);
+        this._drawField(doc, 'RESPONSÁVEL FINANCEIRO', clientData.responsavel_financeiro || '---', col2, currentY, colors);
+        this._drawField(doc, 'CONTACTO FINANCEIRO', clientData.contacto_resp_financeiro || '---', col3, currentY, colors);
+
+        currentY += 50;
+
+        // --- 3. ATIVOS TÉCNICOS ASSOCIADOS ---
+        this._drawSectionTitle(doc, '3. RELAÇÃO DE ATIVOS TÉCNICOS (PTs)', currentY, colors);
+        currentY += 25;
+
+        // Table Header
+        doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold');
+        doc.text('CÓDIGO PT', 40, currentY);
+        doc.text('POTÊNCIA', 120, currentY);
+        doc.text('LOCALIZAÇÃO', 200, currentY);
+        doc.text('ESTADO OPERACIONAL', 400, currentY);
+        
+        currentY += 12;
+        doc.moveTo(40, currentY).lineTo(550, currentY).strokeColor(colors.border).lineWidth(0.5).stroke();
+        currentY += 10;
+
+        doc.font('Helvetica').fontSize(8).fillColor(colors.primary);
+        (clientData.pts || []).forEach(pt => {
+          if (currentY > 720) {
+            doc.addPage();
+            currentY = 50;
+          }
+          doc.text(pt.id_pt, 40, currentY);
+          doc.text(`${pt.potencia_kva} kVA`, 120, currentY);
+          doc.text(pt.bairro || pt.municipio || '---', 200, currentY, { width: 180, truncate: true });
+          doc.text(pt.estado_operacional || '---', 400, currentY);
+          currentY += 20;
+        });
+
+        if (!clientData.pts?.length) {
+          doc.fillColor(colors.lightText).text('Nenhum ativo técnico associado a este cliente.', 40, currentY, { italic: true });
+          currentY += 20;
+        }
+
+        // Footer
+        doc.fontSize(7).fillColor(colors.lightText)
+           .text('Documento gerado automaticamente pelo Sistema PTAS MBT. Dados sujeitos a confirmação em auditoria de campo.', 40, 785, { align: 'center', width: 500 });
         
         doc.end();
         resolve();
@@ -189,8 +313,6 @@ class PDFGenerator {
 
   // generateAuditReport stays similar but focuses on the inspection event
   async generateAuditReport(auditData, res) {
-    // Legacy support or specific audit report logic here
-    // For now, I'll keep it as is or redirect to the technical sheet pattern
     return this.generateTechnicalSheet(auditData.pt, [], res);
   }
 }

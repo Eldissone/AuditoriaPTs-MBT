@@ -45,6 +45,35 @@ class ProprietarioController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async generatePDF(req, res) {
+    try {
+      const { id } = req.params;
+      const prisma = require('../../database/client');
+      const pdfGenerator = require('../../utils/pdfGenerator');
+
+      const client = await prisma.proprietario.findUnique({
+        where: { id: Number(id) },
+        include: { 
+          pts: {
+            orderBy: { id_pt: 'asc' }
+          }
+        }
+      });
+
+      if (!client) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Ficha_Cliente_${id}.pdf`);
+
+      await pdfGenerator.generateClientSheet(client, res);
+    } catch (error) {
+      console.error('Erro ao gerar PDF do cliente:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro ao gerar o relatório do cliente' });
+      }
+    }
+  }
 }
 
 module.exports = new ProprietarioController();
