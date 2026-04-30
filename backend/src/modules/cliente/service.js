@@ -160,17 +160,27 @@ class IdentificacaoService {
         where: { id_pt: { in: chunkIds } }
       });
       const recordMap = new Map(existingRecordsData.map(r => [r.id_pt, r]));
+      const processedInChunk = new Set();
 
-      await Promise.all(chunk.map(async (item, chunkIdx) => {
+      for (let chunkIdx = 0; chunkIdx < chunk.length; chunkIdx++) {
+        const item = chunk[chunkIdx];
         const absoluteIdx = i + chunkIdx;
+        
         try {
           const stableKey = deriveStableKey(item);
 
           if (!stableKey) {
             results.skipped++;
             results.errors.push(`Linha ${absoluteIdx + 1}: ignorada — sem identificador único.`);
-            return;
+            continue;
           }
+
+          // Evitar processar o mesmo ID duas vezes no mesmo chunk (colisão de dados no Excel)
+          if (processedInChunk.has(stableKey)) {
+            results.skipped++;
+            continue;
+          }
+          processedInChunk.add(stableKey);
 
           // ── Lógica de Proprietário (Clientes) ────────────────────────────
           const propNome = (item['Nome completo'] || item['Nome Proprietario'] || item.proprietario || item.parceiro_negocios || 'N/D').toString().trim();
@@ -330,7 +340,7 @@ class IdentificacaoService {
         } catch (err) {
           results.errors.push(`Linha ${absoluteIdx + 1}: ${err.message}`);
         }
-      }));
+      }
     }
 
     return results;
