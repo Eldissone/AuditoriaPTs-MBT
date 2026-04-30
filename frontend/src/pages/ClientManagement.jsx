@@ -157,6 +157,7 @@ export default function ClientManagement() {
   const [loading, setLoading] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [expandedSubestacoes, setExpandedSubestacoes] = useState({});
+  const [expandedSubProprietarios, setExpandedSubProprietarios] = useState({});
 
   const [mainTab, setMainTab] = useState('pts'); // 'pts' | 'proprietarios'
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -348,6 +349,25 @@ export default function ClientManagement() {
     Object.keys(acc).sort().forEach(key => { sortedAcc[key] = acc[key]; });
     return sortedAcc;
   }, [clientes]);
+
+  const groupedProprietarios = useMemo(() => {
+    const acc = {};
+    proprietarios.forEach(p => {
+      const subs = new Set();
+      if (p.pts && p.pts.length > 0) {
+        p.pts.forEach(pt => subs.add(pt.subestacao?.nome || 'Subestação Geral (Padrão)'));
+      } else {
+        subs.add('Outros / Sem PT Associado');
+      }
+      subs.forEach(subName => {
+        if (!acc[subName]) acc[subName] = { items: [] };
+        acc[subName].items.push(p);
+      });
+    });
+    const sortedAcc = {};
+    Object.keys(acc).sort().forEach(key => { sortedAcc[key] = acc[key]; });
+    return sortedAcc;
+  }, [proprietarios]);
 
   const toggleSub = (subName) => {
     setExpandedSubestacoes(prev => ({ ...prev, [subName]: !prev[subName] }));
@@ -757,59 +777,76 @@ export default function ClientManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#c4c5d7]/10">
-                  {proprietarios.map((p) => (
-                    <tr key={p.id} className="transition-colors group text-[#0f1c2c] text-[11px] hover:bg-purple-50/30">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                            <Briefcase className="w-4 h-4 text-[#0d3fd1]" />
+                  {Object.entries(groupedProprietarios).map(([subName, { items }]) => (
+                    <React.Fragment key={subName}>
+                      <tr 
+                        onClick={() => setExpandedSubProprietarios(prev => ({ ...prev, [subName]: !prev[subName] }))}
+                        className="bg-purple-50/50 border-y border-[#c4c5d7]/10 cursor-pointer hover:bg-purple-50 transition-colors"
+                      >
+                        <td colSpan={7} className="px-6 py-3 font-black uppercase tracking-widest text-purple-700 text-[10px]">
+                          <div className="flex items-center gap-2">
+                            {expandedSubProprietarios[subName] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            <Building2 className="w-3.5 h-3.5 opacity-40" />
+                            {subName}
+                            <span className="text-purple-700 text-[9px] ml-2 font-bold bg-purple-100 px-2 py-0.5 rounded-md">{items.length} Clientes</span>
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-black uppercase text-[11px] truncate max-w-[250px]">{p.nome}</span>
-                            <span className="text-[9px] text-[#747686]">{p.municipio} {p.provincia ? `| ${p.provincia}` : ''}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono font-bold text-[#747686]">
-                        {p.nif || p.conta_contrato || '---'}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="bg-[#eff4ff] text-[#0d3fd1] px-2 py-1 rounded-lg font-black text-[10px] border border-[#0d3fd1]/10">
-                          {p._count?.pts || 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-black text-[9px] text-purple-700 uppercase">{p.tipo_cliente || 'N/D'}</span>
-                          <span className="text-[8px] opacity-60 truncate max-w-[120px]">{p.categoria_tarifa || 'Geral'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
-                        <div className="flex flex-col items-end">
-                          <span className={`font-black ${Number(p.montante_divida) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {Number(p.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
-                          </span>
-                          {Number(p.num_facturas_atraso) > 0 && (
-                            <span className="text-[8px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md border border-red-100 mt-0.5">
-                              {p.num_facturas_atraso} fact. em atraso
+                        </td>
+                      </tr>
+                      {expandedSubProprietarios[subName] && items.map((p) => (
+                        <tr key={`${subName}-${p.id}`} className="transition-colors group text-[#0f1c2c] text-[11px] hover:bg-purple-50/30">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                                <Briefcase className="w-4 h-4 text-[#0d3fd1]" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-black uppercase text-[11px] truncate max-w-[250px]">{p.nome}</span>
+                                <span className="text-[9px] text-[#747686]">{p.municipio} {p.provincia ? `| ${p.provincia}` : ''}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-mono font-bold text-[#747686]">
+                            {p.nif || p.conta_contrato || '---'}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="bg-[#eff4ff] text-[#0d3fd1] px-2 py-1 rounded-lg font-black text-[10px] border border-[#0d3fd1]/10">
+                              {p._count?.pts || 0}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-[10px]">{p.responsavel_financeiro || 'N/D'}</span>
-                          <span className="text-[9px] opacity-60">{p.contacto_resp_financeiro || ''}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => navigate(`/proprietarios/${p.id}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm">
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-black text-[9px] text-purple-700 uppercase">{p.tipo_cliente || 'N/D'}</span>
+                              <span className="text-[8px] opacity-60 truncate max-w-[120px]">{p.categoria_tarifa || 'Geral'}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                            <div className="flex flex-col items-end">
+                              <span className={`font-black ${Number(p.montante_divida) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {Number(p.montante_divida || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                              </span>
+                              {Number(p.num_facturas_atraso) > 0 && (
+                                <span className="text-[8px] font-bold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-md border border-red-100 mt-0.5">
+                                  {p.num_facturas_atraso} fact. em atraso
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-[10px]">{p.responsavel_financeiro || 'N/D'}</span>
+                              <span className="text-[9px] opacity-60">{p.contacto_resp_financeiro || ''}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex justify-center gap-2">
+                              <button onClick={() => navigate(`/proprietarios/${p.id}`)} className="p-2 bg-white border border-[#c4c5d7]/30 rounded-lg text-[#0d3fd1] hover:bg-[#0d3fd1] hover:text-white transition-all shadow-sm">
+                                <ArrowUpRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
                   ))}
                   {proprietarios.length === 0 && !loadingProprietarios && (
                     <tr>

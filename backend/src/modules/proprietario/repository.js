@@ -14,7 +14,16 @@ class ProprietarioRepository {
     }
 
     const orderBy = { nome: 'asc' };
-    const include = { _count: { select: { pts: true } } };
+    const include = { 
+      _count: { select: { pts: true } },
+      pts: {
+        select: {
+          subestacao: {
+            select: { nome: true }
+          }
+        }
+      }
+    };
 
     if (page && limit) {
       const skip = (Number(page) - 1) * Number(limit);
