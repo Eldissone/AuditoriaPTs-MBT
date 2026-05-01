@@ -176,7 +176,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   // Calculate traced path from substation to all PTs using nearest neighbor
   const sortedPath = useMemo(() => {
     if (!subCoords || localPts.length === 0) return [];
-    
+
     const points = localPts
       .map(pt => ({ ...pt, coords: getCoords(pt) }))
       .filter(pt => pt.coords);
@@ -233,20 +233,18 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
         <div className="p-5 sm:p-6 space-y-6">
 
           {/* Detailed Info & Main Info Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-[#c4c5d7]/20 p-6 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 p-6 space-y-4 flex flex-col justify-center">
               <h3 className="font-black text-[#0f1c2c] text-lg flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#243141]" />
                 Informações da Subestação
               </h3>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div>
                 <div>
                   <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Substação</label>
                   <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.municipio || 'N/D'}</p>
-                </div>
 
-                <div>
                   <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de Clientes</label>
                   <p className="text-sm font-bold text-[#0f1c2c] mt-1">{localPts.length}</p>
                 </div>
@@ -325,9 +323,9 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 </span>
               </div>
               <div className="h-[350px] relative z-0">
-                <MapContainer 
-                  center={subCoords} 
-                  zoom={15} 
+                <MapContainer
+                  center={subCoords}
+                  zoom={15}
                   style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={true}
                 >
@@ -335,7 +333,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                     url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     attribution='&copy; OpenStreetMap contributors'
                   />
-                  
+
                   {/* Substation Marker */}
                   <Marker position={subCoords} icon={createSubstationIcon(substation.status)}>
                     <Popup>
@@ -352,8 +350,8 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                     if (!ptPos) return null;
 
                     const distanceMeters = L.latLng(subCoords[0], subCoords[1]).distanceTo(L.latLng(ptPos[0], ptPos[1]));
-                    const distanceText = distanceMeters >= 1000 
-                      ? `${(distanceMeters / 1000).toFixed(2)} km` 
+                    const distanceText = distanceMeters >= 1000
+                      ? `${(distanceMeters / 1000).toFixed(2)} km`
                       : `${Math.round(distanceMeters)} m`;
 
                     return (
@@ -378,30 +376,30 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
                   {/* Traced Path */}
                   {sortedPath.length > 1 && (
-                    <Polyline 
-                      positions={sortedPath} 
-                      color="#0d3fd1" 
-                      weight={3} 
-                      opacity={0.6} 
+                    <Polyline
+                      positions={sortedPath}
+                      color="#0d3fd1"
+                      weight={3}
+                      opacity={0.6}
                       dashArray="5, 10"
                     />
                   )}
                 </MapContainer>
-                
+
                 {/* Map Legend Floating */}
                 <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-[#c4c5d7]/20 shadow-lg z-[1000] space-y-2">
-                   <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#0d3fd1] rounded"></div>
-                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Subestação</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
-                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Operacional</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
-                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Crítico</span>
-                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-[#0d3fd1] rounded"></div>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Subestação</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Operacional</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Crítico</span>
+                  </div>
                 </div>
               </div>
             </div>
