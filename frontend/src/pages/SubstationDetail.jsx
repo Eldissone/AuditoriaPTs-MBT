@@ -1,7 +1,44 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle, AlertTriangle } from 'lucide-react';
+import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle, AlertTriangle, Navigation } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import L from 'leaflet';
 import api from '../services/api';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in React Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const createSubstationIcon = (status) => {
+  const color = status === 'Ativa' ? '#0d3fd1' : status === 'Manutenção' ? '#f59e0b' : '#6b7280';
+  return L.divIcon({
+    className: 'custom-substation-icon',
+    html: `<div style="background-color: ${color}; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 12px rgba(13, 63, 209, 0.4);">
+             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+           </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
+  });
+};
+
+const createPTIcon = (status) => {
+  const color = status === 'Operacional' ? '#10b981' : status === 'Crítico' ? '#ef4444' : '#f59e0b';
+  return L.divIcon({
+    className: 'custom-pt-icon',
+    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+             <div style="width: 6px; height: 6px; background-color: white; border-radius: 50%;"></div>
+           </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
+};
 
 export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   const storageKey = `@PTAS:subestacao:${substation.id}:imagens`;
@@ -120,11 +157,64 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
     };
   }, [substation.capacidade_total_mva, somaPotenciasPTs]);
 
+  // Map Helper: Parse GPS string or use lat/lng
+  const getCoords = useCallback((obj) => {
+    if (obj.latitude && obj.longitude) {
+      return [parseFloat(obj.latitude), parseFloat(obj.longitude)];
+    }
+    if (obj.gps) {
+      const parts = obj.gps.split(',').map(p => parseFloat(p.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return [parts[0], parts[1]];
+      }
+    }
+    return null;
+  }, []);
+
+  const subCoords = useMemo(() => getCoords(substation), [substation, getCoords]);
+
+  // Calculate traced path from substation to all PTs using nearest neighbor
+  const sortedPath = useMemo(() => {
+    if (!subCoords || localPts.length === 0) return [];
+    
+    const points = localPts
+      .map(pt => ({ ...pt, coords: getCoords(pt) }))
+      .filter(pt => pt.coords);
+
+    if (points.length === 0) return [];
+
+    let current = subCoords;
+    const path = [current];
+    const remaining = [...points];
+
+    while (remaining.length > 0) {
+      let nearestIdx = 0;
+      let minDist = Infinity;
+
+      for (let i = 0; i < remaining.length; i++) {
+        const d = Math.sqrt(
+          Math.pow(remaining[i].coords[0] - current[0], 2) +
+          Math.pow(remaining[i].coords[1] - current[1], 2)
+        );
+        if (d < minDist) {
+          minDist = d;
+          nearestIdx = i;
+        }
+      }
+
+      const next = remaining.splice(nearestIdx, 1)[0];
+      current = next.coords;
+      path.push(current);
+    }
+
+    return path;
+  }, [subCoords, localPts, getCoords]);
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header with close button */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] p-5 sm:p-6 flex justify-between items-start gap-4">
+        <div className="sticky top-0 z-[100] bg-gradient-to-r from-[#0d3fd1] to-[#0034cc] p-5 sm:p-6 flex justify-between items-start gap-4 shadow-md">
           <div className="min-w-0">
             <h2 className="text-white text-xl sm:text-2xl font-black uppercase tracking-tight truncate">{substation.nome}</h2>
             <p className="text-white/70 text-sm mt-1 flex items-center gap-2">
@@ -142,47 +232,45 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
         <div className="p-5 sm:p-6 space-y-6">
 
-          {/* Detailed Info */}
-          <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 p-6 space-y-4">
-            <h3 className="font-black text-[#0f1c2c] text-lg flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#243141]" />
-              Informações da Subestação
-            </h3>
+          {/* Detailed Info & Main Info Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-[#c4c5d7]/20 p-6 space-y-4">
+              <h3 className="font-black text-[#0f1c2c] text-lg flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#243141]" />
+                Informações da Subestação
+              </h3>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Substação</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.municipio || 'N/D'}</p>
-              </div>
-
-
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de Clientes</label>
-                <p className="text-sm font-bold text-[#0f1c2c] mt-1">{localPts.length}</p>
-              </div>
-            </div>
-
-            {substation.descricao && (
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Descrição</label>
-                <p className="text-sm text-[#0f1c2c] mt-2 bg-[#f8f9ff] p-3 rounded-lg">{substation.descricao}</p>
-              </div>
-            )}
-
-            {substation.observacoes && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-black text-yellow-700 uppercase tracking-widest">Observações</p>
-                  <p className="text-sm text-yellow-800 mt-1">{substation.observacoes}</p>
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Substação</label>
+                  <p className="text-sm font-bold text-[#0f1c2c] mt-1">{substation.municipio || 'N/D'}</p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Quantidade de Clientes</label>
+                  <p className="text-sm font-bold text-[#0f1c2c] mt-1">{localPts.length}</p>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Main Info Grid */}
-          <div className="w-100 sm:grid-cols-2 lg:grid-cols-5 gap-4 ">
-            <div className="bg-gradient-to-br from-[#243141]/10 to-[#0f1c2c]/10 rounded-xl p-4 border border-[#243141]/20 lg:col-span-2 relative overflow-hidden">
+              {substation.descricao && (
+                <div>
+                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest">Descrição</label>
+                  <p className="text-sm text-[#0f1c2c] mt-2 bg-[#f8f9ff] p-3 rounded-lg">{substation.descricao}</p>
+                </div>
+              )}
+
+              {substation.observacoes && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-black text-yellow-700 uppercase tracking-widest">Observações</p>
+                    <p className="text-sm text-yellow-800 mt-1">{substation.observacoes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gradient-to-br from-[#243141]/10 to-[#0f1c2c]/10 rounded-2xl p-6 border border-[#243141]/20 relative overflow-hidden flex flex-col justify-center">
               {isSobrecarga && (
                 <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black uppercase px-3 py-1 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Excesso de Carga
@@ -217,12 +305,109 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
               {capacidadeSubestacao > 0 && (
                 <div className="flex justify-between items-center text-[9px] font-bold mt-1">
                   <span className="opacity-60 uppercase">0%</span>
-                  <span style={{ color: overloadClass }}>{sobrecargaPct.toFixed(1)}% de nível de saturação</span>
+                  <span style={{ color: overloadClass }}>{sobrecargaPct.toFixed(1)}% de saturação</span>
                   <span className="opacity-60 uppercase">100% LIMITE</span>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Map View */}
+          {subCoords && (
+            <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-[#c4c5d7]/10 flex items-center justify-between bg-[#fcfdff]">
+                <h3 className="font-black text-[#0f1c2c] text-sm uppercase tracking-tight flex items-center gap-2">
+                  <Navigation className="w-4 h-4 text-[#0d3fd1]" />
+                  Mapa de Distribuição e Traçado
+                </h3>
+                <span className="text-[9px] font-black text-[#747686] uppercase bg-white px-2 py-1 rounded border border-[#c4c5d7]/20 shadow-sm" title={`${localPts.length - localPts.filter(pt => getCoords(pt)).length} PTs sem coordenadas registadas`}>
+                  {localPts.filter(pt => getCoords(pt)).length} DE {localPts.length} PTs COM LOCALIZAÇÃO
+                </span>
+              </div>
+              <div className="h-[350px] relative z-0">
+                <MapContainer 
+                  center={subCoords} 
+                  zoom={15} 
+                  style={{ height: '100%', width: '100%' }}
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer
+                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; OpenStreetMap contributors'
+                  />
+                  
+                  {/* Substation Marker */}
+                  <Marker position={subCoords} icon={createSubstationIcon(substation.status)}>
+                    <Popup>
+                      <div className="text-xs">
+                        <p className="font-black text-[#0d3fd1] uppercase">Substação {substation.nome}</p>
+                        <p className="opacity-70 mt-1">{substation.municipio}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+
+                  {/* PT Markers */}
+                  {localPts.map(pt => {
+                    const ptPos = getCoords(pt);
+                    if (!ptPos) return null;
+
+                    const distanceMeters = L.latLng(subCoords[0], subCoords[1]).distanceTo(L.latLng(ptPos[0], ptPos[1]));
+                    const distanceText = distanceMeters >= 1000 
+                      ? `${(distanceMeters / 1000).toFixed(2)} km` 
+                      : `${Math.round(distanceMeters)} m`;
+
+                    return (
+                      <Marker key={pt.id} position={ptPos} icon={createPTIcon(pt.estado_operacional)}>
+                        <Popup>
+                          <div className="text-xs">
+                            <p className="font-black text-[#0f1c2c] uppercase">{pt.id_pt}</p>
+                            <p className="opacity-70 mb-1">{pt.proprietario?.nome || pt.proprietario || 'Sem Proprietário'}</p>
+                            <p className="text-[10px] text-[#0d3fd1] font-bold flex items-center gap-1">
+                              <Navigation className="w-3 h-3" />
+                              Distância: {distanceText}
+                            </p>
+                            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${pt.estado_operacional === 'Operacional' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span className="font-bold">{pt.estado_operacional}</span>
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
+
+                  {/* Traced Path */}
+                  {sortedPath.length > 1 && (
+                    <Polyline 
+                      positions={sortedPath} 
+                      color="#0d3fd1" 
+                      weight={3} 
+                      opacity={0.6} 
+                      dashArray="5, 10"
+                    />
+                  )}
+                </MapContainer>
+                
+                {/* Map Legend Floating */}
+                <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-[#c4c5d7]/20 shadow-lg z-[1000] space-y-2">
+                   <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#0d3fd1] rounded"></div>
+                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Subestação</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
+                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Operacional</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
+                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Crítico</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
 
           {/* PT Status Distribution */}
           <div className="bg-[#f8f9ff] rounded-2xl p-6">
