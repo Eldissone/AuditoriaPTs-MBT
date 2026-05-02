@@ -351,9 +351,9 @@ export default function SubstationManagement() {
                                     </thead>
                                     <tbody className="divide-y divide-[#c4c5d7]/10">
                                       {subPts[sub.id].map(pt => (
-                                        <tr key={pt.id} className="hover:bg-[#fcfdff] transition-colors">
+                                        <tr key={pt.id_pt || pt.id} className="hover:bg-[#fcfdff] transition-colors">
                                           <td className="px-4 py-2 font-black text-[#0d3fd1]">{pt.id_pt}</td>
-                                          <td className="px-4 py-2 font-bold opacity-80 uppercase">{pt.proprietario || 'N/D'}</td>
+                                          <td className="px-4 py-2 font-bold opacity-80 uppercase">{pt.proprietario?.nome || 'N/D'}</td>
                                           <td className="px-4 py-2 font-mono">{pt.equipamento || '---'}</td>
                                           <td className="px-4 py-2">{pt.instalacao || '---'}</td>
                                           <td className="px-4 py-2 text-center font-black">{pt.potencia_kva} kVA</td>
