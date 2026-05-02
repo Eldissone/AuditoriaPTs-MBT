@@ -43,6 +43,7 @@ export default function NewPT() {
       freguesia: '',
       concelho: '',
       provincia: 'Luanda', // Distrito
+      gps: '',
       latitude: '',
       longitude: '',
       altitude: '',
@@ -244,8 +245,9 @@ export default function NewPT() {
               })(),
               ano_instalacao: sPt.ano_instalacao || '',
               data_levantamento: sPt.data_levantamento ? new Date(sPt.data_levantamento).toISOString().split('T')[0] : '',
-              latitude: sPt.latitude || '',
-              longitude: sPt.longitude || '',
+              gps: sPt.gps || '',
+              latitude: sPt.latitude || (sPt.gps ? parseFloat(sPt.gps.split(',')[0]) || '' : ''),
+              longitude: sPt.longitude || (sPt.gps && sPt.gps.includes(',') ? parseFloat(sPt.gps.split(',')[1]) || '' : ''),
               equipamento_poste: sPt.equipamento_poste || prev.identificacao.equipamento_poste
             },
             conformidade: { 
@@ -578,6 +580,11 @@ export default function NewPT() {
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Altitude (m)</label>
                        <input type="number" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.altitude} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, altitude: e.target.value } })} />
+                    </div>
+
+                    <div className="lg:col-span-3 space-y-2">
+                       <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Dados de GPS Original (Texto Livre)</label>
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.gps} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, gps: e.target.value } })} placeholder="Ex: -9.0194, 13.3591 SE KKX D3" />
                     </div>
 
                     <div className="space-y-2">
