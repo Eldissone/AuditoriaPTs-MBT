@@ -42,6 +42,8 @@ export default function NewPT() {
       morada: '', // Localização / Morada completa
       freguesia: '',
       concelho: '',
+      distrito_comuna: '',
+      municipio: '',
       provincia: 'Luanda', // Distrito
       gps: '',
       latitude: '',
@@ -222,6 +224,10 @@ export default function NewPT() {
               id_proprietario: sPt.id_proprietario || '',
               id_pt: sPt.id_pt || '',
               id_concessionaria: sPt.id_concessionaria || sPt.id_pt || '',
+              freguesia: sPt.freguesia || sPt.distrito_comuna || '',
+              concelho: sPt.concelho || sPt.municipio || '',
+              distrito_comuna: sPt.distrito_comuna || sPt.freguesia || '',
+              municipio: sPt.municipio || sPt.concelho || '',
               tipo_instalacao: (() => {
                 let type = sPt.tipo_instalacao || '';
                 // Normalização para garantir que os botões do novo UI fiquem selecionados
@@ -556,11 +562,11 @@ export default function NewPT() {
 
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Freguesia / Comuna</label>
-                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.freguesia} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, freguesia: e.target.value } })} />
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.freguesia} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, freguesia: e.target.value, distrito_comuna: e.target.value } })} />
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Concelho / Município</label>
-                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.concelho} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concelho: e.target.value } })} />
+                       <input type="text" className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl py-4 px-6 text-sm font-bold" value={formData.identificacao.concelho} onChange={(e) => setFormData({ ...formData, identificacao: { ...formData.identificacao, concelho: e.target.value, municipio: e.target.value } })} />
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest ml-1">Distrito / Província</label>

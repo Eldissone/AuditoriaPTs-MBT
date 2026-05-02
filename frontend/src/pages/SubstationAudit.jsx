@@ -123,9 +123,11 @@ export default function SubstationAudit() {
       try {
         const subRes = await api.get(`/subestacoes/${id}`);
         const localidadeEfetiva = localidadeFiltro || subRes.data?.municipio || '';
-        const ptsRes = await api.get('/clientes', {
-          params: localidadeEfetiva ? { localidade: localidadeEfetiva } : {}
-        });
+        
+        const params = { id_subestacao: id };
+        if (localidadeFiltro) params.localidade = localidadeFiltro;
+
+        const ptsRes = await api.get('/clientes', { params });
 
         setSubestacao(subRes.data);
         setPts(ptsRes.data || []);
@@ -169,7 +171,7 @@ export default function SubstationAudit() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Auditando : {subestacao?.municipio}</h2>
+            <h2 className="text-xl font-black text-[#0f1c2c] uppercase tracking-tight">Auditando : {subestacao?.nome}</h2>
             <p className="text-[10px] font-bold text-[#747686] uppercase tracking-[0.2em]">{subestacao?.codigo} • MBT Energia</p>
           </div>
         </div>
@@ -221,7 +223,7 @@ export default function SubstationAudit() {
         {/* Sidebar - PT List */}
         <div className="w-80 flex flex-col bg-white rounded-3xl border border-[#c4c5d7]/20 overflow-hidden shadow-sm">
           <div className="p-4 bg-[#0d3fd1] text-white">
-            <h3 className="text-[16px] font-black text-center uppercase tracking-widest">Clientes da Substação: {subestacao?.municipio}</h3>
+            <h3 className="text-[16px] font-black text-center uppercase tracking-widest">Clientes da Subestação: {subestacao?.nome}</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
             {proprietarios.length > 0 && (
