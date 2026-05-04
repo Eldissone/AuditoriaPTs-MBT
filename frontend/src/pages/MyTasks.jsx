@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Play, CheckCircle, X, Calendar, MapPin, ClipboardList,
-  CheckSquare, Eye, Zap, Clock, ChevronRight, Camera
+  CheckSquare, Eye, Zap, Clock, ChevronRight, Camera,
+  Activity, ArrowRight, ShieldCheck, FileText
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
@@ -390,6 +391,113 @@ export default function MyTasks() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* ── Informação Apurada (Inspecção / Auditoria) ──────────────── */}
+              {taskInspecoes.length > 0 && (
+                <div className="space-y-4">
+                   <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest flex items-center gap-2 px-1">
+                      <ShieldCheck className="w-4 h-4 text-[#0d3fd1]" /> 
+                      Informação Apurada na Auditoria
+                   </h4>
+                  {taskInspecoes.map((ins, idx) => (
+                    <div key={ins.id} className="bg-[#f0f4ff] border border-[#0d3fd1]/10 rounded-2xl p-5 shadow-sm space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[#0d3fd1] block mb-1">Resultado #{taskInspecoes.length - idx}</span>
+                          <h4 className="text-lg font-black text-[#0f1c2c] uppercase tracking-tighter leading-tight">{ins.resultado || 'Sem Resultado'}</h4>
+                          <p className="text-[9px] font-bold text-[#747686] uppercase mt-1">{new Date(ins.data_inspecao).toLocaleDateString('pt-PT')}</p>
+                        </div>
+                        {ins.nivel_urgencia && (
+                          <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${ins.nivel_urgencia === 'Crítico' || ins.nivel_urgencia === 'Alta' ? 'bg-red-500 text-white' : 'bg-[#0d3fd1] text-white'}`}>
+                            {ins.nivel_urgencia}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Medições e Dados Técnicos */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 p-3 rounded-xl border border-white/80">
+                          <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Terra Protecção</p>
+                          <p className={`text-xs font-black ${Number(ins.terra_protecao) >= 20 ? 'text-red-600' : 'text-[#0f1c2c]'}`}>
+                             {ins.terra_protecao != null ? `${ins.terra_protecao} Ω` : '---'}
+                          </p>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-xl border border-white/80">
+                          <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Terra Serviço</p>
+                          <p className={`text-xs font-black ${Number(ins.terra_servico) >= 20 ? 'text-red-600' : 'text-[#0f1c2c]'}`}>
+                             {ins.terra_servico != null ? `${ins.terra_servico} Ω` : '---'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Tensões se houver */}
+                      {ins.medicao_tensao && typeof ins.medicao_tensao === 'object' && (
+                        <div className="bg-white/40 p-3 rounded-xl border border-white/60">
+                           <p className="text-[8px] font-black uppercase text-[#747686] mb-2">Medições de Tensão (V)</p>
+                           <div className="grid grid-cols-3 gap-2">
+                              {Object.entries(ins.medicao_tensao).filter(([_,v]) => v !== null).map(([fase, valor]) => (
+                                <div key={fase} className="flex justify-between items-center bg-white/50 px-2 py-1 rounded-md border border-white/50">
+                                   <span className="text-[9px] font-bold opacity-60">{fase}</span>
+                                   <span className="text-[10px] font-black text-[#0d3fd1]">{valor}V</span>
+                                </div>
+                              ))}
+                           </div>
+                        </div>
+                      )}
+
+                      {/* Confronto de Dados (Se houver edições) */}
+                      {( (ins.pt_info_edits && Object.keys(ins.pt_info_edits).length > 0) || 
+                         (ins.cliente_edits && Object.keys(ins.cliente_edits).length > 0) ) && (
+                        <div className="bg-white/80 p-4 rounded-xl border border-white space-y-3 shadow-inner">
+                          <p className="text-[9px] font-black uppercase text-[#0d3fd1] flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5" /> Correcções de Dados Efetuadas
+                          </p>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[10px]">
+                            {/* PT Info Edits */}
+                            {ins.pt_info_edits && Object.keys(ins.pt_info_edits).length > 0 && (
+                              <div className="space-y-2">
+                                <p className="font-black text-[#747686] text-[8px] uppercase tracking-widest border-b border-black/5 pb-1">Dados Técnicos (PT)</p>
+                                <div className="space-y-2">
+                                  {Object.entries(ins.pt_info_edits).map(([key, val]) => (
+                                    <div key={key} className="flex flex-col border-l-2 border-[#0d3fd1]/30 pl-2 py-0.5">
+                                      <span className="opacity-60 text-[7px] font-black uppercase">{key.replace(/_/g, ' ')}</span>
+                                      <span className="font-bold text-[#0d3fd1] text-[11px] tracking-tight">{val}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Cliente Edits */}
+                            {ins.cliente_edits && Object.keys(ins.cliente_edits).length > 0 && (
+                              <div className="space-y-2">
+                                <p className="font-black text-[#747686] text-[8px] uppercase tracking-widest border-b border-black/5 pb-1">Dados Comerciais (Cliente)</p>
+                                <div className="space-y-2">
+                                  {Object.entries(ins.cliente_edits).map(([key, val]) => (
+                                    <div key={key} className="flex flex-col border-l-2 border-purple-200 pl-2 py-0.5">
+                                      <span className="opacity-60 text-[7px] font-black uppercase">{key.replace(/_/g, ' ')}</span>
+                                      <span className="font-bold text-purple-700 text-[11px] tracking-tight">{val}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {ins.observacoes && (
+                        <div className="bg-white/40 p-4 rounded-xl border border-white/60">
+                          <p className="text-[8px] font-black uppercase text-[#747686] mb-1 flex items-center gap-1">
+                             <FileText className="w-3 h-3" /> Observações do Técnico
+                          </p>
+                          <p className="text-sm font-medium text-[#444655] leading-relaxed italic opacity-80">"{ins.observacoes}"</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 

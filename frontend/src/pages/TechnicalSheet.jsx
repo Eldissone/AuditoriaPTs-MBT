@@ -163,14 +163,14 @@ export default function TechnicalSheet() {
   const handleExportPDF = async () => {
     try {
       setLoading(true);
-      
+
       // Detetar automaticamente qual ficha gerar com base na aba ativa ou dados disponíveis
       const isClientSheet = activeTab === 'cliente';
-      const endpoint = isClientSheet 
-        ? `/proprietarios/${pt.id_proprietario}/pdf` 
+      const endpoint = isClientSheet
+        ? `/proprietarios/${pt.id_proprietario}/pdf`
         : `/clientes/${id_pt}/pdf`;
-      
-      const fileName = isClientSheet 
+
+      const fileName = isClientSheet
         ? `Ficha_Cliente_${pt.proprietario?.nome?.replace(/\s+/g, '_') || pt.id_proprietario}.pdf`
         : `Ficha_Tecnica_${id_pt}.pdf`;
 
@@ -266,7 +266,7 @@ export default function TechnicalSheet() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="text-right hidden md:block">
-                <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest">Potência Instalada</p>
+                <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest">Potência Contratual</p>
                 <p className="text-white font-black text-2xl tracking-tighter">{pt.potencia_kva || '—'} <span className="text-sm text-white/40">kVA</span></p>
               </div>
               <button

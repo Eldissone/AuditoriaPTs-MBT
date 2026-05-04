@@ -204,6 +204,8 @@ model Inspecao {
   terra_servico       Float?
   medicao_tensao      Json?
   dados_cliente_campo Json?
+  pt_info_edits       Json?
+  cliente_edits       Json?
   proxima_inspecao    DateTime?          @db.Date
   criado_em           DateTime           @default(now())
   atualizado_em       DateTime           @updatedAt

@@ -3,19 +3,12 @@ import {
   X, Camera, Upload, CheckCircle2, AlertCircle, MapPin,
   ArrowRight, ArrowLeft, Zap, ClipboardList, Trash2,
   AlertTriangle, FileText, Clock, Users, Phone,
-  Wrench, Activity, Shield, Building2, Info, Calendar
+  Wrench, Activity, Shield, Building2, Info, Calendar,
+  Edit2
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { CHECKLIST_PTA, CHECKLIST_PTC } from '../data/checklists';
-
-const PHOTO_SLOTS = [
-  { id: 'vista_geral', label: 'Vista Geral do PT', required: true, icon: '🏗️' },
-  { id: 'placa_id', label: 'Placa de Identificação', required: true, icon: '🪧' },
-  { id: 'estado_equip', label: 'Estado Geral do Equipamento', required: true, icon: '⚡' },
-  { id: 'contador', label: 'Contador / Medição', required: false, icon: '🔢' },
-  { id: 'extra', label: 'Foto Adicional (opcional)', required: false, icon: '📷' },
-];
 
 const RESULTADOS = ['Conforme', 'Não Conforme', 'Em Avaliação', 'Urgente'];
 const URGENCIAS = ['Baixo', 'Médio', 'Alto', 'Crítico'];
@@ -44,43 +37,89 @@ function compressImage(file, maxW = 1280, quality = 0.75) {
   });
 }
 
-// ─── PhotoCard ───────────────────────────────────────────────────────────────
-function PhotoCard({ slot, photo, onChange }) {
-  const inputRef = useRef();
-  const handleCapture = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const compressed = await compressImage(file);
-    onChange(slot.id, { label: slot.label, data: compressed, tipo: file.type, secao: 'campo' });
-    e.target.value = '';
-  };
+// ─── ConfrontoField (Novo) ───────────────────────────────────────────────────
+function ConfrontoField({ label, valorOriginal, valorEditado, conforme, onConforme, onEdit, isNumber = false, helpText }) {
   return (
-    <div className={`relative rounded-2xl border-2 overflow-hidden transition-all ${photo ? 'border-emerald-300 shadow-lg shadow-emerald-50' : slot.required ? 'border-dashed border-[#0d3fd1]/30 bg-[#f8faff] hover:border-[#0d3fd1]/60' : 'border-dashed border-[#c4c5d7]/40 bg-[#fcfdff]'}`}>
-      {photo ? (
-        <div className="relative">
-          <img src={photo.data} alt={slot.label} className="w-full h-36 object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-3 flex items-end justify-between">
-            <div>
-              <p className="text-[9px] text-white font-black uppercase">{slot.label}</p>
-              <div className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400" /><span className="text-[8px] text-emerald-300 font-bold uppercase">OK</span></div>
+    <div className={`p-4 rounded-2xl border-2 transition-all ${conforme === true ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : conforme === false ? 'border-amber-300 bg-amber-50/40 shadow-md' : 'border-[#c4c5d7]/20 bg-white hover:border-[#0d3fd1]/20'}`}>
+      <div className="flex items-start justify-between mb-3 gap-4">
+        <div className="flex flex-col">
+          <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest leading-tight">{label}</label>
+          {helpText && <span className="text-[8px] font-bold text-amber-600/70 italic uppercase leading-tight mt-1">{helpText}</span>}
+        </div>
+        <div className="flex bg-[#f1f3f9] rounded-lg p-0.5 shrink-0">
+          <button 
+            onClick={() => { onConforme(true); onEdit(''); }} 
+            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${conforme === true ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#747686]'}`}
+          >
+            ✓ OK
+          </button>
+          <button 
+            onClick={() => onConforme(false)} 
+            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${conforme === false ? 'bg-white text-amber-600 shadow-sm' : 'text-[#747686]'}`}
+          >
+            ✗ Corrigir
+          </button>
+        </div>
+      </div>
+
+      {conforme === false ? (
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-2 text-[#747686] opacity-60">
+              <span className="text-[9px] font-bold uppercase">Original:</span>
+              <span className="text-xs font-bold uppercase line-through">{valorOriginal || 'Vazio'}</span>
             </div>
-            <button onClick={() => onChange(slot.id, null)} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-white" /></button>
-          </div>
+            <input 
+                type={isNumber ? "number" : "text"} 
+                className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-2.5 text-sm font-black text-[#0f1c2c] focus:outline-none focus:ring-4 focus:ring-amber-500/10 placeholder:text-amber-900/30"
+                value={valorEditado || ''}
+                onChange={(e) => onEdit(e.target.value)}
+                placeholder={`Inserir novo ${label}...`}
+            />
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center gap-2 p-5 cursor-pointer min-h-[144px]">
-          <div className="text-3xl">{slot.icon}</div>
-          <p className={`text-[10px] font-black uppercase text-center ${slot.required ? 'text-[#0f1c2c]' : 'text-[#747686]'}`}>{slot.label}</p>
-          {slot.required && <span className="text-[8px] font-black text-red-500 uppercase">Obrigatório</span>}
-          <div className="flex gap-2 mt-1">
-            <div className="flex items-center gap-1 bg-[#0d3fd1] text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase"><Camera className="w-3 h-3" /> Câmara</div>
-            <div className="flex items-center gap-1 bg-white border border-[#0d3fd1]/20 text-[#0d3fd1] px-3 py-1.5 rounded-xl text-[9px] font-black uppercase"><Upload className="w-3 h-3" /> Doc</div>
-          </div>
-          <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
-        </label>
+        <div className="flex items-center gap-2 text-[#0f1c2c]">
+          {conforme === true && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+          <span className={`text-sm font-black uppercase ${conforme === true ? 'text-emerald-700' : 'text-[#0f1c2c]'}`}>
+            {valorOriginal || 'N/A'}
+          </span>
+        </div>
       )}
     </div>
   );
+}
+
+// ─── SecaoFoto (Novo) ────────────────────────────────────────────────────────
+function SecaoFoto({ secao, foto, onCapture, onRemove }) {
+   const inputRef = useRef();
+   const handleCapture = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const compressed = await compressImage(file);
+    onCapture(secao, { label: `Foto - ${secao}`, data: compressed, tipo: file.type, secao: secao });
+    e.target.value = '';
+  };
+  
+  if (foto) {
+      return (
+          <div className="mt-3 relative rounded-xl overflow-hidden border-2 border-emerald-300 h-24">
+             <img src={foto.data} alt={foto.label} className="w-full h-full object-cover" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+             <div className="absolute bottom-0 left-0 right-0 p-2 flex items-end justify-between">
+                <span className="text-[9px] text-white font-black uppercase">{foto.label}</span>
+                <button onClick={() => onRemove(secao)} className="p-1 bg-red-500/80 hover:bg-red-500 rounded-lg"><Trash2 className="w-3 h-3 text-white" /></button>
+             </div>
+          </div>
+      )
+  }
+
+  return (
+      <div className="mt-3">
+          <label className="flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#0d3fd1]/30 bg-[#f8faff] hover:border-[#0d3fd1]/60 rounded-xl cursor-pointer transition-all">
+             <Camera className="w-4 h-4 text-[#0d3fd1]" />
+             <span className="text-[10px] font-black uppercase text-[#0d3fd1]">Adicionar Foto Opcional</span>
+             <input type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
+          </label>
+      </div>
+  )
 }
 
 // ─── ChecklistItem ───────────────────────────────────────────────────────────
@@ -131,38 +170,46 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const pt = tarefa.pt;
-  const sub = pt?.subestacao;
+  const pt = tarefa.pt || {};
+  const sub = pt?.subestacao || {};
 
-  // Detectar tipo PT (PTC vs PTA) - Mais robusto com .includes e fallback para título/tamanho
-  const tipoInstalacao = (tarefa?.pt?.tipo_instalacao || '').toUpperCase();
+  // Tipo PT
+  const tipoInstalacao = (pt?.tipo_instalacao || '').toUpperCase();
   const tituloTarefa = (tarefa?.titulo || '').toUpperCase();
-  const isPTC = tipoInstalacao.includes('PTC') || 
+  const defaultIsPTC = tipoInstalacao.includes('PTC') || 
                 tipoInstalacao.includes('CABINE') || 
                 tipoInstalacao.includes('EDIFICIO') ||
-                tarefa?.id_pt?.toUpperCase().includes('PTC') ||
+                (tarefa?.id_pt || '').toUpperCase().includes('PTC') ||
                 tituloTarefa.includes('PTC') ||
                 tituloTarefa.includes('CABINE') ||
                 (tarefa?.checklist?.length === 37);
 
-  const checklistBase = isPTC ? CHECKLIST_PTC : CHECKLIST_PTA;
+  const [tipoPT, setTipoPT] = useState(initialProgress?.tipoPT || (defaultIsPTC ? 'PTC' : 'PTA'));
+  const checklistBase = tipoPT === 'PTC' ? CHECKLIST_PTC : CHECKLIST_PTA;
 
-  // Estados Base — Inicializados com progresso carregado ou valor padrão
-  const [fotos, setFotos] = useState(initialProgress?.fotos || Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, null])));
+  // Novos Estados (Confronto)
+  const [ptInfoEdits, setPtInfoEdits] = useState(initialProgress?.ptInfoEdits || {});
+  const [ptInfoConforme, setPtInfoConforme] = useState(initialProgress?.ptInfoConforme || {});
+
+  const [clienteEdits, setClienteEdits] = useState(initialProgress?.clienteEdits || {});
+  const [clienteConforme, setClienteConforme] = useState(initialProgress?.clienteConforme || {});
+
+  const [checklistFotos, setChecklistFotos] = useState(initialProgress?.checklistFotos || {});
+
+  // Estados Base
   const [checklistMap, setChecklistMap] = useState(initialProgress?.checklistMap || Object.fromEntries(checklistBase.map(i => [i.id, null])));
+  
+  // Se mudar o tipo de PT, reseta o checklistMap
+  useEffect(() => {
+    setChecklistMap(prev => {
+        if (Object.keys(prev).length !== checklistBase.length) {
+            return Object.fromEntries(checklistBase.map(i => [i.id, null]));
+        }
+        return prev;
+    });
+  }, [tipoPT, checklistBase]);
+
   const [medicoes, setMedicoes] = useState(initialProgress?.medicoes || { terra_protecao: '', terra_servico: '', UA: '', UB: '', UC: '', UAB: '', UBC: '', UCA: '' });
-  const [dadosCliente, setDadosCliente] = useState(initialProgress?.dadosCliente || {
-    razao_social: pt?.proprietario?.nome || pt?.proprietario || '',
-    resp_financeiro: pt?.responsavel_financeiro || '',
-    contacto_fin: pt?.contacto_resp_financeiro || '',
-    resp_tecnico: pt?.responsavel_tecnico_cliente || '',
-    contacto_tec: pt?.contacto_resp_tecnico || '',
-    canal_faturacao: pt?.canal_faturacao || '',
-    ultima_fatura: '',
-    fornece_terceiros: pt?.fornece_terceiros || false,
-    empresa_manutencao: pt?.empresa_manutencao || '',
-    data_ultima_manutencao: '',
-  });
   const [formData, setFormData] = useState(initialProgress?.formData || { resultado: 'Em Avaliação', nivel_urgencia: 'Baixo', observacoes: '', proxima_inspecao: '' });
   const [resumed, setResumed] = useState(!!initialProgress);
 
@@ -178,23 +225,23 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   useEffect(() => {
     const stateToSave = {
       step,
-      fotos,
+      tipoPT,
+      ptInfoEdits, ptInfoConforme,
+      clienteEdits, clienteConforme,
+      checklistFotos,
       checklistMap,
       medicoes,
-      dadosCliente,
       formData,
       timestamp: Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [STORAGE_KEY, step, fotos, checklistMap, medicoes, dadosCliente, formData]);
+  }, [STORAGE_KEY, step, tipoPT, ptInfoEdits, ptInfoConforme, clienteEdits, clienteConforme, checklistFotos, checklistMap, medicoes, formData]);
 
-
-  // Dados checklist da tarefa original (para manter compatibilidade)
   const [tarefaChecklist, setTarefaChecklist] = useState(tarefa.checklist || []);
 
-  const handleFotoChange = (id, val) => setFotos(p => ({ ...p, [id]: val }));
+  const handleFotoChecklist = (secao, foto) => setChecklistFotos(p => ({ ...p, [secao]: foto }));
+  const handleRemoveFotoChecklist = (secao) => setChecklistFotos(p => { const nv = {...p}; delete nv[secao]; return nv; });
   const handleCheckItem = (id, val) => setChecklistMap(p => ({ ...p, [id]: val }));
-  const fotosObrigOk = PHOTO_SLOTS.filter(s => s.required).every(s => fotos[s.id] !== null);
 
   // Secções do checklist agrupadas
   const secoes = [...new Set(checklistBase.map(i => i.secao))];
@@ -204,20 +251,17 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
   const totalNC = checklistBase.filter(i => checklistMap[i.id] === 'nc').length;
   const totalPendente = checklistBase.filter(i => checklistMap[i.id] !== 'ok' && checklistMap[i.id] !== 'nc' && checklistMap[i.id] !== 'na').length;
 
-  // Validação de Integridade
+  // Validação de Integridade (Fotos deixam de ser obrigatórias)
   const infoCompleta = totalPendente === 0 && 
-                      fotosObrigOk && 
                       medicoes.terra_protecao !== '' && 
                       medicoes.terra_servico !== '';
 
   const STEPS = [
     { n: 1, label: 'PT Info', icon: Info },
-    { n: 2, label: 'Fotos', icon: Camera },
-    { n: 3, label: isPTC ? 'Cheklist PTC' : 'Checklist PTA', icon: ClipboardList },
+    { n: 2, label: 'Cliente', icon: Users },
+    { n: 3, label: 'Checklist', icon: ClipboardList },
     { n: 4, label: 'Medições', icon: Activity },
-    { n: 5, label: 'Cliente', icon: Users },
-    { n: 6, label: 'Resultado', icon: Shield },
-    { n: 7, label: 'Submeter', icon: CheckCircle2 },
+    { n: 5, label: 'Resumo', icon: CheckCircle2 },
   ];
 
   const handleIniciar = async () => {
@@ -239,8 +283,8 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
     try {
       setLoading(true); setError(null);
 
-      // Array de fotos (sem nulls)
-      const fotosArray = PHOTO_SLOTS.filter(s => fotos[s.id]).map(s => fotos[s.id]);
+      // Array de fotos (das secções)
+      const fotosArray = Object.values(checklistFotos);
 
       // Converter checklistMap → array de items para guardar
       const checklistFinal = checklistBase.map(item => ({
@@ -263,7 +307,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
       const tipoInspecao = tarefa.tipo_tarefa === 'Manutenção Preventiva' ? 'Manutenção Preventiva'
         : tarefa.tipo_tarefa === 'Manutenção Corretiva' ? 'Manutenção Corretiva'
           : tarefa.tipo_tarefa === 'Inspeção' ? 'Inspeção'
-            : isPTC ? 'Auditoria PTC' : 'Auditoria PTA';
+            : tipoPT === 'PTC' ? 'Auditoria PTC' : 'Auditoria PTA';
 
       const inspecaoPayload = {
         id_pt: tarefa.id_pt,
@@ -277,7 +321,10 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
         terra_protecao,
         terra_servico,
         medicao_tensao,
-        dados_cliente_campo: dadosCliente,
+        // Adiciona as edições feitas no campo
+        pt_info_edits: ptInfoEdits,
+        cliente_edits: clienteEdits,
+        tipo_pt: tipoPT,
       };
 
       await api.post('/inspecoes', inspecaoPayload);
@@ -287,7 +334,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
 
       // Registar incongruências de prioridade A não conformes
       if (ncPrioA.length > 0 || (terra_protecao !== null && terra_protecao >= 20) || (terra_servico !== null && terra_servico >= 20)) {
-        // Incongruências de terra
+        // Incongruências de terra (O backend pode gerir)
         const incongruencias = [];
         if (terra_protecao !== null && terra_protecao >= 20) {
           incongruencias.push({ campo: 'terra_protecao', label: 'Terra de Protecção acima de 20Ω', valor: `${terra_protecao}Ω`, limite: '<20Ω' });
@@ -295,7 +342,6 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
         if (terra_servico !== null && terra_servico >= 20) {
           incongruencias.push({ campo: 'terra_servico', label: 'Terra de Serviço acima de 20Ω', valor: `${terra_servico}Ω`, limite: '<20Ω' });
         }
-        // Itens NC de prioridade A são registados no checklist — o motor de incongruências processará no backend
       }
 
       // Limpar progresso salvo
@@ -318,7 +364,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
             <div className="flex items-center gap-2 mb-1">
               <Zap className="w-4 h-4 text-white/70" />
               <span className="text-[9px] text-white/70 font-black uppercase tracking-[0.2em]">
-                {isPTC ? 'Auditoria PTC — 37 itens' : 'Auditoria PTA — 32 itens'}
+                {tipoPT === 'PTC' ? 'Auditoria PTC' : 'Auditoria PTA'}
               </span>
               {resumed && (
                 <span className="ml-3 text-[8px] font-black uppercase bg-emerald-400 text-[#0d3fd1] px-2 py-0.5 rounded-full animate-pulse">
@@ -362,88 +408,143 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
         {/* Conteúdo */}
         <div className="flex-grow overflow-y-auto p-5 space-y-4" style={{ scrollbarWidth: 'thin' }}>
 
-          {/* ── PASSO 1: Briefing ────────────────────────────────────────── */}
+          {/* ── PASSO 1: PT Info ────────────────────────────────────────── */}
           {step === 1 && (
             <div className="space-y-4">
-              <div className="bg-[#0d3fd1]/5 border border-[#0d3fd1]/15 rounded-2xl p-4">
-                <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <ClipboardList className="w-3.5 h-3.5" /> Informação do PT
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'ID PT', val: tarefa.id_pt },
-                    { label: 'Tipo', val: pt?.tipo_instalacao },
-                    { label: 'Subestação', val: sub?.nome },
-                    { label: 'Proprietário', val: pt?.proprietario?.nome || pt?.proprietario },
-                    { label: 'Município', val: pt?.municipio || sub?.municipio },
-                    { label: 'Potência', val: pt?.potencia_kva ? `${pt.potencia_kva} kVA` : null },
-                  ].map(({ label, val }) => val && (
-                    <div key={label} className="bg-white rounded-xl p-2.5 border border-[#0d3fd1]/10">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-[#747686] mb-0.5">{label}</p>
-                      <p className="text-[11px] font-black text-[#0f1c2c] uppercase">{val}</p>
-                    </div>
-                  ))}
-                </div>
-                {pt?.gps && (
+               <div className="bg-[#0d3fd1]/5 border border-[#0d3fd1]/15 rounded-2xl p-4 mb-4">
+                  <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-2 flex items-center gap-2"><Info className="w-3.5 h-3.5" /> Confronto de Dados — PT</p>
+                  <p className="text-[10px] font-bold text-[#444655]">Verifique os dados abaixo. Se algum estiver incorreto no local, clique em "Corrigir".</p>
+               </div>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <ConfrontoField 
+                      label="ID do PT" valorOriginal={tarefa.id_pt}
+                      valorEditado={ptInfoEdits.id_pt} conforme={ptInfoConforme.id_pt}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, id_pt: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, id_pt: v}))} />
+                  <ConfrontoField 
+                      label="Proprietário" valorOriginal={pt?.proprietario?.nome || pt?.proprietario}
+                      valorEditado={ptInfoEdits.proprietario} conforme={ptInfoConforme.proprietario}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, proprietario: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, proprietario: v}))} />
+                  <ConfrontoField 
+                      label="Subestação" valorOriginal={sub?.nome}
+                      valorEditado={ptInfoEdits.subestacao} conforme={ptInfoConforme.subestacao}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, subestacao: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, subestacao: v}))} />
+                  <ConfrontoField 
+                      label="Município" valorOriginal={pt?.municipio || sub?.municipio}
+                      valorEditado={ptInfoEdits.municipio} conforme={ptInfoConforme.municipio}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, municipio: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, municipio: v}))} />
+                  <ConfrontoField 
+                      label="Localização (GPS)" valorOriginal={pt?.gps}
+                      valorEditado={ptInfoEdits.gps} conforme={ptInfoConforme.gps}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, gps: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, gps: v}))} />
+                  <ConfrontoField 
+                      label="Potência Contratual" valorOriginal={pt?.potencia_kva ? `${pt.potencia_kva} kVA` : null}
+                      valorEditado={ptInfoEdits.potencia_contratual} conforme={ptInfoConforme.potencia_contratual}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, potencia_contratual: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, potencia_contratual: v}))} isNumber={true} 
+                      helpText="Dados de contrato na base de dados" />
+                  <ConfrontoField 
+                      label="Potência Instalada" valorOriginal={pt?.potencia_instalada ? `${pt.potencia_instalada} kVA` : null}
+                      valorEditado={ptInfoEdits.potencia_instalada} conforme={ptInfoConforme.potencia_instalada}
+                      onConforme={(v) => setPtInfoConforme(p => ({...p, potencia_instalada: v}))}
+                      onEdit={(v) => setPtInfoEdits(p => ({...p, potencia_instalada: v}))} isNumber={true} 
+                      helpText="Deve ser preenchida pelo técnico no local" />
+               </div>
+
+               {pt?.gps && (
                   <a href={`https://www.google.com/maps?q=${encodeURIComponent(pt.gps)}`} target="_blank" rel="noreferrer"
                     className="mt-3 flex items-center gap-2 bg-white border border-emerald-200 text-emerald-700 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-50 transition-colors w-full justify-center">
-                    <MapPin className="w-3.5 h-3.5" /> Abrir no Mapa — GPS: {pt.gps}
+                    <MapPin className="w-3.5 h-3.5" /> Abrir no Mapa
                   </a>
                 )}
-              </div>
-              <div className="bg-[#eff4ff] border border-[#0d3fd1]/10 rounded-2xl p-4">
-                <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest mb-2">
-                  📋 Esta auditoria vai usar a checklist {isPTC ? 'PTC (37 itens)' : 'PTA (32 itens)'}
-                </p>
-                <p className="text-[10px] font-bold text-[#444655]">
-                  Irá percorrer: {PHOTO_SLOTS.filter(s => s.required).length} fotos obrigatórias · {checklistBase.length} itens de verificação · Medições de terra · Dados do cliente · Resultado.
-                </p>
-              </div>
+                
               {tarefa.descricao && (
-                <div className="bg-[#f8faff] border border-[#c4c5d7]/20 rounded-2xl p-4">
+                <div className="bg-[#f8faff] border border-[#c4c5d7]/20 rounded-2xl p-4 mt-4">
                   <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5" /> Instruções
+                    <FileText className="w-3.5 h-3.5" /> Instruções da Tarefa
                   </p>
                   <p className="text-sm font-medium text-[#444655] leading-relaxed">{tarefa.descricao}</p>
                 </div>
               )}
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] font-bold text-amber-700 leading-relaxed">
-                  Ao iniciar, o cronómetro começa a contar e a tarefa fica "Em Andamento".
-                </p>
-              </div>
             </div>
           )}
 
-          {/* ── PASSO 2: Fotos ─────────────────────────────────────────── */}
+          {/* ── PASSO 2: Cliente ─────────────────────────────────────────── */}
           {step === 2 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Capturas de Campo</p>
-                <span className="text-[9px] font-black text-[#0d3fd1] bg-[#eff4ff] px-3 py-1 rounded-full">
-                  {Object.values(fotos).filter(Boolean).length}/{PHOTO_SLOTS.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PHOTO_SLOTS.map(slot => (
-                  <PhotoCard key={slot.id} slot={slot} photo={fotos[slot.id]} onChange={handleFotoChange} />
-                ))}
-              </div>
-              {!fotosObrigOk && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 p-3 rounded-xl text-[9px] font-bold uppercase tracking-wider">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Capture todas as fotos obrigatórias para avançar
-                </div>
-              )}
+            <div className="space-y-4">
+               <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 mb-4">
+                  <p className="text-[10px] font-black text-purple-700 uppercase tracking-widest mb-2 flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Confronto de Dados — Cliente</p>
+                  <p className="text-[10px] font-bold text-[#444655]">Valide ou corrija os dados do cliente associado ao PT.</p>
+               </div>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <ConfrontoField 
+                      label="Nome do Cliente" valorOriginal={pt?.proprietario?.nome || pt?.proprietario}
+                      valorEditado={clienteEdits.nome} conforme={clienteConforme.nome}
+                      onConforme={(v) => setClienteConforme(p => ({...p, nome: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, nome: v}))} />
+                  <ConfrontoField 
+                      label="NIF" valorOriginal={pt?.proprietario?.nif}
+                      valorEditado={clienteEdits.nif} conforme={clienteConforme.nif}
+                      onConforme={(v) => setClienteConforme(p => ({...p, nif: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, nif: v}))} />
+                  <ConfrontoField 
+                      label="Tipo de Cliente" valorOriginal={pt?.proprietario?.tipo_cliente}
+                      valorEditado={clienteEdits.tipo_cliente} conforme={clienteConforme.tipo_cliente}
+                      onConforme={(v) => setClienteConforme(p => ({...p, tipo_cliente: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, tipo_cliente: v}))} />
+                  <ConfrontoField 
+                      label="Conta/Contrato" valorOriginal={pt?.proprietario?.conta_contrato}
+                      valorEditado={clienteEdits.conta_contrato} conforme={clienteConforme.conta_contrato}
+                      onConforme={(v) => setClienteConforme(p => ({...p, conta_contrato: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, conta_contrato: v}))} />
+                  <ConfrontoField 
+                      label="Parceiro de Negócio" valorOriginal={pt?.proprietario?.parceiro_negocios}
+                      valorEditado={clienteEdits.parceiro_negocio} conforme={clienteConforme.parceiro_negocio}
+                      onConforme={(v) => setClienteConforme(p => ({...p, parceiro_negocio: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, parceiro_negocio: v}))} />
+                  <ConfrontoField 
+                      label="Telefone" valorOriginal={pt?.proprietario?.telefone || pt?.proprietario?.contacto_resp_financeiro}
+                      valorEditado={clienteEdits.telefone} conforme={clienteConforme.telefone}
+                      onConforme={(v) => setClienteConforme(p => ({...p, telefone: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, telefone: v}))} />
+                  <ConfrontoField 
+                      label="Email" valorOriginal={pt?.proprietario?.email}
+                      valorEditado={clienteEdits.email} conforme={clienteConforme.email}
+                      onConforme={(v) => setClienteConforme(p => ({...p, email: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, email: v}))} />
+                  <ConfrontoField 
+                      label="Responsável" valorOriginal={pt?.proprietario?.responsavel_financeiro}
+                      valorEditado={clienteEdits.responsavel} conforme={clienteConforme.responsavel}
+                      onConforme={(v) => setClienteConforme(p => ({...p, responsavel: v}))}
+                      onEdit={(v) => setClienteEdits(p => ({...p, responsavel: v}))} />
+               </div>
             </div>
           )}
+
 
           {/* ── PASSO 3: Checklist ─────────────────────────────────────── */}
           {step === 3 && (
             <div className="space-y-4">
+              <div className="bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl p-4 flex items-center justify-between">
+                 <div>
+                    <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Tipo de Instalação</p>
+                    <p className="text-[9px] text-[#747686]">Pode alterar o tipo de PT se a deteção estiver incorreta.</p>
+                 </div>
+                 <div className="flex bg-white border border-[#c4c5d7]/30 rounded-xl overflow-hidden shadow-sm">
+                    <button onClick={() => setTipoPT('PTA')} className={`px-4 py-2 text-[10px] font-black uppercase transition-all ${tipoPT === 'PTA' ? 'bg-[#0d3fd1] text-white' : 'text-[#747686] hover:bg-[#eff4ff]'}`}>PTA</button>
+                    <button onClick={() => setTipoPT('PTC')} className={`px-4 py-2 text-[10px] font-black uppercase transition-all ${tipoPT === 'PTC' ? 'bg-[#0d3fd1] text-white' : 'text-[#747686] hover:bg-[#eff4ff]'}`}>PTC</button>
+                 </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">
-                  Checklist {isPTC ? 'PTC' : 'PTA'} — {checklistBase.length} itens
+                  Checklist {tipoPT} — {checklistBase.length} itens
                 </p>
                 <div className="flex gap-2">
                   <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">✓ {totalOK}</span>
@@ -462,8 +563,8 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                 const items = checklistBase.filter(i => i.secao === secao);
                 const okCount = items.filter(i => checklistMap[i.id] === 'ok').length;
                 return (
-                  <div key={secao}>
-                    <div className="flex items-center gap-2 mb-2">
+                  <div key={secao} className="bg-white border border-[#c4c5d7]/20 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
                       <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">{secao}</p>
                       <span className="text-[8px] font-black text-[#747686]">{okCount}/{items.length}</span>
                       <div className="flex-1 h-1 bg-[#f1f3f9] rounded-full overflow-hidden">
@@ -475,6 +576,13 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                         <ChecklistItem key={item.id} item={item} value={checklistMap[item.id]} onChange={handleCheckItem} />
                       ))}
                     </div>
+                    
+                    <SecaoFoto 
+                        secao={secao} 
+                        foto={checklistFotos[secao]} 
+                        onCapture={handleFotoChecklist} 
+                        onRemove={handleRemoveFotoChecklist} 
+                    />
                   </div>
                 );
               })}
@@ -544,186 +652,176 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
             </div>
           )}
 
-          {/* ── PASSO 5: Dados do Cliente ─────────────────────────────────── */}
+          {/* ── PASSO 5: Resumo e Resultado ──────────────────────────────── */}
           {step === 5 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Verificação de Dados do Cliente</p>
-              </div>
-              <div className="bg-[#f8f0ff] border border-purple-100 rounded-xl px-4 py-3">
-                <p className="text-[9px] font-bold text-purple-700">Confirme os dados do cliente no local. Estes dados actualizam a ficha do cliente.</p>
-              </div>
-
-              <div className="space-y-3">
-                {[
-                  { key: 'razao_social', label: 'Razão Social / Nome', icon: Building2 },
-                  { key: 'resp_financeiro', label: 'Responsável Financeiro', icon: Users },
-                  { key: 'contacto_fin', label: 'Contacto do Resp. Financeiro', icon: Phone },
-                  { key: 'resp_tecnico', label: 'Responsável Técnico', icon: Wrench },
-                  { key: 'contacto_tec', label: 'Contacto do Resp. Técnico', icon: Phone },
-                  { key: 'ultima_fatura', label: 'Referência da Última Fatura', icon: FileText },
-                  { key: 'empresa_manutencao', label: 'Empresa de Manutenção', icon: Wrench },
-                  { key: 'data_ultima_manutencao', label: 'Data da Última Manutenção', icon: Calendar, type: 'date' },
-                ].map(f => (
-                  <div key={f.key}>
-                    <label className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#747686] mb-1">
-                      <f.icon className="w-3 h-3" /> {f.label}
-                    </label>
-                    <input
-                      type={f.type || 'text'}
-                      value={dadosCliente[f.key] || ''}
-                      onChange={e => setDadosCliente(p => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-4 py-2.5 text-sm font-bold text-[#0f1c2c] focus:outline-none focus:ring-2 focus:ring-[#0d3fd1]/20"
-                    />
-                  </div>
-                ))}
-
-
-                {/* Canal de Faturação */}
-                <div>
-                  <label className="block text-[9px] font-black uppercase tracking-widest text-[#747686] mb-1">Canal de Receção de Fatura</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['Email', 'SMS', 'Papel', 'Portal'].map(c => (
-                      <button key={c} onClick={() => setDadosCliente(p => ({ ...p, canal_faturacao: c }))}
-                        className={`py-2 rounded-xl text-[9px] font-black uppercase border-2 transition-all ${dadosCliente.canal_faturacao === c ? 'bg-[#0d3fd1] text-white border-[#0d3fd1]' : 'bg-white border-[#c4c5d7]/30 text-[#747686]'}`}>
-                        {c}
-                      </button>
-                    ))}
-                  </div>
+            <div className="space-y-6">
+              {/* 1. Confronto de Dados - PT */}
+              <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-[#f0f4ff] px-4 py-2 border-b border-[#c4c5d7]/20">
+                  <p className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5" /> 1. Resumo PT Info
+                  </p>
                 </div>
-
-                {/* Fornece terceiros */}
-                <div className="flex items-center justify-between bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl px-4 py-3">
-                  <div>
-                    <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Fornece energia a terceiros?</p>
-                    <p className="text-[10px] text-[#747686]">Além deste cliente, o PT serve outros consumidores?</p>
-                  </div>
-                  <button onClick={() => setDadosCliente(p => ({ ...p, fornece_terceiros: !p.fornece_terceiros }))}
-                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase border-2 transition-all ${dadosCliente.fornece_terceiros ? 'bg-amber-500 text-white border-amber-500' : 'bg-white border-[#c4c5d7]/30 text-[#747686]'}`}>
-                    {dadosCliente.fornece_terceiros ? 'Sim ⚠️' : 'Não ✅'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── PASSO 6: Resultado ───────────────────────────────────────── */}
-          {step === 6 && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[9px] font-black uppercase tracking-widest text-[#747686] mb-2">Resultado da Auditoria *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {RESULTADOS.map(r => (
-                    <button key={r} onClick={() => setFormData(p => ({ ...p, resultado: r }))}
-                      className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${formData.resultado === r ? `${RESULTADO_COLOR[r]} text-white border-transparent shadow-lg` : 'bg-white border-[#c4c5d7]/30 text-[#444655]'}`}>
-                      {r}
-                    </button>
+                <div className="p-4 space-y-2">
+                  {[
+                    { label: 'ID do PT', original: tarefa.id_pt, editado: ptInfoEdits.id_pt, conforme: ptInfoConforme.id_pt },
+                    { label: 'Proprietário', original: pt?.proprietario?.nome || pt?.proprietario, editado: ptInfoEdits.proprietario, conforme: ptInfoConforme.proprietario },
+                    { label: 'Subestação', original: sub?.nome, editado: ptInfoEdits.subestacao, conforme: ptInfoConforme.subestacao },
+                    { label: 'Município', original: pt?.municipio || sub?.municipio, editado: ptInfoEdits.municipio, conforme: ptInfoConforme.municipio },
+                    { label: 'GPS', original: pt?.gps, editado: ptInfoEdits.gps, conforme: ptInfoConforme.gps },
+                    { label: 'Pot. Contratual', original: pt?.potencia_kva ? `${pt.potencia_kva} kVA` : null, editado: ptInfoEdits.potencia_contratual, conforme: ptInfoConforme.potencia_contratual },
+                    { label: 'Pot. Instalada', original: pt?.potencia_instalada ? `${pt.potencia_instalada} kVA` : null, editado: ptInfoEdits.potencia_instalada, conforme: ptInfoConforme.potencia_instalada },
+                  ].map((field, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-[#f0f1f7] last:border-0 gap-1">
+                      <span className="text-[10px] font-bold text-[#747686] uppercase tracking-tight">{field.label}</span>
+                      <div className="flex items-center gap-2 text-[11px] font-black uppercase">
+                        {field.conforme ? (
+                          <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {field.original || 'N/A'}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#747686] line-through opacity-50">{field.original || 'N/A'}</span>
+                            <ArrowRight className="w-2.5 h-2.5 text-[#0d3fd1]" />
+                            <span className="text-[#0d3fd1] bg-[#0d3fd1]/5 px-2 py-0.5 rounded">{field.editado || '---'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-              {['Não Conforme', 'Urgente'].includes(formData.resultado) && (
-                <div>
-                  <label className="block text-[9px] font-black uppercase tracking-widest text-[#747686] mb-2">Nível de Urgência</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {URGENCIAS.map(u => (
-                      <button key={u} onClick={() => setFormData(p => ({ ...p, nivel_urgencia: u }))}
-                        className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider border-2 transition-all ${formData.nivel_urgencia === u ? u === 'Crítico' ? 'bg-red-500 text-white border-transparent' : u === 'Alto' ? 'bg-orange-500 text-white border-transparent' : u === 'Médio' ? 'bg-amber-400 text-white border-transparent' : 'bg-blue-400 text-white border-transparent' : 'bg-white border-[#c4c5d7]/30 text-[#444655]'}`}>
-                        {u}
-                      </button>
-                    ))}
+
+              {/* 2. Confronto de Dados - Cliente */}
+              <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-[#fcf8ff] px-4 py-2 border-b border-[#c4c5d7]/20">
+                  <p className="text-[10px] font-black text-purple-700 uppercase tracking-widest flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5" /> 2. Resumo Cliente
+                  </p>
+                </div>
+                <div className="p-4 space-y-2">
+                  {[
+                    { label: 'Nome', original: pt?.proprietario?.nome || pt?.proprietario, editado: clienteEdits.nome, conforme: clienteConforme.nome },
+                    { label: 'NIF', original: pt?.proprietario?.nif, editado: clienteEdits.nif, conforme: clienteConforme.nif },
+                    { label: 'Tipo', original: pt?.proprietario?.tipo_cliente, editado: clienteEdits.tipo_cliente, conforme: clienteConforme.tipo_cliente },
+                    { label: 'Conta/Contrato', original: pt?.proprietario?.conta_contrato, editado: clienteEdits.conta_contrato, conforme: clienteConforme.conta_contrato },
+                    { label: 'Parceiro', original: pt?.proprietario?.parceiro_negocios, editado: clienteEdits.parceiro_negocio, conforme: clienteConforme.parceiro_negocio },
+                    { label: 'Telefone', original: pt?.proprietario?.telefone || pt?.proprietario?.contacto_resp_financeiro, editado: clienteEdits.telefone, conforme: clienteConforme.telefone },
+                    { label: 'Email', original: pt?.proprietario?.email, editado: clienteEdits.email, conforme: clienteConforme.email },
+                    { label: 'Responsável', original: pt?.proprietario?.responsavel_financeiro, editado: clienteEdits.responsavel, conforme: clienteConforme.responsavel },
+                  ].map((field, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-1.5 border-b border-[#f0f1f7] last:border-0 gap-1">
+                      <span className="text-[10px] font-bold text-[#747686] uppercase tracking-tight">{field.label}</span>
+                      <div className="flex items-center gap-2 text-[11px] font-black uppercase">
+                        {field.conforme ? (
+                          <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {field.original || 'N/A'}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#747686] line-through opacity-50">{field.original || 'N/A'}</span>
+                            <ArrowRight className="w-2.5 h-2.5 text-purple-700" />
+                            <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{field.editado || '---'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Checklist e Fotos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl p-4 shadow-sm">
+                  <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ClipboardList className="w-3.5 h-3.5" /> 3. Checklist
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase">
+                      <span className="text-[#747686]">Total Itens</span>
+                      <span>{checklistBase.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase">
+                      <span className="text-emerald-600">Conformes (OK)</span>
+                      <span>{totalOK}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase">
+                      <span className="text-red-600">Não Conformes (NC)</span>
+                      <span>{totalNC}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase border-t pt-2 mt-2">
+                      <span className="text-[#0d3fd1]">Fotos Capturadas</span>
+                      <span>{Object.keys(checklistFotos).length}</span>
+                    </div>
                   </div>
+                </div>
+
+                <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl p-4 shadow-sm">
+                  <p className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Activity className="w-3.5 h-3.5" /> 4. Medições
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase">
+                      <span className="text-[#747686]">Terra Proteção</span>
+                      <span className={Number(medicoes.terra_protecao) >= 20 ? 'text-red-600' : 'text-emerald-600'}>{medicoes.terra_protecao} Ω</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase">
+                      <span className="text-[#747686]">Terra Serviço</span>
+                      <span className={Number(medicoes.terra_servico) >= 20 ? 'text-red-600' : 'text-emerald-600'}>{medicoes.terra_servico} Ω</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] font-black uppercase border-t pt-2 mt-2">
+                      <span className="text-[#747686]">Tensões</span>
+                      <span className="text-[9px] font-bold">Ver detalhes na submissão</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Resultado Final */}
+              <div className="bg-[#0f1c2c] text-white border border-[#0f1c2c] rounded-2xl p-5 shadow-xl">
+                 <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Resultado Final</p>
+                      <h4 className="text-xl font-black uppercase tracking-tight">{formData.resultado}</h4>
+                    </div>
+                    <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${RESULTADO_COLOR[formData.resultado]}`}>
+                      {formData.resultado}
+                    </div>
+                 </div>
+                 
+                 {formData.nivel_urgencia && (
+                    <div className="mb-4 flex items-center gap-3">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/50">Urgência:</span>
+                      <span className="text-[11px] font-black uppercase px-3 py-1 rounded-lg bg-white/10">{formData.nivel_urgencia}</span>
+                    </div>
+                 )}
+
+                 {formData.observacoes && (
+                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-2">Observações de Campo</p>
+                      <p className="text-sm font-medium leading-relaxed">{formData.observacoes}</p>
+                    </div>
+                 )}
+
+                 <div className="mt-6">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-white/50 mb-3">Rever Resultado da Auditoria</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {RESULTADOS.map(r => (
+                        <button key={r} onClick={() => setFormData(p => ({ ...p, resultado: r }))}
+                          className={`py-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-all ${formData.resultado === r ? 'bg-white text-[#0f1c2c] border-white shadow-lg' : 'bg-transparent border-white/20 text-white/70 hover:bg-white/5'}`}>
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-3 bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 text-[10px] font-bold uppercase tracking-wider">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {error}
                 </div>
               )}
-              <div>
-                <label className="block text-[9px] font-black uppercase tracking-widest text-[#747686] mb-2">Observações / Notas de Campo</label>
-                <textarea value={formData.observacoes} onChange={e => setFormData(p => ({ ...p, observacoes: e.target.value }))}
-                  rows={4} placeholder="Anote anomalias, leituras, condições observadas no local..."
-                  className="w-full border border-[#c4c5d7]/30 rounded-xl p-3 text-sm font-medium text-[#0f1c2c] focus:outline-none focus:ring-2 focus:ring-[#0d3fd1]/20 resize-none bg-[#fcfdff]" />
-              </div>
-              <div>
-                <label className="block text-[9px] font-black uppercase tracking-widest text-[#747686] mb-2">Data da Próxima Inspeção (opcional)</label>
-                <input type="date" value={formData.proxima_inspecao} onChange={e => setFormData(p => ({ ...p, proxima_inspecao: e.target.value }))}
-                  className="w-full border border-[#c4c5d7]/30 rounded-xl p-3 text-sm font-medium text-[#0f1c2c] focus:outline-none focus:ring-2 focus:ring-[#0d3fd1]/20 bg-[#fcfdff]" />
-              </div>
-            </div>
-          )}
-
-          {/* ── PASSO 7: Resumo ─────────────────────────────────────────── */}
-          {step === 7 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-2">
-                {PHOTO_SLOTS.map(s => (
-                  <div key={s.id}>
-                    {fotos[s.id] ? <img src={fotos[s.id].data} alt={s.label} className="w-full h-16 object-cover rounded-xl border-2 border-emerald-300" />
-                      : <div className="w-full h-16 bg-[#f0f2f5] rounded-xl border-2 border-dashed border-[#c4c5d7]/40 flex items-center justify-center text-lg">{s.icon}</div>}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Checklist</p>
-                  <p className="text-[11px] font-black text-[#0f1c2c] uppercase">{totalOK}/{checklistBase.length} OK · {totalNC} NC</p>
+              {success && (
+                <div className="flex items-center gap-3 bg-emerald-50 text-emerald-600 p-4 rounded-2xl border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" /> Auditoria submetida com sucesso! Tarefa concluída. ✅
                 </div>
-                <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Resultado</p>
-                  <span className={`inline-flex px-2.5 py-1 rounded-lg text-[9px] font-black text-white uppercase ${RESULTADO_COLOR[formData.resultado]}`}>{formData.resultado}</span>
-                </div>
-                <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Terra TP</p>
-                  <p className={`text-[11px] font-black uppercase ${medicoes.terra_protecao !== '' && Number(medicoes.terra_protecao) >= 20 ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {medicoes.terra_protecao !== '' ? `${medicoes.terra_protecao} Ω` : 'Não medido'}
-                  </p>
-                </div>
-                <div className="bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Terra TS</p>
-                  <p className={`text-[11px] font-black uppercase ${medicoes.terra_servico !== '' && Number(medicoes.terra_servico) >= 20 ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {medicoes.terra_servico !== '' ? `${medicoes.terra_servico} Ω` : 'Não medido'}
-                  </p>
-                </div>
-                <div className="col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                  <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Divergências de Cadastro</p>
-                  <div className="space-y-1.5">
-                    {(() => {
-                      const divs = [];
-                      const mapping = {
-                        razao_social: { campo: 'proprietario', label: 'Nome' },
-                        resp_financeiro: { campo: 'responsavel_financeiro', label: 'Resp. Fin.' },
-                        resp_tecnico: { campo: 'responsavel_tecnico_cliente', label: 'Resp. Téc.' },
-                        contacto_fin: { campo: 'contacto_resp_financeiro', label: 'Cont. Fin.' },
-                        contacto_tec: { campo: 'contacto_resp_tecnico', label: 'Cont. Téc.' },
-                        empresa_manutencao: { campo: 'empresa_manutencao', label: 'Manutenção' },
-                      };
-                      Object.entries(mapping).forEach(([key, meta]) => {
-                        const vCampo = String(dadosCliente?.[key] || '').trim();
-                        const vSist = String(tarefa?.pt?.[meta.campo] || '').trim();
-                        if (vCampo && vSist && vCampo !== vSist) {
-                          divs.push(`${meta.label}: ${vSist} → ${vCampo}`);
-                        }
-                      });
-                      if (dadosCliente?.fornece_terceiros !== !!tarefa?.pt?.fornece_terceiros) {
-                        divs.push(`Fornece Terceiros: ${tarefa?.pt?.fornece_terceiros ? 'Sim' : 'Não'} → ${dadosCliente?.fornece_terceiros ? 'Sim' : 'Não'}`);
-                      }
-
-                      
-                      if (divs.length === 0) return <p className="text-[10px] font-bold text-emerald-600">Sem divergências (Dados em conformidade)</p>;
-                      return divs.map((d, i) => <p key={i} className="text-[10px] font-bold text-amber-600">⚠️ {d}</p>);
-                    })()}
-                  </div>
-                </div>
-                {formData.observacoes && (
-                  <div className="col-span-2 bg-white border border-[#c4c5d7]/20 rounded-xl p-3">
-                    <p className="text-[8px] font-black uppercase text-[#747686] mb-1">Observações</p>
-                    <p className="text-[11px] font-medium text-[#444655]">{formData.observacoes}</p>
-                  </div>
-                )}
-
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] font-bold text-amber-700 leading-relaxed">
-                  A tarefa será marcada como <strong>Concluída</strong>. A inspeção, checklist, medições e dados do cliente serão guardados. {totalNC > 0 && `⚠️ ${totalNC} NC(s) serão registados para seguimento.`}
-                </p>
-              </div>
+              )}
             </div>
           )}
 
@@ -758,12 +856,12 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                 onClick={handleIniciar}
                 title={!isAssignedAuditor ? "Apenas o auditor designado pode iniciar" : ""}
                 className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                {iniciando ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A iniciar...</> : <><Zap className="w-4 h-4" fill="currentColor" /> {tarefa.status === 'Em Andamento' ? 'Continuar Auditoria' : 'Iniciar Auditoria'} <ArrowRight className="w-3.5 h-3.5" /></>}
+                {iniciando ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A iniciar...</> : <><Zap className="w-4 h-4" fill="currentColor" /> {tarefa.status === 'Em Andamento' ? 'Continuar' : 'Iniciar'} <ArrowRight className="w-3.5 h-3.5" /></>}
               </button>
             )}
             {step === 2 && (
-              <button disabled={!fotosObrigOk} onClick={() => setStep(3)}
-                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${fotosObrigOk ? 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20' : 'bg-[#c4c5d7] text-white cursor-not-allowed'}`}>
+              <button onClick={() => setStep(3)}
+                className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20`}>
                 Avançar <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -776,22 +874,10 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
             {step === 4 && (
               <button disabled={medicoes.terra_protecao === '' || medicoes.terra_servico === ''} onClick={() => setStep(5)}
                 className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${medicoes.terra_protecao !== '' && medicoes.terra_servico !== '' ? 'bg-[#0d3fd1] text-white hover:bg-[#0034cc] shadow-[#0d3fd1]/20' : 'bg-[#c4c5d7] text-white cursor-not-allowed'}`}>
-                Dados do Cliente <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {step === 5 && (
-              <button onClick={() => setStep(6)}
-                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all">
                 Resultado <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
-            {step === 6 && (
-              <button onClick={() => setStep(7)}
-                className="flex items-center gap-2 bg-[#0d3fd1] text-white px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-[#0d3fd1]/20 hover:bg-[#0034cc] active:scale-95 transition-all">
-                Rever e Submeter <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {step === 7 && !success && (
+            {step === 5 && !success && (
               <button disabled={loading || !infoCompleta} onClick={handleSubmit}
                 className={`flex items-center gap-2 px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 ${loading || !infoCompleta ? 'bg-[#c4c5d7] text-white cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200'}`}>
                 {loading ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> A submeter...</> : !infoCompleta ? 'Informação Incompleta' : <><CheckCircle2 className="w-4 h-4" /> Concluir Auditoria</>}

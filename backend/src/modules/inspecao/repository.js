@@ -82,6 +82,8 @@ class InspecaoRepository {
           terra_servico:      baseData.terra_servico      != null ? Number(baseData.terra_servico)    : null,
           medicao_tensao:     baseData.medicao_tensao     ?? null,
           dados_cliente_campo: baseData.dados_cliente_campo ?? null,
+          pt_info_edits:       baseData.pt_info_edits       ?? null,
+          cliente_edits:       baseData.cliente_edits       ?? null,
         },
       });
 
@@ -195,6 +197,14 @@ class InspecaoRepository {
             ...(lon !== null && !isNaN(lon) && { longitude: lon }),
             ...(dc.gps && { gps: dc.gps })
           },
+        });
+      }
+
+      // Atualizar Tipo de Infraestrutura (PTA/PTC) se fornecido
+      if (baseData.tipo_pt) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { tipo_instalacao: baseData.tipo_pt === 'PTC' ? 'PT CABINE' : 'PT AEREO' }
         });
       }
 
@@ -316,6 +326,8 @@ class InspecaoRepository {
           terra_servico:      baseData.terra_servico      !== undefined ? (baseData.terra_servico  != null ? Number(baseData.terra_servico)  : null) : existing.terra_servico,
           medicao_tensao:     baseData.medicao_tensao     !== undefined ? baseData.medicao_tensao     : existing.medicao_tensao,
           dados_cliente_campo: baseData.dados_cliente_campo !== undefined ? baseData.dados_cliente_campo : existing.dados_cliente_campo,
+          pt_info_edits:       baseData.pt_info_edits       !== undefined ? baseData.pt_info_edits       : existing.pt_info_edits,
+          cliente_edits:       baseData.cliente_edits       !== undefined ? baseData.cliente_edits       : existing.cliente_edits,
         },
       });
 
@@ -332,6 +344,14 @@ class InspecaoRepository {
             ...(dc.fornece_terceiros       != null && { fornece_terceiros: Boolean(dc.fornece_terceiros) }),
             ...(dc.data_ultima_manutencao  && { data_ultima_manutencao: new Date(dc.data_ultima_manutencao) }),
           },
+        });
+      }
+
+      // Actualiza Tipo de Infraestrutura se fornecido
+      if (baseData.tipo_pt) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { tipo_instalacao: baseData.tipo_pt === 'PTC' ? 'PT CABINE' : 'PT AEREO' }
         });
       }
 
