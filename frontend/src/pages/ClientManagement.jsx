@@ -249,15 +249,20 @@ export default function ClientManagement() {
   }
 
   const handleFilterChange = useCallback((key, value) => {
-    const updated = { ...filters, [key]: value };
-    setFilters(updated);
     if (key === 'search') {
+      setFilters(prev => ({ ...prev, [key]: value }));
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => setActiveFilters(updated), 500);
+      debounceRef.current = setTimeout(() => {
+        setActiveFilters(prev => ({ ...prev, [key]: value }));
+      }, 1000); // 1 segundo de espera para não travar a digitação
     } else {
-      setActiveFilters(updated);
+      setFilters(prev => {
+        const updated = { ...prev, [key]: value };
+        setActiveFilters(updated);
+        return updated;
+      });
     }
-  }, [filters]);
+  }, []);
 
   const clearFilters = useCallback(() => {
     const empty = { search: '', municipio: '', estado_operacional: '', nivel_tensao: '', id_subestacao: '' };
@@ -383,80 +388,6 @@ export default function ClientManagement() {
     }
   };
 
-  // ─── Shared filter bar ────────────────────────────────────────────────────
-  const FilterBar = () => (
-    <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 shadow-sm px-6 py-4">
-      <div className="flex items-start gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-[10px] font-black text-[#747686] uppercase tracking-widest mt-5">
-          <Filter className="w-3.5 h-3.5 text-[#0d3fd1]" />
-          Filtros
-        </div>
-        <div className="flex flex-col gap-0.5 flex-grow max-w-xs">
-          <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Pesquisa</label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={mainTab === 'pts' ? "ID PT, instalação, equipamento..." : "Contrato, razão social, parceiro..."}
-              value={filters.search}
-              onChange={e => handleFilterChange('search', e.target.value)}
-              className="w-full bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg py-2 pl-8 pr-4 text-[10px] font-bold text-[#0f1c2c] outline-none"
-            />
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#747686]" />
-          </div>
-        </div>
-        <div className="ml-auto flex flex-wrap items-end gap-4">
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
-            <select value={filters.municipio} onChange={e => handleFilterChange('municipio', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
-              <option value="">Todos Municípios</option>
-              {(metadata.municipios || []).map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          {mainTab === 'pts' && (
-            <>
-              <div className="flex flex-col gap-0.5">
-                <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Operacional</label>
-                <select value={filters.estado_operacional} onChange={e => handleFilterChange('estado_operacional', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
-                  <option value="">Todos os Estados</option>
-                  <option value="Operacional">Operacional</option>
-                  <option value="Crítico">Crítico</option>
-                  <option value="Manutenção">Manutenção</option>
-                  <option value="Fora de Serviço">Fora de Serviço</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão</label>
-                <select value={filters.nivel_tensao} onChange={e => handleFilterChange('nivel_tensao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[130px]">
-                  <option value="">Todos</option>
-                  <option value="MT">MT</option>
-                  <option value="BT">BT</option>
-                  <option value="MT/BT">MT/BT</option>
-                </select>
-              </div>
-            </>
-          )}
-          <div className="flex flex-col gap-0.5">
-            <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Subestação</label>
-            <select value={filters.id_subestacao} onChange={e => handleFilterChange('id_subestacao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[180px]">
-              <option value="">Todas Subestações</option>
-              {subestacoes.map(s => (<option key={s.id} value={s.id}>{s.nome}</option>))}
-            </select>
-          </div>
-          {hasActiveFilters && (
-            <div className="flex items-center gap-2 flex-wrap ml-2">
-              {activeFilters.search && (<span className="flex items-center gap-1 bg-gray-50 text-gray-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-gray-100"><Search className="w-3 h-3" /> "{activeFilters.search}"</span>)}
-              {activeFilters.municipio && (<span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-[#0d3fd1]/10"><MapPin className="w-3 h-3" /> {activeFilters.municipio}</span>)}
-              {activeFilters.estado_operacional && (<span className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1 rounded-lg border ${statusColor(activeFilters.estado_operacional)}`}><Activity className="w-3 h-3" /> {activeFilters.estado_operacional}</span>)}
-              {activeFilters.nivel_tensao && (<span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-purple-100"><Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}</span>)}
-              {activeFilters.id_subestacao && (<span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-100"><Building2 className="w-3 h-3" /> {subestacoes.find(s => String(s.id) === String(activeFilters.id_subestacao))?.nome || 'Sub.'}</span>)}
-              <button onClick={clearFilters} className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 transition-all active:scale-95"><X className="w-3 h-3" /> Limpar</button>
-            </div>
-          )}
-          {loading && <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin" />}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-6 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -550,8 +481,77 @@ export default function ClientManagement() {
               </div>
             ))}
           </div>
-
-          <FilterBar />
+          <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 shadow-sm px-6 py-4">
+            <div className="flex items-start gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-[10px] font-black text-[#747686] uppercase tracking-widest mt-5">
+                <Filter className="w-3.5 h-3.5 text-[#0d3fd1]" />
+                Filtros
+              </div>
+              <div className="flex flex-col gap-0.5 flex-grow max-w-xs">
+                <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Pesquisa</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={mainTab === 'pts' ? "ID PT, designação, município, fabricante..." : "Contrato, razão social, parceiro, NIF..."}
+                    value={filters.search}
+                    onChange={e => handleFilterChange('search', e.target.value)}
+                    className="w-full bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg py-2.5 pl-9 pr-4 text-[10px] font-bold text-[#0f1c2c] outline-none focus:ring-2 focus:ring-[#0d3fd1]/10 transition-all shadow-sm"
+                  />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#747686]" />
+                </div>
+              </div>
+              <div className="ml-auto flex flex-wrap items-end gap-4">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
+                  <select value={filters.municipio} onChange={e => handleFilterChange('municipio', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
+                    <option value="">Todos Municípios</option>
+                    {(metadata.municipios || []).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                {mainTab === 'pts' && (
+                  <>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Operacional</label>
+                      <select value={filters.estado_operacional} onChange={e => handleFilterChange('estado_operacional', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
+                        <option value="">Todos os Estados</option>
+                        <option value="Operacional">Operacional</option>
+                        <option value="Crítico">Crítico</option>
+                        <option value="Manutenção">Manutenção</option>
+                        <option value="Fora de Serviço">Fora de Serviço</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão</label>
+                      <select value={filters.nivel_tensao} onChange={e => handleFilterChange('nivel_tensao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[130px]">
+                        <option value="">Todos</option>
+                        <option value="MT">MT</option>
+                        <option value="BT">BT</option>
+                        <option value="MT/BT">MT/BT</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Subestação</label>
+                  <select value={filters.id_subestacao} onChange={e => handleFilterChange('id_subestacao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[180px]">
+                    <option value="">Todas Subestações</option>
+                    {subestacoes.map(s => (<option key={s.id} value={s.id}>{s.nome}</option>))}
+                  </select>
+                </div>
+                {hasActiveFilters && (
+                  <div className="flex items-center gap-2 flex-wrap ml-2">
+                    {activeFilters.search && (<span className="flex items-center gap-1 bg-gray-50 text-gray-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-gray-100"><Search className="w-3 h-3" /> "{activeFilters.search}"</span>)}
+                    {activeFilters.municipio && (<span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-[#0d3fd1]/10"><MapPin className="w-3 h-3" /> {activeFilters.municipio}</span>)}
+                    {activeFilters.estado_operacional && (<span className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1 rounded-lg border ${statusColor(activeFilters.estado_operacional)}`}><Activity className="w-3 h-3" /> {activeFilters.estado_operacional}</span>)}
+                    {activeFilters.nivel_tensao && (<span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-purple-100"><Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}</span>)}
+                    {activeFilters.id_subestacao && (<span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-100"><Building2 className="w-3 h-3" /> {subestacoes.find(s => String(s.id) === String(activeFilters.id_subestacao))?.nome || 'Sub.'}</span>)}
+                    <button onClick={clearFilters} className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 transition-all active:scale-95"><X className="w-3 h-3" /> Limpar</button>
+                  </div>
+                )}
+                {loading && <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin" />}
+              </div>
+            </div>
+          </div>
 
           {/* PT Table */}
           <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative">
@@ -641,8 +641,8 @@ export default function ClientManagement() {
                               </td>
                               <td className="px-6 py-4 text-[#444655]">
                                 <div className="flex flex-col">
-                                  <span className="font-bold">{cliente.instalacao || '---'}</span>
-                                  <span className="text-[9px] opacity-60">Equip: {cliente.equipamento || '---'}</span>
+                                  <span className="font-bold">{cliente.designacao || '---'}</span>
+                                  <span className="text-[9px] opacity-60">ID Concessionária: {cliente.id_concessionaria || '---'}</span>
                                 </div>
                               </td>
                               <td className="px-6 py-4 font-black text-center whitespace-nowrap">
@@ -739,8 +739,77 @@ export default function ClientManagement() {
               </div>
             ))}
           </div>
-
-          <FilterBar />
+          <div className="bg-white rounded-2xl border border-[#c4c5d7]/20 shadow-sm px-6 py-4">
+            <div className="flex items-start gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-[10px] font-black text-[#747686] uppercase tracking-widest mt-5">
+                <Filter className="w-3.5 h-3.5 text-[#0d3fd1]" />
+                Filtros
+              </div>
+              <div className="flex flex-col gap-0.5 flex-grow max-w-xs">
+                <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Pesquisa</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={mainTab === 'pts' ? "ID PT, designação, município, fabricante..." : "Contrato, razão social, parceiro, NIF..."}
+                    value={filters.search}
+                    onChange={e => handleFilterChange('search', e.target.value)}
+                    className="w-full bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg py-2.5 pl-9 pr-4 text-[10px] font-bold text-[#0f1c2c] outline-none focus:ring-2 focus:ring-[#0d3fd1]/10 transition-all shadow-sm"
+                  />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#747686]" />
+                </div>
+              </div>
+              <div className="ml-auto flex flex-wrap items-end gap-4">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Município</label>
+                  <select value={filters.municipio} onChange={e => handleFilterChange('municipio', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
+                    <option value="">Todos Municípios</option>
+                    {(metadata.municipios || []).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                {mainTab === 'pts' && (
+                  <>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Estado Operacional</label>
+                      <select value={filters.estado_operacional} onChange={e => handleFilterChange('estado_operacional', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[150px]">
+                        <option value="">Todos os Estados</option>
+                        <option value="Operacional">Operacional</option>
+                        <option value="Crítico">Crítico</option>
+                        <option value="Manutenção">Manutenção</option>
+                        <option value="Fora de Serviço">Fora de Serviço</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Nível de Tensão</label>
+                      <select value={filters.nivel_tensao} onChange={e => handleFilterChange('nivel_tensao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[130px]">
+                        <option value="">Todos</option>
+                        <option value="MT">MT</option>
+                        <option value="BT">BT</option>
+                        <option value="MT/BT">MT/BT</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8px] font-black text-[#747686] uppercase tracking-widest ml-1">Subestação</label>
+                  <select value={filters.id_subestacao} onChange={e => handleFilterChange('id_subestacao', e.target.value)} className="bg-[#f8f9ff] border border-[#c4c5d7]/30 rounded-lg px-3 py-2 text-[10px] font-bold min-w-[180px]">
+                    <option value="">Todas Subestações</option>
+                    {subestacoes.map(s => (<option key={s.id} value={s.id}>{s.nome}</option>))}
+                  </select>
+                </div>
+                {hasActiveFilters && (
+                  <div className="flex items-center gap-2 flex-wrap ml-2">
+                    {activeFilters.search && (<span className="flex items-center gap-1 bg-gray-50 text-gray-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-gray-100"><Search className="w-3 h-3" /> "{activeFilters.search}"</span>)}
+                    {activeFilters.municipio && (<span className="flex items-center gap-1 bg-[#eff4ff] text-[#0d3fd1] text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-[#0d3fd1]/10"><MapPin className="w-3 h-3" /> {activeFilters.municipio}</span>)}
+                    {activeFilters.estado_operacional && (<span className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1 rounded-lg border ${statusColor(activeFilters.estado_operacional)}`}><Activity className="w-3 h-3" /> {activeFilters.estado_operacional}</span>)}
+                    {activeFilters.nivel_tensao && (<span className="flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-purple-100"><Zap className="w-3 h-3" /> {activeFilters.nivel_tensao}</span>)}
+                    {activeFilters.id_subestacao && (<span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-100"><Building2 className="w-3 h-3" /> {subestacoes.find(s => String(s.id) === String(activeFilters.id_subestacao))?.nome || 'Sub.'}</span>)}
+                    <button onClick={clearFilters} className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-red-100 transition-all active:scale-95"><X className="w-3 h-3" /> Limpar</button>
+                  </div>
+                )}
+                {loading && <div className="w-3 h-3 rounded-full border-2 border-[#0d3fd1] border-t-transparent animate-spin" />}
+              </div>
+            </div>
+          </div>
 
           {/* Proprietarios Table */}
           <div className="bg-white rounded-[1rem] border border-[#c4c5d7]/20 shadow-sm overflow-hidden relative">

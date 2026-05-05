@@ -110,6 +110,7 @@ model PostoTransformacao {
   num_transformadores Int         @default(1) @db.SmallInt
   regime_exploracao   String?     @db.VarChar(100)
   estado_operacional  String      @default("Operacional") @db.VarChar(50)
+  status_legal        String      @default("Em Avaliação") @db.VarChar(50) // Legal, Não Legal, Legal com Inconformidades
 
   // ── Secção 1 — Identificação Geral (PDF) ─────────────────────────
   designacao              String?     @db.VarChar(200)

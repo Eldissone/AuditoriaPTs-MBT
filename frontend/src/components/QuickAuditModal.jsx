@@ -10,11 +10,13 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { CHECKLIST_PTA, CHECKLIST_PTC } from '../data/checklists';
 
-const RESULTADOS = ['Conforme', 'Não Conforme', 'Em Avaliação', 'Urgente'];
+const RESULTADOS = ['Legal', 'Não Legal', 'Legal com Inconformidades', 'Em Avaliação'];
 const URGENCIAS = ['Baixo', 'Médio', 'Alto', 'Crítico'];
 const RESULTADO_COLOR = {
-  'Conforme': 'bg-emerald-500', 'Não Conforme': 'bg-amber-500',
-  'Em Avaliação': 'bg-blue-500', 'Urgente': 'bg-red-500',
+  'Legal': 'bg-emerald-500', 
+  'Não Legal': 'bg-red-500',
+  'Legal com Inconformidades': 'bg-amber-500',
+  'Em Avaliação': 'bg-blue-500',
 };
 const PRIO_COLOR = { A: 'bg-red-100 text-red-700', B: 'bg-amber-100 text-amber-700', C: 'bg-gray-100 text-gray-600' };
 
@@ -314,7 +316,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
         id_tarefa: tarefa.id,
         tipo: tipoInspecao,
         resultado: formData.resultado,
-        nivel_urgencia: ['Não Conforme', 'Urgente'].includes(formData.resultado) ? formData.nivel_urgencia : null,
+        nivel_urgencia: ['Não Legal', 'Legal com Inconformidades', 'Urgente'].includes(formData.resultado) ? formData.nivel_urgencia : null,
         observacoes: formData.observacoes || null,
         proxima_inspecao: formData.proxima_inspecao || null,
         fotos: fotosArray,
@@ -333,7 +335,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
       await api.put(`/tarefas/${tarefa.id}/concluir`, { checklist: checklistFinal, novoStatus: 'Aguardando Validação' });
 
       // Registar incongruências de prioridade A não conformes
-      if (ncPrioA.length > 0 || (terra_protecao !== null && terra_protecao >= 20) || (terra_servico !== null && terra_servico >= 20)) {
+      if (formData.resultado === 'Não Legal' || (terra_protecao !== null && terra_protecao >= 20) || (terra_servico !== null && terra_servico >= 20)) {
         // Incongruências de terra (O backend pode gerir)
         const incongruencias = [];
         if (terra_protecao !== null && terra_protecao >= 20) {

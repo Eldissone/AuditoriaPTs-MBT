@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle, AlertTriangle, Navigation } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, MapPin, Zap, Building2, Users, Calendar, AlertCircle, AlertTriangle, Navigation, Shield } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -27,8 +28,8 @@ const createSubstationIcon = (status) => {
   });
 };
 
-const createPTIcon = (status) => {
-  const color = status === 'Operacional' ? '#10b981' : status === 'Crítico' ? '#ef4444' : '#f59e0b';
+const createPTIcon = (statusLegal) => {
+  const color = statusLegal === 'Legal' ? '#10b981' : statusLegal === 'Não Legal' ? '#ef4444' : statusLegal === 'Legal com Inconformidades' ? '#f59e0b' : '#6b7280';
   return L.divIcon({
     className: 'custom-pt-icon',
     html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
@@ -41,6 +42,7 @@ const createPTIcon = (status) => {
 };
 
 export default function SubstationDetail({ substation, onClose, onFilterPts }) {
+  const navigate = useNavigate();
   const storageKey = `@PTAS:subestacao:${substation.id}:imagens`;
   const [imagensLocais, setImagensLocais] = useState([]);
   const [imagemAtiva, setImagemAtiva] = useState(null);
@@ -120,10 +122,10 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   // Count PTs by operational status
   const statusCounts = React.useMemo(() => {
     return {
-      operacional: localPts.filter(p => p.estado_operacional === 'Operacional').length,
-      critico: localPts.filter(p => p.estado_operacional === 'Crítico').length,
-      manutencao: localPts.filter(p => p.estado_operacional === 'Manutenção').length,
-      fora: localPts.filter(p => p.estado_operacional === 'Fora de Serviço').length,
+      legal: localPts.filter(p => p.status_legal === 'Legal').length,
+      naoLegal: localPts.filter(p => p.status_legal === 'Não Legal').length,
+      comInconformidades: localPts.filter(p => p.status_legal === 'Legal com Inconformidades').length,
+      avaliacao: localPts.filter(p => !p.status_legal || p.status_legal === 'Em Avaliação').length,
     };
   }, [localPts]);
 
@@ -159,11 +161,14 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
 
   // Map Helper: Parse GPS string or use lat/lng
   const getCoords = useCallback((obj) => {
+    if (!obj) return null;
     if (obj.latitude && obj.longitude) {
-      return [parseFloat(obj.latitude), parseFloat(obj.longitude)];
+      const lat = parseFloat(obj.latitude);
+      const lng = parseFloat(obj.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) return [lat, lng];
     }
     if (obj.gps) {
-      const parts = obj.gps.split(',').map(p => parseFloat(p.trim()));
+      const parts = String(obj.gps).split(',').map(p => parseFloat(p.trim()));
       if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
         return [parts[0], parts[1]];
       }
@@ -330,8 +335,8 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                   scrollWheelZoom={true}
                 >
                   <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; OpenStreetMap contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   />
 
                   {/* Substation Marker */}
@@ -355,7 +360,7 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                       : `${Math.round(distanceMeters)} m`;
 
                     return (
-                      <Marker key={pt.id} position={ptPos} icon={createPTIcon(pt.estado_operacional)}>
+                      <Marker key={pt.id} position={ptPos} icon={createPTIcon(pt.status_legal)}>
                         <Popup>
                           <div className="text-xs">
                             <p className="font-black text-[#0f1c2c] uppercase">{pt.id_pt}</p>
@@ -364,9 +369,20 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                               <Navigation className="w-3 h-3" />
                               Distância: {distanceText}
                             </p>
-                            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${pt.estado_operacional === 'Operacional' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                              <span className="font-bold">{pt.estado_operacional}</span>
+                            <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${pt.status_legal === 'Legal' ? 'bg-green-500' : pt.status_legal === 'Não Legal' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                                <span className="font-bold">{pt.status_legal || 'Em Avaliação'}</span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/ficha-tecnica/${pt.id_pt}`);
+                                }}
+                                className="w-full bg-[#0d3fd1] text-white text-[9px] font-black uppercase py-1.5 rounded-lg hover:bg-[#0034cc] transition-all text-center"
+                              >
+                                Ver Ficha Técnica
+                              </button>
                             </div>
                           </div>
                         </Popup>
@@ -394,11 +410,15 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-[#10b981] rounded-full"></div>
-                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Operacional</span>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Legal (Conforme)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-[#ef4444] rounded-full"></div>
-                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">PT Crítico</span>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Não Legal (Infracção)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-[#f59e0b] rounded-full"></div>
+                    <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-tighter">Legal c/ Inconformidades</span>
                   </div>
                 </div>
               </div>
@@ -410,25 +430,25 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
           {/* PT Status Distribution */}
           <div className="bg-[#f8f9ff] rounded-2xl p-6">
             <h3 className="font-black text-[#0f1c2c] text-lg mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-[#0d3fd1]" />
-              Estados dos (Clientes)
+              <Shield className="w-5 h-5 text-[#0d3fd1]" />
+              Status de Legalidade dos PTs
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-xl p-4 border-l-4 border-green-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Operacional</p>
-                <p className="text-2xl font-black text-green-600">{statusCounts.operacional}</p>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-emerald-500 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Legal</p>
+                <p className="text-2xl font-black text-emerald-600">{statusCounts.legal}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-red-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Crítico</p>
-                <p className="text-2xl font-black text-red-600">{statusCounts.critico}</p>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Não Legal</p>
+                <p className="text-2xl font-black text-red-600">{statusCounts.naoLegal}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-yellow-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Manutenção</p>
-                <p className="text-2xl font-black text-yellow-600">{statusCounts.manutencao}</p>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-amber-500 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Com Inconformidades</p>
+                <p className="text-2xl font-black text-amber-600">{statusCounts.comInconformidades}</p>
               </div>
-              <div className="bg-white rounded-xl p-4 border-l-4 border-gray-500">
-                <p className="text-[10px] font-bold text-gray-600 uppercase">Fora de Serviço</p>
-                <p className="text-2xl font-black text-gray-600">{statusCounts.fora}</p>
+              <div className="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm">
+                <p className="text-[10px] font-bold text-gray-600 uppercase">Em Avaliação</p>
+                <p className="text-2xl font-black text-blue-600">{statusCounts.avaliacao}</p>
               </div>
             </div>
           </div>

@@ -632,9 +632,9 @@ export default function PTAudits() {
                       )}
                     </td>
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
-                      <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${audit.resultado === 'Conforme' ? 'bg-emerald-500' :
-                        audit.resultado === 'Não Conforme' ? 'bg-amber-500' :
-                          audit.resultado === 'Urgente' ? 'bg-red-500' : 'bg-blue-500'
+                      <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${audit.resultado === 'Legal' ? 'bg-emerald-500' :
+                        audit.resultado === 'Não Legal' ? 'bg-red-500' :
+                        audit.resultado === 'Legal com Inconformidades' ? 'bg-amber-500' : 'bg-blue-500'
                         }`}>
                         {audit.resultado || 'N/D'}
                       </span>
@@ -643,7 +643,7 @@ export default function PTAudits() {
                       {audit.pt?.proprietario?.nome || audit.pt?.proprietario || 'N/A'}
                     </td>
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
-                      {audit.nivel_urgencia && (audit.resultado === 'Não Conforme' || audit.resultado === 'Urgente') ? (
+                      {audit.nivel_urgencia && (audit.resultado === 'Não Legal' || audit.resultado === 'Legal com Inconformidades' || audit.resultado === 'Urgente') ? (
                         <span className={`inline-flex px-2 py-1 rounded-md text-[8px] font-black text-white uppercase ${audit.nivel_urgencia === 'Crítico' ? 'bg-red-700' :
                           audit.nivel_urgencia === 'Alto' ? 'bg-orange-600' : 'bg-amber-600'
                           }`}>

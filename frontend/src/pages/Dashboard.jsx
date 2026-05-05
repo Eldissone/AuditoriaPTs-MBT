@@ -57,6 +57,18 @@ function ZoomSync({ onZoomChange }) {
   return null;
 }
 
+// Auto-adjust bounds when filtered markers change
+function MapBoundsHandler({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map && points && points.length > 0) {
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [map, points]);
+  return null;
+}
+
 // Memoized Substation Marker Component
 const SubstationMarker = React.memo(({ sub, parseGps, iconSize, onSelectSubstation, onMapCenter, onZoomChange }) => {
   const pos = parseGps(sub.gps) || (sub.latitude && sub.longitude ? { lat: sub.latitude, lng: sub.longitude } : null);
@@ -108,9 +120,12 @@ export default function Dashboard() {
     tipo: '',
     id_subestacao: '',
   });
+
+  const hasActiveFilters = !!(activeFilters.municipio || activeFilters.status || activeFilters.tipo || activeFilters.id_subestacao);
+
   const [selectedSubstation, setSelectedSubstation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([-11.2027, 17.8739]);
-  const [zoom, setZoom] = useState(6);
+  const [mapCenter, setMapCenter] = useState([-8.8390, 13.2344]); // Luanda Default
+  const [zoom, setZoom] = useState(12);
 
   const debounceTimerRef = useRef(null);
   const hasInitialFocused = useRef(false);
@@ -123,7 +138,7 @@ export default function Dashboard() {
 
   const parseGps = useCallback((gpsString) => {
     if (!gpsString) return null;
-    const parts = gpsString.split(',').map(p => parseFloat(p.trim()));
+    const parts = String(gpsString).split(',').map(p => parseFloat(p.trim()));
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
       return { lat: parts[0], lng: parts[1] };
     }
@@ -157,23 +172,17 @@ export default function Dashboard() {
 
   // Auto-focus logic: centers the map on the substation cluster once data is loaded
   useEffect(() => {
-    if (!isLoadingMap && mapData?.subestacoes && mapData.subestacoes.length > 0 && !hasInitialFocused.current) {
+    if (!isLoadingMap && mapData?.subestacoes && mapData.subestacoes.length > 0 && !hasInitialFocused.current && !hasActiveFilters) {
       const points = mapData.subestacoes
-        .map(s => parseGps(s.gps) || (s.latitude && s.longitude ? { lat: s.latitude, lng: s.longitude } : null))
-        .filter(Boolean);
+        .map(s => parseGps(s.gps) || (s.latitude && s.longitude ? { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) } : null))
+        .filter(p => p && !isNaN(p.lat) && !isNaN(p.lng));
 
       if (points.length > 0) {
-        const sumLat = points.reduce((acc, p) => acc + p.lat, 0);
-        const sumLng = points.reduce((acc, p) => acc + p.lng, 0);
-        const avgLat = sumLat / points.length;
-        const avgLng = sumLng / points.length;
-
-        setMapCenter([avgLat, avgLng]);
-        setZoom(10);
         hasInitialFocused.current = true;
+        // The MapBoundsHandler will take care of the actual centering via fitBounds
       }
     }
-  }, [mapData, isLoadingMap, parseGps]);
+  }, [mapData, isLoadingMap, parseGps, hasActiveFilters]);
 
   // Handle auto-focus when a specific substation is filtered
   useEffect(() => {
@@ -210,8 +219,6 @@ export default function Dashboard() {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   }, []);
 
-  const hasActiveFilters = activeFilters.municipio || activeFilters.status || activeFilters.tipo || activeFilters.id_subestacao;
-
   // Derive computed stats from filtered map data for KPIs
   const filteredSubs = useMemo(() => {
     if (!mapData?.subestacoes) return [];
@@ -223,6 +230,13 @@ export default function Dashboard() {
       return true;
     });
   }, [mapData, activeFilters]);
+
+  // Memoize coordinates to prevent MapBoundsHandler from fighting user interaction
+  const filteredCoords = useMemo(() => {
+    return filteredSubs
+      .map(s => parseGps(s.gps) || (s.latitude && s.longitude ? { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) } : null))
+      .filter(p => p && !isNaN(p.lat) && !isNaN(p.lng));
+  }, [filteredSubs, parseGps]);
 
   const uniqueMunicipios = useMemo(() => {
     if (!mapData?.subestacoes) return [];
@@ -458,10 +472,10 @@ export default function Dashboard() {
             style={{ height: '100%', width: '100%', zIndex: '1' }}
             zoomControl={false}
           >
-            <ChangeView center={mapCenter} zoom={zoom} />
             <ZoomSync onZoomChange={setZoom} />
+            <MapBoundsHandler points={filteredCoords} />
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             {filteredSubs.map((sub) => (

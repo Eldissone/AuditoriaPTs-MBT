@@ -65,6 +65,23 @@ function EstadoBadge({ estado }) {
   return <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg border ${cls}`}>{estado || 'N/D'}</span>;
 }
 
+// ─── Legal Status Badge ──────────────────────────────────────────────────────
+function LegalStatusBadge({ status }) {
+  const map = {
+    'Legal': 'bg-green-600 text-white border-green-700',
+    'Não Legal': 'bg-red-600 text-white border-red-700',
+    'Legal com Inconformidades': 'bg-amber-500 text-white border-amber-600',
+    'Em Avaliação': 'bg-blue-500 text-white border-blue-600',
+  };
+  const cls = map[status] || 'bg-gray-500 text-white border-gray-600';
+  return (
+    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border shadow-sm ${cls}`}>
+      <Shield className="w-3 h-3" />
+      <span className="text-[10px] font-black uppercase tracking-tight">{status || 'Em Avaliação'}</span>
+    </div>
+  );
+}
+
 // ─── Info Card ────────────────────────────────────────────────────────────────
 function InfoCard({ icon: Icon, iconBg, iconColor, label, primary, secondary, highlight }) {
   return (
@@ -250,6 +267,7 @@ export default function TechnicalSheet() {
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <h2 className="text-white text-2xl font-black uppercase tracking-tight">{pt.id_pt}</h2>
                   <EstadoBadge estado={pt.estado_operacional} />
+                  <LegalStatusBadge status={pt.status_legal} />
                   <PTTypeBadge tipo={pt.tipo_instalacao} />
                 </div>
                 <p className="text-white/50 text-xs font-bold uppercase tracking-widest">
@@ -713,7 +731,7 @@ export default function TechnicalSheet() {
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <p className="text-[10px] font-bold text-[#747686]">{audit.auditor?.nome || 'Sistema'}</p>
                         {audit.resultado && (
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${audit.resultado === 'Conforme' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : audit.resultado === 'Não Conforme' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${audit.resultado === 'Legal' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : audit.resultado === 'Não Legal' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                             {audit.resultado}
                           </span>
                         )}

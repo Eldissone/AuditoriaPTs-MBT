@@ -58,7 +58,7 @@ class PDFGenerator {
         currentY += 35;
         this._drawField(doc, 'COORDENADAS GPS', ptData.gps || (ptData.latitude ? `${ptData.latitude}, ${ptData.longitude}` : '---'), col1, currentY, colors);
         this._drawField(doc, 'NÍVEL TENSÃO', ptData.nivel_tensao || '---', col2, currentY, colors);
-        this._drawField(doc, 'CÓDIGO CONCESSIONÁRIA', ptData.id_concessionaria || '---', col3, currentY, colors);
+        this._drawField(doc, 'STATUS LEGAL', ptData.status_legal || 'EM AVALIAÇÃO', col3, currentY, colors);
 
         currentY += 50;
 
@@ -311,9 +311,230 @@ class PDFGenerator {
     doc.fillColor(colors.primary).fontSize(8.5).font('Helvetica-Bold').text(value, x, y + 12);
   }
 
-  // generateAuditReport stays similar but focuses on the inspection event
+  /**
+   * Generates a detailed Audit Report for a specific inspection
+   */
   async generateAuditReport(auditData, res) {
-    return this.generateTechnicalSheet(auditData.pt, [], res);
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({
+          margin: 40,
+          size: 'A4',
+          info: {
+            Title: `Relatório de Auditoria - ${auditData.pt?.id_pt || 'N/D'}`,
+            Author: 'Sistema PTAS - MBT Energia',
+          }
+        });
+
+        doc.pipe(res);
+
+        const colors = {
+          primary: '#0f1c2c',
+          accent: '#0d3fd1',
+          success: '#059669',
+          danger: '#dc2626',
+          warning: '#d97706',
+          info: '#2563eb',
+          text: '#444655',
+          lightText: '#747686',
+          border: '#e5e7eb',
+          bgHeader: '#0f1c2c',
+          white: '#ffffff'
+        };
+
+        // Header
+        doc.rect(0, 0, doc.page.width, 100).fill(colors.bgHeader);
+        doc.fillColor(colors.white).fontSize(20).font('Helvetica-Bold').text('RELATÓRIO DE AUDITORIA TÉCNICA', 40, 30);
+        doc.fillColor('#00e47c').fontSize(10).font('Helvetica').text('POSTO DE TRANSFORMAÇÃO (PT) — MBT ENERGIA', 40, 60);
+
+        const auditDate = new Date(auditData.data_inspecao).toLocaleDateString('pt-PT');
+        doc.fillColor(colors.white).fontSize(9).text(`DATA DA AUDITORIA: ${auditDate}`, 400, 30, { align: 'right' });
+        doc.text(`ID INSPEÇÃO: #${auditData.id}`, 400, 45, { align: 'right' });
+        doc.text(`AUDITOR: ${auditData.auditor?.nome || 'Sistema'}`, 400, 60, { align: 'right' });
+
+        let currentY = 120;
+
+        // 1. RESULTADO DA LEGALIDADE (Destaque)
+        const statusColors = {
+          'Legal': colors.success,
+          'Não Legal': colors.danger,
+          'Legal com Inconformidades': colors.warning,
+          'Em Avaliação': colors.info
+        };
+        const statusColor = statusColors[auditData.resultado] || colors.info;
+
+        doc.rect(40, currentY, 515, 40).fill(statusColor);
+        doc.fillColor(colors.white).fontSize(10).font('Helvetica-Bold').text('STATUS DE LEGALIDADE:', 55, currentY + 15);
+        doc.fontSize(14).text(auditData.resultado?.toUpperCase() || 'EM AVALIAÇÃO', 200, currentY + 13);
+        
+        currentY += 60;
+
+        // 2. IDENTIFICAÇÃO DO ATIVO
+        this._drawSectionTitle(doc, '1. IDENTIFICAÇÃO DO ATIVO', currentY, colors);
+        currentY += 25;
+
+        const col1 = 40, col2 = 220, col3 = 400;
+        const pt = auditData.pt || {};
+
+        this._drawField(doc, 'ID DO PT', pt.id_pt || '---', col1, currentY, colors);
+        // 3. CONFRONTO DE DADOS (CADASTRO VS CAMPO)
+        this._drawSectionTitle(doc, '2. CONFRONTO DE DADOS (CADASTRO VS CAMPO)', currentY, colors);
+        currentY += 25;
+
+        const confrontationRows = [
+          { label: 'Proprietário', original: pt.proprietario?.nome || '---', audit: auditData.cliente_edits?.proprietario || auditData.pt_info_edits?.proprietario },
+          { label: 'Localidade', original: pt.municipio || '---', audit: auditData.pt_info_edits?.municipio },
+          { label: 'GPS / Coordenadas', original: pt.gps || '---', audit: auditData.pt_info_edits?.gps },
+          { label: 'Potência Instalada', original: pt.potencia_instalada || '---', audit: auditData.pt_info_edits?.potencia_instalada },
+          { label: 'Conta Contrato', original: pt.proprietario?.conta_contrato || '---', audit: auditData.cliente_edits?.conta_contrato }
+        ].filter(r => r.audit); // Só mostrar o que foi editado/confrontado
+
+        if (confrontationRows.length > 0) {
+          doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold');
+          doc.text('ATRIBUTO', 40, currentY);
+          doc.text('DADO EM CADASTRO', 180, currentY);
+          doc.text('DADO APURADO EM CAMPO', 380, currentY);
+          currentY += 12;
+          doc.moveTo(40, currentY).lineTo(550, currentY).strokeColor(colors.border).lineWidth(0.5).stroke();
+          currentY += 10;
+
+          confrontationRows.forEach(row => {
+            doc.fillColor(colors.text).fontSize(8).font('Helvetica-Bold').text(row.label.toUpperCase(), 40, currentY);
+            doc.fillColor(colors.lightText).font('Helvetica').text(String(row.original), 180, currentY);
+            doc.fillColor(colors.accent).font('Helvetica-Bold').text(String(row.audit), 380, currentY);
+            currentY += 18;
+          });
+        } else {
+          doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Oblique').text('Nenhuma divergência de cadastro detetada ou editada.', 40, currentY);
+          currentY += 15;
+        }
+
+        currentY += 25;
+
+        // 4. CHECKLIST TÉCNICA (Itens de Inspeção)
+        if (currentY > 600) { doc.addPage(); currentY = 50; }
+        this._drawSectionTitle(doc, '3. CHECKLIST TÉCNICA E ESTADO DA INFRAESTRUTURA', currentY, colors);
+        currentY += 25;
+
+        const checklist = auditData.tarefa?.checklist || [];
+        if (checklist.length > 0) {
+          // Headers
+          doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold');
+          doc.text('ITEM DE INSPEÇÃO', 40, currentY);
+          doc.text('PRIO', 450, currentY);
+          doc.text('ESTADO', 500, currentY);
+          currentY += 12;
+          doc.moveTo(40, currentY).lineTo(550, currentY).strokeColor(colors.border).lineWidth(0.5).stroke();
+          currentY += 10;
+
+          doc.fontSize(8).font('Helvetica');
+          checklist.forEach(item => {
+            if (currentY > 750) { doc.addPage(); currentY = 50; }
+            
+            const isOk = item.checked === true || item.value === 'ok';
+            const isNC = item.value === 'nc';
+            
+            doc.fillColor(colors.text).text(item.label, 40, currentY, { width: 380 });
+            doc.fillColor(colors.lightText).text(item.prio || 'C', 450, currentY);
+            
+            if (isOk) {
+              doc.fillColor(colors.success).font('Helvetica-Bold').text('CONFORME', 500, currentY);
+            } else if (isNC) {
+              doc.fillColor(colors.danger).font('Helvetica-Bold').text('NÃO CONF.', 500, currentY);
+            } else {
+              doc.fillColor(colors.lightText).text('N/A', 500, currentY);
+            }
+            
+            doc.font('Helvetica');
+            currentY += 18;
+          });
+        } else {
+          doc.fillColor(colors.lightText).fontSize(8).text('Checklist não disponível para esta tarefa.', 40, currentY);
+          currentY += 20;
+        }
+
+        currentY += 25;
+
+        // 5. MEDIÇÕES TÉCNICAS
+        if (currentY > 600) { doc.addPage(); currentY = 50; }
+        this._drawSectionTitle(doc, '4. MEDIÇÕES E ENSAIOS DE CAMPO', currentY, colors);
+        currentY += 25;
+
+        // Resistência de Terra
+        doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('RESISTÊNCIA DE TERRA (LIMITE < 20Ω)', col1, currentY);
+        currentY += 15;
+        
+        const tp = auditData.terra_protecao;
+        const ts = auditData.terra_servico;
+        
+        this._drawMeasurementBox(doc, 'TERRA PROTEÇÃO (TP)', tp != null ? `${tp} Ω` : 'N/D', tp != null && tp < 20, col1, currentY, colors);
+        this._drawMeasurementBox(doc, 'TERRA SERVIÇO (TS)', ts != null ? `${ts} Ω` : 'N/D', ts != null && ts < 20, col2 + 20, currentY, colors);
+
+        currentY += 55;
+
+        // Tensões (se houver)
+        if (auditData.medicao_tensao) {
+          doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('MEDIÇÕES DE TENSÃO (V)', col1, currentY);
+          currentY += 15;
+          const u = auditData.medicao_tensao;
+          const uText = `UA: ${u.UA || '--'}V | UB: ${u.UB || '--'}V | UC: ${u.UC || '--'}V  ||  UAB: ${u.UAB || '--'}V | UBC: ${u.UBC || '--'}V | UCA: ${u.UCA || '--'}V`;
+          doc.fillColor(colors.primary).fontSize(9).font('Helvetica').text(uText, col1, currentY);
+          currentY += 25;
+        }
+
+        // 6. OBSERVAÇÕES E PARECER DO AUDITOR
+        if (currentY > 600) { doc.addPage(); currentY = 50; }
+        this._drawSectionTitle(doc, '5. OBSERVAÇÕES E PARECER TÉCNICO', currentY, colors);
+        currentY += 25;
+
+        doc.fillColor(colors.text).fontSize(9).font('Helvetica');
+        const obs = auditData.observacoes || 'Sem observações adicionais registadas.';
+        doc.text(obs, 40, currentY, { width: 500, align: 'justify' });
+
+        currentY += 60;
+
+        // 7. INCONGRUÊNCIAS DETECTADAS
+        if (auditData.incongruencias && auditData.incongruencias.length > 0) {
+           if (currentY > 700) { doc.addPage(); currentY = 50; }
+           this._drawSectionTitle(doc, '6. INCONGRUÊNCIAS / NÃO CONFORMIDADES CRÍTICAS', currentY, colors);
+           currentY += 25;
+           
+           auditData.incongruencias.forEach((inc, idx) => {
+              doc.fillColor(colors.danger).fontSize(8).font('Helvetica-Bold').text(`• ${inc.label || inc.campo}:`, col1, currentY);
+              doc.fillColor(colors.text).font('Helvetica').text(`${inc.valor || '---'} (Esperado: ${inc.limite || '---'})`, 180, currentY);
+              currentY += 15;
+           });
+        }
+
+        // Validação no final
+        if (currentY > 650) { doc.addPage(); currentY = 50; }
+        
+        doc.moveTo(40, 720).lineTo(240, 720).strokeColor(colors.border).stroke();
+        doc.fillColor(colors.lightText).fontSize(8).text('ASSINATURA DO AUDITOR', 40, 725);
+        doc.fillColor(colors.primary).font('Helvetica-Bold').text(auditData.auditor?.nome || '---', 40, 735);
+
+        doc.moveTo(350, 720).lineTo(550, 720).strokeColor(colors.border).stroke();
+        doc.fillColor(colors.lightText).fontSize(8).text('CARIMBO DA EMPRESA / DATA', 350, 725);
+        doc.fillColor(colors.primary).font('Helvetica-Bold').text(new Date().toLocaleDateString('pt-PT'), 350, 735);
+
+        doc.fontSize(7).fillColor(colors.lightText)
+           .text('Este relatório é um documento técnico oficial gerado pelo Sistema PTAS MBT.', 40, 785, { align: 'center', width: 500 });
+
+        doc.end();
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  _drawMeasurementBox(doc, label, value, isOk, x, y, colors) {
+    doc.rect(x, y, 160, 35).fillAndStroke(isOk ? '#f0fdf4' : '#fef2f2', colors.border);
+    doc.fillColor(colors.lightText).fontSize(7).font('Helvetica').text(label, x + 10, y + 8);
+    doc.fillColor(isOk ? colors.success : colors.danger).fontSize(10).font('Helvetica-Bold').text(value, x + 10, y + 20);
+    if (value !== 'N/D') {
+      doc.text(isOk ? '✓' : '✗', x + 140, y + 18);
+    }
   }
 }
 

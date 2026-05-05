@@ -41,8 +41,13 @@ class ClienteRepository {
       where.AND.push({
         OR: [
           { id_pt: { contains: search, mode: 'insensitive' } },
+          { designacao: { contains: search, mode: 'insensitive' } },
+          { fabricante: { contains: search, mode: 'insensitive' } },
+          { municipio: { contains: search, mode: 'insensitive' } },
+          { subestacao: { nome: { contains: search, mode: 'insensitive' } } },
           { proprietario: { nome: { contains: search, mode: 'insensitive' } } },
           { proprietario: { conta_contrato: { contains: search, mode: 'insensitive' } } },
+          { proprietario: { nif: { contains: search, mode: 'insensitive' } } },
         ]
       });
     }
@@ -123,7 +128,7 @@ class ClienteRepository {
       'id_pt', 'id_subestacao', 'id_proprietario', 'designacao', 'localizacao', 'gps',
       'latitude', 'longitude', 'altitude', 'morada', 'municipio', 'provincia',
       'tipo_instalacao', 'nivel_tensao', 'potencia_kva', 'ano_instalacao', 'fabricante',
-      'num_transformadores', 'regime_exploracao', 'estado_operacional',
+      'num_transformadores', 'regime_exploracao', 'estado_operacional', 'status_legal',
       'data_levantamento', 'tecnico_levantamento', 'num_habilitacao',
       'tipo_poste', 'ref_poste', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'material_poste', 'ano_poste', 'estado_poste',
       'equipamento_poste', 'tipo_cabine', 'dim_comprimento', 'dim_largura', 'observacoes_gerais',
@@ -298,7 +303,7 @@ class ClienteRepository {
       'localizacao', 'gps', 'latitude', 'longitude', 'altitude', 'morada',
       'municipio', 'provincia', 'tipo_instalacao', 'nivel_tensao',
       'potencia_kva', 'ano_instalacao', 'fabricante', 'num_transformadores',
-      'regime_exploracao', 'estado_operacional',
+      'regime_exploracao', 'estado_operacional', 'status_legal',
       'data_levantamento', 'tecnico_levantamento', 'num_habilitacao',
       'tipo_poste', 'ref_poste', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'material_poste', 'ano_poste', 'estado_poste',
       'equipamento_poste', 'tipo_cabine', 'dim_comprimento', 'dim_largura', 'observacoes_gerais',

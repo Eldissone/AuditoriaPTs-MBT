@@ -78,8 +78,8 @@ class InspecaoRepository {
           proxima_inspecao:   baseData.proxima_inspecao ? new Date(baseData.proxima_inspecao) : null,
           fotos:              Array.isArray(baseData.fotos) ? baseData.fotos : (baseData.fotos ?? null),
           // Novos campos de auditoria de campo
-          terra_protecao:     baseData.terra_protecao     != null ? Number(baseData.terra_protecao)   : null,
-          terra_servico:      baseData.terra_servico      != null ? Number(baseData.terra_servico)    : null,
+          terra_protecao:     (baseData.terra_protecao != null && baseData.terra_protecao !== '') ? Number(baseData.terra_protecao) : null,
+          terra_servico:      (baseData.terra_servico != null && baseData.terra_servico !== '') ? Number(baseData.terra_servico) : null,
           medicao_tensao:     baseData.medicao_tensao     ?? null,
           dados_cliente_campo: baseData.dados_cliente_campo ?? null,
           pt_info_edits:       baseData.pt_info_edits       ?? null,
@@ -208,6 +208,14 @@ class InspecaoRepository {
         });
       }
 
+      // Atualizar Status Legal do PT com o resultado da auditoria
+      if (baseData.resultado) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { status_legal: baseData.resultado }
+        });
+      }
+
       // Criar listas via modelos diretamente (evita depender de writes relacionais no prisma client)
 
       if (transformadores) {
@@ -322,8 +330,8 @@ class InspecaoRepository {
           proxima_inspecao:   baseData.proxima_inspecao  ? new Date(baseData.proxima_inspecao) : null,
           fotos:              baseData.fotos !== undefined ? (Array.isArray(baseData.fotos) ? baseData.fotos : baseData.fotos) : existing.fotos,
           // Novos campos de auditoria
-          terra_protecao:     baseData.terra_protecao     !== undefined ? (baseData.terra_protecao != null ? Number(baseData.terra_protecao) : null) : existing.terra_protecao,
-          terra_servico:      baseData.terra_servico      !== undefined ? (baseData.terra_servico  != null ? Number(baseData.terra_servico)  : null) : existing.terra_servico,
+          terra_protecao:     baseData.terra_protecao     !== undefined ? (baseData.terra_protecao != null && baseData.terra_protecao !== '' ? Number(baseData.terra_protecao) : null) : existing.terra_protecao,
+          terra_servico:      baseData.terra_servico      !== undefined ? (baseData.terra_servico  != null && baseData.terra_servico !== '' ? Number(baseData.terra_servico)  : null) : existing.terra_servico,
           medicao_tensao:     baseData.medicao_tensao     !== undefined ? baseData.medicao_tensao     : existing.medicao_tensao,
           dados_cliente_campo: baseData.dados_cliente_campo !== undefined ? baseData.dados_cliente_campo : existing.dados_cliente_campo,
           pt_info_edits:       baseData.pt_info_edits       !== undefined ? baseData.pt_info_edits       : existing.pt_info_edits,
@@ -352,6 +360,14 @@ class InspecaoRepository {
         await tx.postoTransformacao.update({
           where: { id_pt: id_pt },
           data: { tipo_instalacao: baseData.tipo_pt === 'PTC' ? 'PT CABINE' : 'PT AEREO' }
+        });
+      }
+
+      // Atualizar Status Legal do PT com o resultado da auditoria
+      if (baseData.resultado) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { status_legal: baseData.resultado }
         });
       }
 

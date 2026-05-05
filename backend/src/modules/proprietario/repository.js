@@ -9,7 +9,9 @@ class ProprietarioRepository {
       where.OR = [
         { nome: { contains: search, mode: 'insensitive' } },
         { nif: { contains: search, mode: 'insensitive' } },
-        { conta_contrato: { contains: search, mode: 'insensitive' } }
+        { conta_contrato: { contains: search, mode: 'insensitive' } },
+        { parceiro_negocios: { contains: search, mode: 'insensitive' } },
+        { concessionaria: { contains: search, mode: 'insensitive' } }
       ];
     }
 
