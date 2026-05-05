@@ -216,6 +216,14 @@ class InspecaoRepository {
         });
       }
 
+      // Sincronizar Potência Instalada se fornecida em pt_info_edits
+      if (baseData.pt_info_edits && baseData.pt_info_edits.potencia_instalada) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { potencia_instalada: parseFloat(baseData.pt_info_edits.potencia_instalada) }
+        });
+      }
+
       // Criar listas via modelos diretamente (evita depender de writes relacionais no prisma client)
 
       if (transformadores) {
@@ -368,6 +376,14 @@ class InspecaoRepository {
         await tx.postoTransformacao.update({
           where: { id_pt: id_pt },
           data: { status_legal: baseData.resultado }
+        });
+      }
+
+      // Sincronizar Potência Instalada se fornecida em pt_info_edits
+      if (baseData.pt_info_edits && baseData.pt_info_edits.potencia_instalada) {
+        await tx.postoTransformacao.update({
+          where: { id_pt: id_pt },
+          data: { potencia_instalada: parseFloat(baseData.pt_info_edits.potencia_instalada) }
         });
       }
 

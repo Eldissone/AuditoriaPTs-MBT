@@ -345,7 +345,8 @@ export default function SubstationManagement() {
                                         <th className="px-4 py-2 uppercase font-black tracking-widest">Proprietário</th>
                                         <th className="px-4 py-2 uppercase font-black tracking-widest">Equipamento</th>
                                         <th className="px-4 py-2 uppercase font-black tracking-widest">Instalação</th>
-                                        <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Potência</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Pot. Contratual</th>
+                                        <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Pot. Auditada</th>
                                         <th className="px-4 py-2 uppercase font-black tracking-widest text-center">Ações</th>
                                       </tr>
                                     </thead>
@@ -356,7 +357,8 @@ export default function SubstationManagement() {
                                           <td className="px-4 py-2 font-bold opacity-80 uppercase">{pt.proprietario?.nome || 'N/D'}</td>
                                           <td className="px-4 py-2 font-mono">{pt.equipamento || '---'}</td>
                                           <td className="px-4 py-2">{pt.instalacao || '---'}</td>
-                                          <td className="px-4 py-2 text-center font-black">{pt.potencia_kva} kVA</td>
+                                          <td className="px-4 py-2 text-center font-black">{pt.potencia_kva || 0} kVA</td>
+                                          <td className="px-4 py-2 text-center font-black text-[#0d3fd1]">{pt.potencia_instalada || 0} kVA</td>
                                           <td className="px-4 py-2 text-center">
                                             <Link to={`/ficha-tecnica/${pt.id_pt}`} className="text-[#0d3fd1] hover:underline font-black uppercase text-[8px]">Ver Ficha</Link>
                                           </td>

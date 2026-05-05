@@ -127,7 +127,7 @@ class ClienteRepository {
       'id_concessionaria', 'concessao_operador', 'concelho', 'freguesia',
       'id_pt', 'id_subestacao', 'id_proprietario', 'designacao', 'localizacao', 'gps',
       'latitude', 'longitude', 'altitude', 'morada', 'municipio', 'provincia',
-      'tipo_instalacao', 'nivel_tensao', 'potencia_kva', 'ano_instalacao', 'fabricante',
+      'tipo_instalacao', 'nivel_tensao', 'potencia_kva', 'potencia_instalada', 'ano_instalacao', 'fabricante',
       'num_transformadores', 'regime_exploracao', 'estado_operacional', 'status_legal',
       'data_levantamento', 'tecnico_levantamento', 'num_habilitacao',
       'tipo_poste', 'ref_poste', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'material_poste', 'ano_poste', 'estado_poste',
@@ -140,7 +140,7 @@ class ClienteRepository {
       if (raw[key] !== undefined) {
         if (key === 'id_subestacao') basePT[key] = parseInt(raw[key]);
         else if (key === 'id_proprietario') basePT[key] = raw[key] ? Number(raw[key]) : null;
-        else if (key === 'potencia_kva' || key === 'latitude' || key === 'longitude' || key === 'altitude' || key === 'altura_poste' || key === 'esforco_poste' || key === 'esforco_poste_dan' || key === 'dim_comprimento' || key === 'dim_largura') {
+        else if (key === 'potencia_kva' || key === 'potencia_instalada' || key === 'latitude' || key === 'longitude' || key === 'altitude' || key === 'altura_poste' || key === 'esforco_poste' || key === 'esforco_poste_dan' || key === 'dim_comprimento' || key === 'dim_largura') {
           basePT[key] = parseFloat(raw[key]) || 0;
         }
         else if (key === 'ano_instalacao' || key === 'num_transformadores' || key === 'ano_poste') {
@@ -302,7 +302,7 @@ class ClienteRepository {
       'id_subestacao', 'id_responsavel', 'id_proprietario', 'designacao',
       'localizacao', 'gps', 'latitude', 'longitude', 'altitude', 'morada',
       'municipio', 'provincia', 'tipo_instalacao', 'nivel_tensao',
-      'potencia_kva', 'ano_instalacao', 'fabricante', 'num_transformadores',
+      'potencia_kva', 'potencia_instalada', 'ano_instalacao', 'fabricante', 'num_transformadores',
       'regime_exploracao', 'estado_operacional', 'status_legal',
       'data_levantamento', 'tecnico_levantamento', 'num_habilitacao',
       'tipo_poste', 'ref_poste', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'material_poste', 'ano_poste', 'estado_poste',
@@ -315,7 +315,7 @@ class ClienteRepository {
         let val = raw[key];
         if (['id_subestacao', 'id_responsavel', 'id_proprietario', 'num_transformadores', 'ano_poste', 'ano_instalacao'].includes(key)) {
           val = val !== null && val !== '' ? Number(val) : undefined;
-        } else if (['potencia_kva', 'latitude', 'longitude', 'altitude', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'dim_comprimento', 'dim_largura'].includes(key)) {
+        } else if (['potencia_kva', 'potencia_instalada', 'latitude', 'longitude', 'altitude', 'altura_poste', 'esforco_poste', 'esforco_poste_dan', 'dim_comprimento', 'dim_largura'].includes(key)) {
           val = val !== null && val !== '' ? parseFloat(val) : 0;
         } else if (['data_levantamento', 'data_ultima_manutencao', 'data_validacao'].includes(key)) {
           val = val ? new Date(val) : null;

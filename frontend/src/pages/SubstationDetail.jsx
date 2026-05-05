@@ -59,8 +59,13 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
   });
 
   const somaPotenciasPTs = useMemo(() => {
-    // Usar APENAS potencia_kva para os PTs individuais, garantindo independência do teto da subestação
+    // Usar APENAS potencia_kva para os PTs individuais (Contratual)
     return localPts.reduce((acc, pt) => acc + Number(pt.potencia_kva || 0), 0);
+  }, [localPts]);
+
+  const somaPotenciasAuditadas = useMemo(() => {
+    // Usar APENAS potencia_instalada para os PTs individuais (Auditada)
+    return localPts.reduce((acc, pt) => acc + Number(pt.potencia_instalada || 0), 0);
   }, [localPts]);
 
   const handleFilterPts = useCallback(() => {
@@ -280,17 +285,25 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                 </div>
               )}
               <p className="text-[10px] font-black text-[#243141] uppercase tracking-widest mb-3">Análise de Sobrecarga (Nominal)</p>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Capacidade Instalada</p>
-                  <p className="text-xl font-black text-[#0f1c2c]">{substation.capacidade_total_mva || 0}  <span className="text-[10px] font-bold text-[#747686]">MVA</span></p>
+                  <p className="text-xl font-black text-[#0f1c2c]">{substation.capacidade_total_mva || 0} <span className="text-[10px] font-bold text-[#747686]">MVA</span></p>
                 </div>
                 <div className="hidden sm:block w-px h-10 bg-[#c4c5d7]/30"></div>
-                <div>
-                  <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Carga Exigida</p>
-                  <p className="text-xl font-black" style={{ color: overloadClass }}>
-                    {somaPotenciasPTs.toLocaleString()} <span className="text-[10px] font-bold opacity-60 relative -top-1">kVA</span>
-                  </p>
+                <div className="col-span-2 sm:col-span-1 grid grid-cols-2 sm:grid-cols-1 gap-4">
+                  <div>
+                    <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Carga Contratual</p>
+                    <p className="text-lg font-black" style={{ color: overloadClass }}>
+                      {somaPotenciasPTs.toLocaleString()} <span className="text-[9px] font-bold opacity-60">kVA</span>
+                    </p>
+                  </div>
+                  <div className="sm:mt-2 sm:pt-2 sm:border-t sm:border-[#c4c5d7]/30">
+                    <p className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Carga Auditada</p>
+                    <p className="text-lg font-black text-[#0d3fd1]">
+                      {somaPotenciasAuditadas.toLocaleString()} <span className="text-[9px] font-bold opacity-60">kVA</span>
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -369,6 +382,16 @@ export default function SubstationDetail({ substation, onClose, onFilterPts }) {
                               <Navigation className="w-3 h-3" />
                               Distância: {distanceText}
                             </p>
+                            <div className="mt-2 grid grid-cols-2 gap-2 border-y border-gray-100 py-2">
+                              <div>
+                                <p className="text-[8px] font-black text-gray-400 uppercase">Contratual</p>
+                                <p className="text-[10px] font-black text-gray-700">{pt.potencia_kva || 0} kVA</p>
+                              </div>
+                              <div className="border-l border-gray-100 pl-2">
+                                <p className="text-[8px] font-black text-blue-400 uppercase">Auditada</p>
+                                <p className="text-[10px] font-black text-blue-700">{pt.potencia_instalada || 0} kVA</p>
+                              </div>
+                            </div>
                             <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-2">
                               <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${pt.status_legal === 'Legal' ? 'bg-green-500' : pt.status_legal === 'Não Legal' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
