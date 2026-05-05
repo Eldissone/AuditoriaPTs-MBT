@@ -377,6 +377,8 @@ class PDFGenerator {
         const pt = auditData.pt || {};
 
         this._drawField(doc, 'ID DO PT', pt.id_pt || '---', col1, currentY, colors);
+        currentY += 45;
+
         // 3. CONFRONTO DE DADOS (CADASTRO VS CAMPO)
         this._drawSectionTitle(doc, '2. CONFRONTO DE DADOS (CADASTRO VS CAMPO)', currentY, colors);
         currentY += 25;
@@ -387,7 +389,7 @@ class PDFGenerator {
           { label: 'GPS / Coordenadas', original: pt.gps || '---', audit: auditData.pt_info_edits?.gps },
           { label: 'Potência Instalada', original: pt.potencia_instalada || '---', audit: auditData.pt_info_edits?.potencia_instalada },
           { label: 'Conta Contrato', original: pt.proprietario?.conta_contrato || '---', audit: auditData.cliente_edits?.conta_contrato }
-        ].filter(r => r.audit); // Só mostrar o que foi editado/confrontado
+        ].filter(r => r.audit && r.audit !== r.original); // Só mostrar o que foi editado/confrontado e que seja diferente
 
         if (confrontationRows.length > 0) {
           doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold');
@@ -399,17 +401,18 @@ class PDFGenerator {
           currentY += 10;
 
           confrontationRows.forEach(row => {
+            if (currentY > 750) { doc.addPage(); currentY = 50; }
             doc.fillColor(colors.text).fontSize(8).font('Helvetica-Bold').text(row.label.toUpperCase(), 40, currentY);
             doc.fillColor(colors.lightText).font('Helvetica').text(String(row.original), 180, currentY);
             doc.fillColor(colors.accent).font('Helvetica-Bold').text(String(row.audit), 380, currentY);
             currentY += 18;
           });
         } else {
-          doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Oblique').text('Nenhuma divergência de cadastro detetada ou editada.', 40, currentY);
-          currentY += 15;
+          doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Oblique').text('Nenhuma divergência de cadastro detectada ou editada.', 40, currentY);
+          currentY += 20;
         }
 
-        currentY += 25;
+        currentY += 20;
 
         // 4. CHECKLIST TÉCNICA (Itens de Inspeção)
         if (currentY > 600) { doc.addPage(); currentY = 50; }
