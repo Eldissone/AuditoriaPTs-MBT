@@ -58,14 +58,14 @@ function ZoomSync({ onZoomChange }) {
 }
 
 // Auto-adjust bounds when filtered markers change
-function MapBoundsHandler({ points }) {
+function MapBoundsHandler({ points, active }) {
   const map = useMap();
   useEffect(() => {
-    if (map && points && points.length > 0) {
+    if (map && points && points.length > 0 && active) {
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
-  }, [map, points]);
+  }, [map, points, active]);
   return null;
 }
 
@@ -170,19 +170,12 @@ export default function Dashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Auto-focus logic: centers the map on the substation cluster once data is loaded
+  // Auto-focus logic: only runs when filters are active to prevent overriding the initial Luanda focus
   useEffect(() => {
-    if (!isLoadingMap && mapData?.subestacoes && mapData.subestacoes.length > 0 && !hasInitialFocused.current && !hasActiveFilters) {
-      const points = mapData.subestacoes
-        .map(s => parseGps(s.gps) || (s.latitude && s.longitude ? { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) } : null))
-        .filter(p => p && !isNaN(p.lat) && !isNaN(p.lng));
-
-      if (points.length > 0) {
-        hasInitialFocused.current = true;
-        // The MapBoundsHandler will take care of the actual centering via fitBounds
-      }
+    if (!isLoadingMap && mapData?.subestacoes && mapData.subestacoes.length > 0 && !hasInitialFocused.current && hasActiveFilters) {
+      hasInitialFocused.current = true;
     }
-  }, [mapData, isLoadingMap, parseGps, hasActiveFilters]);
+  }, [mapData, isLoadingMap, hasActiveFilters]);
 
   // Handle auto-focus when a specific substation is filtered
   useEffect(() => {
@@ -473,7 +466,7 @@ export default function Dashboard() {
             zoomControl={false}
           >
             <ZoomSync onZoomChange={setZoom} />
-            <MapBoundsHandler points={filteredCoords} />
+            <MapBoundsHandler points={filteredCoords} active={hasActiveFilters} />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
