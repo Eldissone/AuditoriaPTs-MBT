@@ -538,14 +538,25 @@ class PDFGenerator {
 
         currentY += 55;
 
-        // Tensões (se houver)
+        // Tensões e Observações (se houver)
         if (auditData.medicao_tensao) {
-          doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('MEDIÇÕES DE TENSÃO (V)', col1, currentY);
-          currentY += 15;
           const u = auditData.medicao_tensao;
-          const uText = `UA: ${u.UA || '--'}V | UB: ${u.UB || '--'}V | UC: ${u.UC || '--'}V  ||  UAB: ${u.UAB || '--'}V | UBC: ${u.UBC || '--'}V | UCA: ${u.UCA || '--'}V`;
-          doc.fillColor(colors.primary).fontSize(9).font('Helvetica').text(uText, col1, currentY);
-          currentY += 25;
+          const hasTensions = u.UA || u.UB || u.UC || u.UAB || u.UBC || u.UCA;
+
+          if (hasTensions) {
+            doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('MEDIÇÕES DE TENSÃO (V)', col1, currentY);
+            currentY += 15;
+            const uText = `UA: ${u.UA || '--'}V | UB: ${u.UB || '--'}V | UC: ${u.UC || '--'}V  ||  UAB: ${u.UAB || '--'}V | UBC: ${u.UBC || '--'}V | UCA: ${u.UCA || '--'}V`;
+            doc.fillColor(colors.primary).fontSize(9).font('Helvetica').text(uText, col1, currentY);
+            currentY += 25;
+          }
+
+          if (u.obs) {
+            doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('OBSERVAÇÕES (MEDIÇÕES)', col1, currentY);
+            currentY += 15;
+            doc.fillColor(colors.text).fontSize(8).font('Helvetica-Oblique').text(u.obs, col1, currentY, { width: 500, align: 'justify' });
+            currentY += 30;
+          }
         }
 
         // 6. OBSERVAÇÕES E PARECER DO AUDITOR

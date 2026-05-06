@@ -313,9 +313,19 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
       // Medições numéricas
       const terra_protecao = medicoes.terra_protecao !== '' ? Number(medicoes.terra_protecao) : null;
       const terra_servico = medicoes.terra_servico !== '' ? Number(medicoes.terra_servico) : null;
-      const medicao_tensao = ['UA', 'UB', 'UC', 'UAB', 'UBC', 'UCA'].some(k => medicoes[k] !== '')
-        ? Object.fromEntries(['UA', 'UB', 'UC', 'UAB', 'UBC', 'UCA'].map(k => [k, medicoes[k] !== '' ? Number(medicoes[k]) : null]))
-        : null;
+      let medicao_tensao = null;
+      const hasTension = ['UA', 'UB', 'UC', 'UAB', 'UBC', 'UCA'].some(k => medicoes[k] !== '' && medicoes[k] != null);
+      if (hasTension || medicoes.obs) {
+        medicao_tensao = {
+          UA: medicoes.UA !== '' && medicoes.UA != null ? Number(medicoes.UA) : null,
+          UB: medicoes.UB !== '' && medicoes.UB != null ? Number(medicoes.UB) : null,
+          UC: medicoes.UC !== '' && medicoes.UC != null ? Number(medicoes.UC) : null,
+          UAB: medicoes.UAB !== '' && medicoes.UAB != null ? Number(medicoes.UAB) : null,
+          UBC: medicoes.UBC !== '' && medicoes.UBC != null ? Number(medicoes.UBC) : null,
+          UCA: medicoes.UCA !== '' && medicoes.UCA != null ? Number(medicoes.UCA) : null,
+          obs: medicoes.obs || null
+        };
+      }
 
       // Tipo da inspecção baseado no tipo de tarefa
       const tipoInspecao = tarefa.tipo_tarefa === 'Manutenção Preventiva' ? 'Manutenção Preventiva'
@@ -815,6 +825,19 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Observações das Medições */}
+              <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl p-5">
+                <p className="text-[9px] font-black text-[#0d3fd1] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5" /> Observações (Opcional)
+                </p>
+                <textarea
+                  placeholder="Detalhes adicionais sobre o estado físico, condições do solo, ou anomalias nas medições..."
+                  value={medicoes.obs || ''}
+                  onChange={(e) => setMedicoes(p => ({ ...p, obs: e.target.value }))}
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-4 py-3 text-xs font-bold text-[#0f1c2c] focus:outline-none focus:ring-2 focus:ring-[#0d3fd1]/20 min-h-[100px] resize-y"
+                />
               </div>
             </div>
           )}
