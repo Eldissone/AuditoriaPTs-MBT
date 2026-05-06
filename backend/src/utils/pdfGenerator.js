@@ -153,6 +153,10 @@ class PDFGenerator {
         }
 
         // --- 7: PROTEÇÕES E TERRA ---
+        if (currentY > 650) {
+          doc.addPage();
+          currentY = 50;
+        }
         this._drawSectionTitle(doc, '7. SEGURANÇA, PROTEÇÃO E TERRA', currentY, colors);
         currentY += 25;
 
@@ -169,6 +173,10 @@ class PDFGenerator {
         currentY += 50;
 
         // --- 8: ANOMALIAS ---
+        if (currentY > 680) {
+          doc.addPage();
+          currentY = 50;
+        }
         this._drawSectionTitle(doc, '8. ANOMALIAS E OBSERVAÇÕES CRÍTICAS', currentY, colors);
         currentY += 20;
 
@@ -177,7 +185,7 @@ class PDFGenerator {
         doc.text(obs, 40, currentY, { width: 500, align: 'justify' });
 
         // Ensure validation is always visible, maybe push to next page if tight
-        if (currentY > 650) {
+        if (currentY > 600) {
           doc.addPage();
           currentY = 50;
         } else {
