@@ -108,6 +108,15 @@ export default function PTAudits() {
       falhas_isolamento: false,
       redundancia: false
     },
+    contador: {
+      tem_contagem: true,
+      como_contagem: '',
+      marca: '',
+      modelo: '',
+      ponta_tomada: [{ tipo: 'Principal', obs: '' }],
+      tipo_energia: 'Ativa',
+      leitura: ''
+    },
     fotos: []
   });
 
@@ -250,13 +259,14 @@ export default function PTAudits() {
     let payload;
     try {
       // Destructure to remove singular properties and instead use arrays
-      const { transformador, risco, ...restData } = formData;
+      const { transformador, risco, contador, ...restData } = formData;
       // Formating data for nested Prisma create/update
       payload = {
         ...restData,
         id_tarefa: restData.id_tarefa ? Number(restData.id_tarefa) : undefined,
         transformadores: [transformador], // Repository expects array
-        riscos: [risco]
+        riscos: [risco],
+        contador: contador // Direct object (or first from list in repo if needed, but repo handles upsert)
       };
 
       if (selectedAuditId) {
@@ -315,11 +325,12 @@ export default function PTAudits() {
         terra_servico: fullAudit.terra_servico,
         medicao_tensao: fullAudit.medicao_tensao || {},
         dados_cliente_campo: fullAudit.dados_cliente_campo || {},
-        incongruencias: fullAudit.incongruencias || []
+        incongruencias: fullAudit.incongruencias || [],
+        contador: fullAudit.contador?.[0] || formData.contador
       });
 
       setSelectedAuditId(fullAudit.id);
-      setStep(5);
+      setStep(6);
       setView('form');
     } catch (err) {
       alert('Erro ao carregar detalhes: ' + (err.response?.data?.error || err.message));
@@ -342,7 +353,8 @@ export default function PTAudits() {
         seguranca: fullAudit.seguranca?.[0] || formData.seguranca,
         resultado: fullAudit.resultado || 'Em Avaliação',
         nivel_urgencia: fullAudit.nivel_urgencia || 'Baixo',
-        fotos: fullAudit.fotos || []
+        fotos: fullAudit.fotos || [],
+        contador: fullAudit.contador?.[0] || formData.contador
       });
 
       setSelectedAuditId(fullAudit.id);
@@ -355,6 +367,7 @@ export default function PTAudits() {
 
   const steps = [
     { title: 'Identificação', icon: Info },
+    { title: 'Contador', icon: Zap },
     { title: 'Conformidade', icon: ClipboardCheck },
     { title: 'Transformador', icon: Zap },
     { title: 'Segurança', icon: Shield },
@@ -634,7 +647,7 @@ export default function PTAudits() {
                     <td className="px-8 py-5 text-center border-r border-[#c4c5d7]/10">
                       <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-wider ${audit.resultado === 'Legal' ? 'bg-emerald-500' :
                         audit.resultado === 'Não Legal' ? 'bg-red-500' :
-                        audit.resultado === 'Legal com Inconformidades' ? 'bg-amber-500' : 'bg-blue-500'
+                          audit.resultado === 'Legal com Inconformidades' ? 'bg-amber-500' : 'bg-blue-500'
                         }`}>
                         {audit.resultado || 'N/D'}
                       </span>
@@ -1106,6 +1119,196 @@ export default function PTAudits() {
           )}
 
           {step === 2 && (
+            <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
+              {/* Estado da Contagem */}
+              <div className="bg-[#fcfdff] border border-[#0d3fd1]/10 rounded-2xl p-6">
+                <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-4">Tem contagem? *</label>
+                <div className="flex gap-4">
+                  {[
+                    { val: true, label: 'Sim', color: 'bg-emerald-500' },
+                    { val: false, label: 'Não', color: 'bg-red-500' }
+                  ].map(opt => (
+                    <button
+                      key={String(opt.val)}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        contador: { ...formData.contador, tem_contagem: opt.val }
+                      })}
+                      className={`flex-1 py-4 rounded-xl text-xs font-black uppercase border-2 transition-all ${formData.contador.tem_contagem === opt.val
+                        ? `${opt.color} text-white border-transparent shadow-lg`
+                        : 'bg-white border-[#c4c5d7]/20 text-[#444655] hover:border-[#0d3fd1]/30'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!formData.contador.tem_contagem ? (
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex items-center gap-3 text-red-600 mb-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    <h4 className="text-xs font-black uppercase tracking-tight">Justificativa Obrigatória</h4>
+                  </div>
+                  <label className="block text-[10px] font-black text-red-700 uppercase tracking-widest">Como é feita a contagem? *</label>
+                  <textarea
+                    required
+                    placeholder="Ex: Estimativa, manual, visual, outro..."
+                    className="w-full h-32 bg-white border-2 border-red-100 rounded-xl px-6 py-4 text-sm font-bold text-[#0f1c2c] focus:border-red-500 outline-none transition-all"
+                    value={formData.contador.como_contagem}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      contador: { ...formData.contador, como_contagem: e.target.value }
+                    })}
+                  />
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest opacity-70">
+                    Nota: Ao prosseguir sem contagem, o fluxo será redirecionado para a revisão final.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  {/* Dados do Contador */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Marca do Contador</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Landis+Gyr, Itron..."
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-[#0d3fd1] transition-all"
+                        value={formData.contador.marca}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          contador: { ...formData.contador, marca: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Modelo do Contador</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: ZMD, SL7000..."
+                        className="w-full bg-[#f8faff] border border-[#c4c5d7]/20 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-[#0d3fd1] transition-all"
+                        value={formData.contador.modelo}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          contador: { ...formData.contador, modelo: e.target.value }
+                        })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ponta Tomada Dinâmica */}
+                  <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl overflow-hidden">
+                    <div className="bg-[#f8faff] px-6 py-4 border-b border-[#c4c5d7]/20 flex justify-between items-center">
+                      <h4 className="text-[10px] font-black text-[#0f1c2c] uppercase tracking-widest">Ponta Tomada / Registos</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = [...formData.contador.ponta_tomada, { tipo: '', obs: '' }];
+                          setFormData({ ...formData, contador: { ...formData.contador, ponta_tomada: next } });
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#0d3fd1] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all"
+                      >
+                        <Plus className="w-3 h-3" /> Adicionar
+                      </button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {formData.contador.ponta_tomada.map((pt, idx) => (
+                        <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-[#fcfdff] p-4 rounded-xl border border-[#c4c5d7]/10">
+                          <div className="md:col-span-5 space-y-2">
+                            <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Tipo / Descrição</label>
+                            <input
+                              type="text"
+                              className="w-full bg-white border border-[#c4c5d7]/20 rounded-lg px-4 py-2.5 text-xs font-bold text-[#0f1c2c]"
+                              value={pt.tipo}
+                              onChange={(e) => {
+                                const next = [...formData.contador.ponta_tomada];
+                                next[idx].tipo = e.target.value;
+                                setFormData({ ...formData, contador: { ...formData.contador, ponta_tomada: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="md:col-span-6 space-y-2">
+                            <label className="text-[9px] font-black text-[#747686] uppercase tracking-widest">Observação</label>
+                            <input
+                              type="text"
+                              className="w-full bg-white border border-[#c4c5d7]/20 rounded-lg px-4 py-2.5 text-xs font-bold text-[#0f1c2c]"
+                              value={pt.obs}
+                              onChange={(e) => {
+                                const next = [...formData.contador.ponta_tomada];
+                                next[idx].obs = e.target.value;
+                                setFormData({ ...formData, contador: { ...formData.contador, ponta_tomada: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="md:col-span-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = formData.contador.ponta_tomada.filter((_, i) => i !== idx);
+                                setFormData({ ...formData, contador: { ...formData.contador, ponta_tomada: next } });
+                              }}
+                              className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tipo de Energia e Leitura */}
+                  <div className="bg-[#fcfdff] border border-[#0d3fd1]/10 rounded-2xl p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-4">Tipo de Energia *</label>
+                        <div className="flex gap-2">
+                          {['Ativa', 'Reativa'].map(t => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setFormData({
+                                ...formData,
+                                contador: { ...formData.contador, tipo_energia: t }
+                              })}
+                              className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase border-2 transition-all ${formData.contador.tipo_energia === t
+                                ? 'bg-blue-500 text-white border-transparent'
+                                : 'bg-white border-[#c4c5d7]/20 text-[#444655]'
+                                }`}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {formData.contador.tipo_energia === 'Ativa' && (
+                        <div className="space-y-2 animate-in slide-in-from-right-4">
+                          <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Leitura do Contador (kWh) *</label>
+                          <input
+                            type="number"
+                            required
+                            placeholder="Insira o valor numérico"
+                            className="w-full bg-white border-2 border-emerald-100 rounded-xl py-4 px-6 text-sm font-bold text-[#0f1c2c] focus:border-emerald-500 transition-all"
+                            value={formData.contador.leitura}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              contador: { ...formData.contador, leitura: e.target.value === '' ? '' : Number(e.target.value) }
+                            })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 mb-4">
                 <h4 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-[#eff4ff] px-4 py-2 rounded-lg inline-block">Licenciamento e Normas</h4>
@@ -1133,7 +1336,7 @@ export default function PTAudits() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 animate-in slide-in-from-right-4 duration-300">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Potência Nominal (kVA)</label>
@@ -1189,7 +1392,7 @@ export default function PTAudits() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-[#444655] uppercase tracking-widest ml-1">Resistência de Terra (Ω)</label>
@@ -1224,7 +1427,7 @@ export default function PTAudits() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
               <div className="bg-[#eff4ff] p-8 rounded-3xl border border-[#0d3fd1]/10 space-y-8">
                 <div>
@@ -1271,6 +1474,36 @@ export default function PTAudits() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Detalhes do Contador */}
+                <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl p-6 space-y-4">
+                  <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-widest bg-[#eff4ff] px-3 py-1.5 rounded-lg inline-block shadow-sm">Dados do Contador</h5>
+                  {!formData.contador.tem_contagem ? (
+                    <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                      <p className="text-xs font-bold text-red-700">SEM CONTAGEM</p>
+                      <p className="text-[11px] text-red-600 mt-1 italic">Justificativa: {formData.contador.como_contagem || 'Não informada'}</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Marca / Modelo</span>
+                        <p className="text-xs font-bold text-[#0f1c2c]">{formData.contador.marca || '---'} / {formData.contador.modelo || '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Tipo Energia</span>
+                        <p className="text-xs font-bold text-[#0f1c2c]">{formData.contador.tipo_energia}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Leitura</span>
+                        <p className="text-xs font-bold text-emerald-600">{formData.contador.leitura ? `${formData.contador.leitura} kWh` : '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black text-[#747686] uppercase opacity-60">Registos (PT)</span>
+                        <p className="text-xs font-bold text-[#0f1c2c]">{formData.contador.ponta_tomada?.length || 0} Itens</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
@@ -1426,17 +1659,23 @@ export default function PTAudits() {
             {step > 1 ? (
               <button
                 type="button"
-                onClick={() => setStep(s => s - 1)}
+                onClick={() => setStep(s => {
+                  if (s === 6 && !formData.contador.tem_contagem) return 2;
+                  return s - 1;
+                })}
                 className="flex items-center gap-2 px-8 py-3.5 bg-white border border-[#c4c5d7]/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#444655]"
               >
                 Voltar
               </button>
             ) : <div></div>}
 
-            {step < 5 ? (
+            {step < 6 ? (
               <button
                 type="button"
-                onClick={() => setStep(s => s + 1)}
+                onClick={() => setStep(s => {
+                  if (s === 2 && !formData.contador.tem_contagem) return 6;
+                  return s + 1;
+                })}
                 disabled={!formData.id_pt && step === 1}
                 className="flex items-center gap-2 px-10 py-3.5 bg-[#0d3fd1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#0034cc] transition-all shadow-lg shadow-[#0d3fd1]/10 disabled:opacity-30"
               >
@@ -1452,7 +1691,7 @@ export default function PTAudits() {
             )}
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

@@ -184,6 +184,7 @@ model PostoTransformacao {
   manutencao      Manutencao?
   riscos          Risco[]
   tarefas         Tarefa[]
+  contador        Contador?
 
   @@map("posto_transformacao")
 }
@@ -222,6 +223,7 @@ model Inspecao {
   manutencao      Manutencao[]
   riscos          Risco[]
   incongruencias  Incongruencia[]
+  contador        Contador[]
 
   @@map("inspecao")
 }
@@ -482,4 +484,28 @@ model Risco {
   atualizado_em         DateTime           @updatedAt
 
   @@map("risco")
+}
+
+model Contador {
+  id               Int                @id @default(autoincrement())
+  id_pt            String             @unique @db.VarChar(50)
+  pt               PostoTransformacao @relation(fields: [id_pt], references: [id_pt], onDelete: Cascade)
+  id_inspecao      Int?
+  inspecao         Inspecao?          @relation(fields: [id_inspecao], references: [id])
+  
+  tem_contagem     Boolean            @default(true)
+  como_contagem    String?            @db.Text
+  
+  marca            String?            @db.VarChar(150)
+  modelo           String?            @db.VarChar(150)
+  
+  ponta_tomada     Json?              // Array of { tipo, obs }
+  
+  tipo_energia     String?            @db.VarChar(50) // Ativa, Reativa
+  leitura          Float?
+  
+  criado_em        DateTime           @default(now())
+  atualizado_em    DateTime           @updatedAt
+
+  @@map("contador")
 }

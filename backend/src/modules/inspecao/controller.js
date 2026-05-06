@@ -81,6 +81,9 @@ class InspecaoController {
     } catch (error) {
       console.error('Erro ao gerar PDF de inspeção:', error);
       if (!res.headersSent) {
+        if (error.message.includes('não encontrada')) {
+          return res.status(404).json({ error: error.message });
+        }
         res.status(500).json({ error: 'Erro ao gerar o relatório PDF' });
       }
     }

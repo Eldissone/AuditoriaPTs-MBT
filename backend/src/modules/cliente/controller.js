@@ -102,7 +102,8 @@ class IdentificacaoController {
           media_tensao: true,
           baixa_tensao: true,
           seguranca: true,
-          infraestrutura: true
+          infraestrutura: true,
+          contador: true
         }
       });
 

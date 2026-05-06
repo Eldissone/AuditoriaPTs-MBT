@@ -84,6 +84,29 @@ class PDFGenerator {
 
         currentY += 50;
 
+        // --- 2.1 CONTADOR ---
+        if (ptData.contador) {
+          const cont = ptData.contador;
+          this._drawSectionTitle(doc, '2.1 DADOS DO CONTADOR INSTALADO', currentY, colors);
+          currentY += 25;
+
+          this._drawField(doc, 'MARCA / MODELO', `${cont.marca || '---'} / ${cont.modelo || '---'}`, col1, currentY, colors);
+          this._drawField(doc, 'TIPO ENERGIA', cont.tipo_energia || '---', col2, currentY, colors);
+          this._drawField(doc, 'ÚLTIMA LEITURA', cont.leitura != null ? `${cont.leitura} kWh` : '---', col3, currentY, colors);
+
+          if (cont.ponta_tomada && Array.isArray(cont.ponta_tomada) && cont.ponta_tomada.length > 0) {
+            currentY += 35;
+            doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold').text('PONTAS DE TOMADA / REGISTOS:', col1, currentY);
+            currentY += 12;
+            cont.ponta_tomada.forEach((ptReg, idx) => {
+              doc.fillColor(colors.text).fontSize(8).font('Helvetica').text(`• ${ptReg.tipo}: ${ptReg.obs || '(sem observação)'}`, col1 + 10, currentY);
+              currentY += 12;
+              if (currentY > 750) { doc.addPage(); currentY = 50; }
+            });
+          }
+          currentY += 50;
+        }
+
         // --- 3 & 4: INFRAESTRUTURA FÍSICA ---
         this._drawSectionTitle(doc, '3 & 4. INFRAESTRUTURA E MEIO FÍSICO', currentY, colors);
         currentY += 25;
@@ -410,6 +433,38 @@ class PDFGenerator {
         } else {
           doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Oblique').text('Nenhuma divergência de cadastro detectada ou editada.', 40, currentY);
           currentY += 20;
+        }
+
+        currentY += 20;
+
+        // 2.1 DADOS DO CONTADOR
+        if (auditData.contador && auditData.contador.length > 0) {
+          const cont = auditData.contador[0];
+          this._drawSectionTitle(doc, '2.1 DADOS DO CONTADOR', currentY, colors);
+          currentY += 25;
+
+          if (!cont.tem_contagem) {
+            doc.fillColor(colors.danger).fontSize(9).font('Helvetica-Bold').text('CONTAGEM NÃO REALIZADA', col1, currentY);
+            currentY += 15;
+            doc.fillColor(colors.text).fontSize(8).font('Helvetica-Oblique').text(`Justificativa: ${cont.como_contagem || 'Não informada'}`, col1, currentY);
+            currentY += 30;
+          } else {
+            this._drawField(doc, 'MARCA / MODELO', `${cont.marca || '---'} / ${cont.modelo || '---'}`, col1, currentY, colors);
+            this._drawField(doc, 'TIPO ENERGIA', cont.tipo_energia || '---', col2, currentY, colors);
+            this._drawField(doc, 'LEITURA (kWh)', cont.leitura != null ? `${cont.leitura} kWh` : '---', col3, currentY, colors);
+            
+            currentY += 45;
+            if (cont.ponta_tomada && Array.isArray(cont.ponta_tomada) && cont.ponta_tomada.length > 0) {
+              doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold').text('PONTAS DE TOMADA / REGISTOS:', col1, currentY);
+              currentY += 12;
+              cont.ponta_tomada.forEach((pt, idx) => {
+                doc.fillColor(colors.text).fontSize(8).font('Helvetica').text(`• ${pt.tipo}: ${pt.obs || '(sem observação)'}`, col1 + 10, currentY);
+                currentY += 12;
+                if (currentY > 750) { doc.addPage(); currentY = 50; }
+              });
+              currentY += 10;
+            }
+          }
         }
 
         currentY += 20;

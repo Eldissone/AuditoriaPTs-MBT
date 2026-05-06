@@ -42,6 +42,7 @@ class InspecaoRepository {
         riscos: true,
         incongruencias: true,
         tarefa: true,
+        contador: true,
       },
     });
   }
@@ -57,6 +58,7 @@ class InspecaoRepository {
       monitorizacao,
       manutencao,
       riscos,
+      contador,
       ...baseData
     } = data;
 
@@ -297,6 +299,17 @@ class InspecaoRepository {
           update: { ...manutencao, id_inspecao },
         });
       }
+      if (contador) {
+        const contadorData = {
+          ...contador,
+          leitura: (contador.leitura != null && contador.leitura !== '') ? Number(contador.leitura) : null
+        };
+        await tx.contador.upsert({
+          where: { id_pt },
+          create: { ...contadorData, id_pt, id_inspecao },
+          update: { ...contadorData, id_inspecao },
+        });
+      }
 
       return inspecao;
     });
@@ -317,6 +330,7 @@ class InspecaoRepository {
       monitorizacao,
       manutencao,
       riscos,
+      contador,
       ...baseData
     } = data;
 
@@ -459,6 +473,13 @@ class InspecaoRepository {
           where: { id_pt },
           create: { ...manutencao, id_pt, id_inspecao },
           update: { ...manutencao, id_inspecao },
+        });
+      }
+      if (contador) {
+        await tx.contador.upsert({
+          where: { id_pt },
+          create: { ...contador, id_pt, id_inspecao },
+          update: { ...contador, id_inspecao },
         });
       }
 
