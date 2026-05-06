@@ -556,7 +556,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
           {step === 3 && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               <div className="bg-[#fcfdff] border border-[#0d3fd1]/10 rounded-2xl p-5">
-                <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-4">Tem contagem no local? *</label>
+                <label className="block text-[10px] font-black text-[#747686] uppercase tracking-widest mb-4">Tem contador? *</label>
                 <div className="flex gap-3">
                   {[
                     { val: true, label: 'Sim', color: 'bg-emerald-500' },
@@ -621,7 +621,7 @@ export default function QuickAuditModal({ tarefa, onClose, onDone }) {
 
                   <div className="bg-white border border-[#c4c5d7]/20 rounded-2xl overflow-hidden shadow-sm">
                     <div className="bg-[#f8faff] px-4 py-3 border-b border-[#c4c5d7]/20 flex justify-between items-center">
-                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-widest">Pontas de Tomada</span>
+                      <span className="text-[9px] font-black text-[#0f1c2c] uppercase tracking-widest">Ponta de Tomada</span>
                       <button
                         type="button"
                         onClick={() => setContador({ ...contador, ponta_tomada: [...contador.ponta_tomada, { tipo: '', obs: '' }] })}

@@ -96,52 +96,55 @@ class InspecaoRepository {
       // 1) Descobrir divergências entre o cadastro e os dados de campo
       const currentPT = await tx.postoTransformacao.findUnique({
         where: { id_pt: id_pt },
-        include: { proprietario: true }
+        include: { proprietario: true, subestacao: true }
       });
       
-      if (currentPT && baseData.dados_cliente_campo) {
-        const dc = baseData.dados_cliente_campo;
-        const prop = currentPT.proprietario; // Dados comerciais agora no modelo Proprietario
+      if (currentPT) {
+        const createIncongruenciaForEdits = async (edits, prefix, originalData) => {
+          if (!edits) return;
+          for (const [key, valorApurado] of Object.entries(edits)) {
+            if (valorApurado) {
+              // Try to find the original value from currentPT or proprietario
+              let valorCadastro = originalData[key] || originalData.proprietario?.[key] || 'Não registado';
+              // Special mapping for known fields
+              if (key === 'proprietario') valorCadastro = originalData.proprietario?.nome || 'Não registado';
+              if (key === 'subestacao') valorCadastro = originalData.subestacao?.nome || 'Não registado';
 
-        const mapping = [
-          { key: 'razao_social',           valorCadastro: prop?.nome,                         label: 'Nome/Razão Social' },
-          { key: 'resp_financeiro',         valorCadastro: prop?.responsavel_financeiro,       label: 'Resp. Financeiro' },
-          { key: 'contacto_fin',            valorCadastro: prop?.contacto_resp_financeiro,     label: 'Contacto Financeiro' },
-          { key: 'resp_tecnico',            valorCadastro: currentPT.responsavel_tecnico_cliente, label: 'Resp. Técnico' },
-          { key: 'contacto_tec',            valorCadastro: currentPT.contacto_resp_tecnico,   label: 'Contacto Técnico' },
-          { key: 'canal_faturacao',         valorCadastro: currentPT.canal_faturacao,          label: 'Canal Facturação' },
-          { key: 'empresa_manutencao',      valorCadastro: currentPT.empresa_manutencao,       label: 'Empresa Manutenção' },
-        ];
+              if (String(valorApurado).trim() !== String(valorCadastro).trim()) {
+                await tx.incongruencia.create({
+                  data: {
+                    id_inspecao: id_inspecao,
+                    tipo: 'cadastro',
+                    descricao: `Divergência de Cadastro (${prefix}): ${key.replace(/_/g, ' ').toUpperCase()}`,
+                    valor_cadastro: String(valorCadastro),
+                    valor_apurado: String(valorApurado),
+                    nivel_urgencia: 'normal'
+                  }
+                });
+              }
+            }
+          }
+        };
 
-        for (const meta of mapping) {
-          const valorCampo = dc[meta.key];
-          const valorCadastro = meta.valorCadastro;
-          if (valorCampo && valorCadastro && String(valorCampo).trim() !== String(valorCadastro).trim()) {
+        // Generate incongruencias for both edit objects
+        await createIncongruenciaForEdits(baseData.pt_info_edits, 'PT', currentPT);
+        await createIncongruenciaForEdits(baseData.cliente_edits, 'Cliente', currentPT);
+        
+        // Legacy fallback for old mobile apps if they still send dados_cliente_campo
+        if (baseData.dados_cliente_campo) {
+          const dc = baseData.dados_cliente_campo;
+          if (dc.fornece_terceiros != null && Boolean(dc.fornece_terceiros) !== Boolean(currentPT.fornece_terceiros)) {
             await tx.incongruencia.create({
               data: {
                 id_inspecao: id_inspecao,
-                tipo: 'cliente',
-                descricao: `Divergência detectada em: ${meta.label}`,
-                valor_cadastro: String(valorCadastro),
-                valor_apurado: String(valorCampo),
-                nivel_urgencia: 'normal'
+                tipo: 'ilegal',
+                descricao: 'Alteração no estado de fornecimento a terceiros',
+                valor_cadastro: currentPT.fornece_terceiros ? 'Sim' : 'Não',
+                valor_apurado: dc.fornece_terceiros ? 'Sim' : 'Não',
+                nivel_urgencia: 'u_alta'
               }
             });
           }
-        }
-
-        // Fornecimento a terceiros
-        if (dc.fornece_terceiros != null && Boolean(dc.fornece_terceiros) !== Boolean(currentPT.fornece_terceiros)) {
-          await tx.incongruencia.create({
-            data: {
-              id_inspecao: id_inspecao,
-              tipo: 'ilegal',
-              descricao: 'Alteração no estado de fornecimento a terceiros',
-              valor_cadastro: currentPT.fornece_terceiros ? 'Sim' : 'Não',
-              valor_apurado: dc.fornece_terceiros ? 'Sim' : 'Não',
-              nivel_urgencia: 'u_alta'
-            }
-          });
         }
       }
 
