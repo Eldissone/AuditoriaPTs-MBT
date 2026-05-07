@@ -15,7 +15,12 @@ class InspecaoRepository {
     return prisma.inspecao.findMany({
       where: filters,
       include: {
-        pt: true,
+        pt: {
+          include: {
+            proprietario: true,
+            subestacao: { select: { nome: true, municipio: true } },
+          },
+        },
         auditor: {
           select: { id: true, nome: true, email: true },
         },
@@ -29,7 +34,12 @@ class InspecaoRepository {
     return prisma.inspecao.findUnique({
       where: { id: Number(id) },
       include: {
-        pt: true,
+        pt: {
+          include: {
+            proprietario: true,
+            subestacao: { select: { nome: true, municipio: true } },
+          },
+        },
         auditor: true,
         transformadores: true,
         conformidade: true,

@@ -46,7 +46,7 @@ class PDFGenerator {
         currentY += 25;
 
         const col1 = 40, col2 = 220, col3 = 400;
-        
+
         this._drawField(doc, 'PROPRIETÁRIO / NOME', ptData.proprietario?.nome || ptData.designacao || '---', col1, currentY, colors);
         this._drawField(doc, 'SUBESTAÇÃO ORIGEM', ptData.subestacao?.nome || '---', col2, currentY, colors);
         this._drawField(doc, 'TIPO DE POSTO', ptData.tipo_instalacao || '---', col3, currentY, colors);
@@ -67,7 +67,7 @@ class PDFGenerator {
         currentY += 25;
 
         const tf = (ptData.transformadores && ptData.transformadores.length > 0) ? ptData.transformadores[0] : ptData;
-        
+
         this._drawField(doc, 'FABRICANTE', tf.fabricante || '---', col1, currentY, colors);
         this._drawField(doc, 'Nº DE SÉRIE', tf.num_serie || tf.numero_serie || '---', col2, currentY, colors);
         this._drawField(doc, 'ANO FABRICO / INST.', String(tf.ano_fabrico || tf.ano_instalacao || '---'), col3, currentY, colors);
@@ -112,7 +112,7 @@ class PDFGenerator {
         currentY += 25;
 
         const isPoste = ptData.tipo_instalacao?.toLowerCase().includes('poste') || ptData.tipo_instalacao?.toLowerCase().includes('ptc');
-        
+
         if (isPoste) {
           this._drawField(doc, 'TIPO DE POSTE', ptData.tipo_poste || '---', col1, currentY, colors);
           this._drawField(doc, 'MATERIAL', ptData.material_poste || '---', col2, currentY, colors);
@@ -134,7 +134,7 @@ class PDFGenerator {
 
         const mt = ptData.media_tensao || {};
         const bt = ptData.baixa_tensao || {};
-        
+
         this._drawField(doc, 'TIPO CELAS MT', mt.tipo_celas || '---', col1, currentY, colors);
         this._drawField(doc, 'QGBT FABRICANTE', bt.fabricante_qgbt || '---', col2, currentY, colors);
         this._drawField(doc, 'Nº SAÍDAS BT', String(bt.num_saidas_bt || 0), col3, currentY, colors);
@@ -208,8 +208,8 @@ class PDFGenerator {
 
         // Footer
         doc.fontSize(7).fillColor(colors.lightText)
-           .text('Este documento é um registo eletrónico oficial gerado pelo Sistema PTAS MBT. A integridade dos dados é de responsabilidade dos técnicos validadores.', 40, 785, { align: 'center', width: 500 });
-        
+          .text('Este documento é um registo eletrónico oficial gerado pelo Sistema PTAS MBT. A integridade dos dados é de responsabilidade dos técnicos validadores.', 40, 785, { align: 'center', width: 500 });
+
         doc.end();
         resolve();
       } catch (err) {
@@ -296,7 +296,7 @@ class PDFGenerator {
         doc.text('POTÊNCIA', 120, currentY);
         doc.text('LOCALIZAÇÃO', 200, currentY);
         doc.text('ESTADO OPERACIONAL', 400, currentY);
-        
+
         currentY += 12;
         doc.moveTo(40, currentY).lineTo(550, currentY).strokeColor(colors.border).lineWidth(0.5).stroke();
         currentY += 10;
@@ -321,8 +321,8 @@ class PDFGenerator {
 
         // Footer
         doc.fontSize(7).fillColor(colors.lightText)
-           .text('Documento gerado automaticamente pelo Sistema PTAS MBT. Dados sujeitos a confirmação em auditoria de campo.', 40, 785, { align: 'center', width: 500 });
-        
+          .text('Documento gerado automaticamente pelo Sistema PTAS MBT. Dados sujeitos a confirmação em auditoria de campo.', 40, 785, { align: 'center', width: 500 });
+
         doc.end();
         resolve();
       } catch (err) {
@@ -397,7 +397,7 @@ class PDFGenerator {
         doc.rect(40, currentY, 515, 40).fill(statusColor);
         doc.fillColor(colors.white).fontSize(10).font('Helvetica-Bold').text('STATUS DE LEGALIDADE:', 55, currentY + 15);
         doc.fontSize(14).text(auditData.resultado?.toUpperCase() || 'EM AVALIAÇÃO', 200, currentY + 13);
-        
+
         currentY += 60;
 
         // 2. IDENTIFICAÇÃO DO ATIVO
@@ -408,7 +408,16 @@ class PDFGenerator {
         const pt = auditData.pt || {};
 
         this._drawField(doc, 'ID DO PT', pt.id_pt || '---', col1, currentY, colors);
-        currentY += 45;
+        this._drawField(doc, 'SUBESTAÇÃO', pt.subestacao?.nome || '---', col3, currentY, colors);
+        currentY += 35;
+        // Proprietário on its own row with more horizontal space to avoid overflow
+        doc.fillColor(colors.lightText).fontSize(7).font('Helvetica').text('PROPRIETÁRIO / CLIENTE', col1, currentY);
+        doc.fillColor(colors.primary).fontSize(8.5).font('Helvetica-Bold').text(
+          pt.proprietario?.nome || pt.designacao || '---',
+          col1, currentY + 12,
+          { width: 500, ellipsis: true }
+        );
+        currentY += 40;
 
         // 3. CONFRONTO DE DADOS (CADASTRO VS CAMPO)
         this._drawSectionTitle(doc, '2. CONFRONTO DE DADOS (CADASTRO VS CAMPO)', currentY, colors);
@@ -460,7 +469,7 @@ class PDFGenerator {
             this._drawField(doc, 'MARCA / MODELO', `${cont.marca || '---'} / ${cont.modelo || '---'}`, col1, currentY, colors);
             this._drawField(doc, 'TIPO ENERGIA', cont.tipo_energia || '---', col2, currentY, colors);
             this._drawField(doc, 'LEITURA (kWh)', cont.leitura != null ? `${cont.leitura} kWh` : '---', col3, currentY, colors);
-            
+
             currentY += 45;
             if (cont.ponta_tomada && Array.isArray(cont.ponta_tomada) && cont.ponta_tomada.length > 0) {
               doc.fillColor(colors.lightText).fontSize(7).font('Helvetica-Bold').text('PONTAS DE TOMADA / REGISTOS:', col1, currentY);
@@ -496,13 +505,13 @@ class PDFGenerator {
           doc.fontSize(8).font('Helvetica');
           checklist.forEach(item => {
             if (currentY > 750) { doc.addPage(); currentY = 50; }
-            
+
             const isOk = item.checked === true || item.value === 'ok';
             const isNC = item.value === 'nc';
-            
+
             doc.fillColor(colors.text).text(item.label, 40, currentY, { width: 380 });
             doc.fillColor(colors.lightText).text(item.prio || 'C', 450, currentY);
-            
+
             if (isOk) {
               doc.fillColor(colors.success).font('Helvetica-Bold').text('CONFORME', 500, currentY);
             } else if (isNC) {
@@ -510,7 +519,7 @@ class PDFGenerator {
             } else {
               doc.fillColor(colors.lightText).text('N/A', 500, currentY);
             }
-            
+
             doc.font('Helvetica');
             currentY += 18;
           });
@@ -529,10 +538,10 @@ class PDFGenerator {
         // Resistência de Terra
         doc.fillColor(colors.lightText).fontSize(8).font('Helvetica-Bold').text('RESISTÊNCIA DE TERRA (LIMITE < 20Ω)', col1, currentY);
         currentY += 15;
-        
+
         const tp = auditData.terra_protecao;
         const ts = auditData.terra_servico;
-        
+
         this._drawMeasurementBox(doc, 'TERRA PROTEÇÃO (TP)', tp != null ? `${tp} Ω` : 'N/D', tp != null && tp < 20, col1, currentY, colors);
         this._drawMeasurementBox(doc, 'TERRA SERVIÇO (TS)', ts != null ? `${ts} Ω` : 'N/D', ts != null && ts < 20, col2 + 20, currentY, colors);
 
@@ -572,20 +581,22 @@ class PDFGenerator {
 
         // 7. INCONGRUÊNCIAS DETECTADAS
         if (auditData.incongruencias && auditData.incongruencias.length > 0) {
-           if (currentY > 700) { doc.addPage(); currentY = 50; }
-           this._drawSectionTitle(doc, '6. INCONGRUÊNCIAS / NÃO CONFORMIDADES CRÍTICAS', currentY, colors);
-           currentY += 25;
-           
-           auditData.incongruencias.forEach((inc, idx) => {
-              doc.fillColor(colors.danger).fontSize(8).font('Helvetica-Bold').text(`• ${inc.label || inc.campo}:`, col1, currentY);
-              doc.fillColor(colors.text).font('Helvetica').text(`${inc.valor || '---'} (Esperado: ${inc.limite || '---'})`, 180, currentY);
-              currentY += 15;
-           });
+          if (currentY > 700) { doc.addPage(); currentY = 50; }
+          this._drawSectionTitle(doc, '6. INCONGRUÊNCIAS / NÃO CONFORMIDADES CRÍTICAS', currentY, colors);
+          currentY += 25;
+
+          auditData.incongruencias.forEach((inc, idx) => {
+            if (currentY > 750) { doc.addPage(); currentY = 50; }
+            doc.fillColor(colors.danger).fontSize(8).font('Helvetica-Bold').text(`• ${inc.descricao || inc.label || inc.campo || 'Incongruência'}:`, col1, currentY, { width: 130 });
+            doc.fillColor(colors.lightText).font('Helvetica').text(`Cadastro: ${inc.valor_cadastro || inc.valor || '---'}`, 180, currentY);
+            doc.fillColor(colors.accent).font('Helvetica-Bold').text(`Campo: ${inc.valor_apurado || inc.limite || '---'}`, 360, currentY);
+            currentY += 18;
+          });
         }
 
         // Validação no final
         if (currentY > 650) { doc.addPage(); currentY = 50; }
-        
+
         doc.moveTo(40, 720).lineTo(240, 720).strokeColor(colors.border).stroke();
         doc.fillColor(colors.lightText).fontSize(8).text('ASSINATURA DO AUDITOR', 40, 725);
         doc.fillColor(colors.primary).font('Helvetica-Bold').text(auditData.auditor?.nome || '---', 40, 735);
@@ -595,7 +606,7 @@ class PDFGenerator {
         doc.fillColor(colors.primary).font('Helvetica-Bold').text(new Date().toLocaleDateString('pt-PT'), 350, 735);
 
         doc.fontSize(7).fillColor(colors.lightText)
-           .text('Este relatório é um documento técnico oficial gerado pelo Sistema PTAS MBT.', 40, 785, { align: 'center', width: 500 });
+          .text('Este relatório é um documento técnico oficial gerado pelo Sistema PTAS MBT.', 40, 785, { align: 'center', width: 500 });
 
         doc.end();
         resolve();
