@@ -401,6 +401,7 @@ export default function TaskManagement() {
                 <thead>
                   <tr className="bg-[#f8faff] border-b border-[#c4c5d7]/20">
                     <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tarefa</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/4">Tipo</th>
                     <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10">Técnico</th>
                     <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">Data Prevista</th>
                     <th className="px-8 py-6 text-[10px] font-black text-[#747686] uppercase tracking-[0.2em] border-r border-[#c4c5d7]/10 w-1/6 text-center">GPS / Mapa</th>
@@ -548,24 +549,39 @@ export default function TaskManagement() {
                 )}
                 {Array.isArray(detailTarefa.checklist) && detailTarefa.checklist.length > 0 ? (
                   <div className="space-y-2">
-                    {detailTarefa.checklist.map((item) => {
-                      const res = item.resultado;
-                      const isOK = res === 'ok' || (item.checked && !res);
-                      const isNC = res === 'nc';
-                      const isNA = res === 'na';
-                      
-                      return (
-                        <div key={item.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${isOK ? 'border-emerald-200 bg-emerald-50/50' : isNC ? 'border-red-200 bg-red-50/50' : isNA ? 'border-gray-200 bg-gray-50' : 'border-amber-200 bg-amber-50'}`}>
-                          <span className={`text-[11px] font-bold ${isNA ? 'text-gray-400 line-through' : 'text-[#444655]'}`}>{item.label}</span>
-                          <div className="flex items-center gap-2">
-                            {isOK && <span className="text-[9px] font-black uppercase bg-emerald-500 text-white px-2 py-0.5 rounded">OK</span>}
-                            {isNC && <span className="text-[9px] font-black uppercase bg-red-500 text-white px-2 py-0.5 rounded">NC</span>}
-                            {isNA && <span className="text-[9px] font-black uppercase bg-gray-400 text-white px-2 py-0.5 rounded">N/A</span>}
-                            {!res && !item.checked && <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-2 py-0.5 rounded">Pendente</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      let lastSecao = '';
+                      return detailTarefa.checklist.map((item) => {
+                        const res = item.resultado;
+                        const isOK = res === 'ok' || (item.checked && !res);
+                        const isNC = res === 'nc';
+                        const isNA = res === 'na';
+
+                        const showHeader = item.secao && item.secao !== lastSecao;
+                        if (showHeader) lastSecao = item.secao;
+
+                        return (
+                          <React.Fragment key={item.id}>
+                            {showHeader && (
+                              <div className="pt-3 pb-1 border-b border-[#c4c5d7]/10 mb-2 mt-2 first:mt-0">
+                                <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-[0.1em]">
+                                  {item.secao}
+                                </h5>
+                              </div>
+                            )}
+                            <div className={`flex items-center justify-between p-2.5 rounded-lg border ${isOK ? 'border-emerald-200 bg-emerald-50/50' : isNC ? 'border-red-200 bg-red-50/50' : isNA ? 'border-gray-200 bg-gray-50' : 'border-amber-200 bg-amber-50'}`}>
+                              <span className={`text-[11px] font-bold ${isNA ? 'text-gray-400 line-through' : 'text-[#444655]'}`}>{item.label}</span>
+                              <div className="flex items-center gap-2">
+                                {isOK && <span className="text-[9px] font-black uppercase bg-emerald-500 text-white px-2 py-0.5 rounded">OK</span>}
+                                {isNC && <span className="text-[9px] font-black uppercase bg-red-500 text-white px-2 py-0.5 rounded">NC</span>}
+                                {isNA && <span className="text-[9px] font-black uppercase bg-gray-400 text-white px-2 py-0.5 rounded">N/A</span>}
+                                {!res && !item.checked && <span className="text-[9px] font-black uppercase bg-amber-500 text-white px-2 py-0.5 rounded">Pendente</span>}
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="p-3 bg-white rounded-lg border border-dashed border-[#c4c5d7] text-center">
@@ -620,46 +636,46 @@ export default function TaskManagement() {
                   </div>
                 </div>
               )}
-            {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
-            {(() => {
-              const todasFotos = taskInspecoes.flatMap(ins =>
-                (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data_inspecao: ins.data_inspecao }))
-              );
-              if (todasFotos.length === 0) return null;
-              return (
-                <div className="px-6 sm:px-8 pb-6">
-                  <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
-                    <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-[#0d3fd1]" />
-                      Evidências Fotográficas ({todasFotos.length})
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {todasFotos.map((foto, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setLightboxPhoto({ src: foto.data, label: foto.label, index: i, all: todasFotos })}
-                          className="relative group rounded-xl overflow-hidden aspect-square bg-[#f1f3f9] border border-[#c4c5d7]/20 hover:border-[#0d3fd1]/40 transition-all shadow-sm"
-                        >
-                          <img
-                            src={foto.data}
-                            alt={foto.label || `Foto ${i + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                            <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                          {foto.label && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                              <p className="text-white text-[9px] font-bold truncate">{foto.label}</p>
+              {/* ── Fotos / Evidências das Inspecções ──────────────────── */}
+              {(() => {
+                const todasFotos = taskInspecoes.flatMap(ins =>
+                  (Array.isArray(ins.fotos) ? ins.fotos : []).map(f => ({ ...f, inspecao_id: ins.id, data_inspecao: ins.data_inspecao }))
+                );
+                if (todasFotos.length === 0) return null;
+                return (
+                  <div className="px-6 sm:px-8 pb-6">
+                    <div className="bg-[#fcfdff] border border-[#c4c5d7]/20 rounded-xl p-4">
+                      <h4 className="font-black text-[#0f1c2c] text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-[#0d3fd1]" />
+                        Evidências Fotográficas ({todasFotos.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {todasFotos.map((foto, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setLightboxPhoto({ src: foto.data, label: foto.label, index: i, all: todasFotos })}
+                            className="relative group rounded-xl overflow-hidden aspect-square bg-[#f1f3f9] border border-[#c4c5d7]/20 hover:border-[#0d3fd1]/40 transition-all shadow-sm"
+                          >
+                            <img
+                              src={foto.data}
+                              alt={foto.label || `Foto ${i + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                              <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                          )}
-                        </button>
-                      ))}
+                            {foto.label && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                                <p className="text-white text-[9px] font-bold truncate">{foto.label}</p>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
             </div>
 
             <div className="p-6 border-t border-[#c4c5d7]/20 flex justify-between items-center bg-[#f8faff]">

@@ -503,13 +503,26 @@ class PDFGenerator {
           currentY += 10;
 
           doc.fontSize(8).font('Helvetica');
+          let lastSecao = '';
+          
           checklist.forEach(item => {
+            // Se mudou de secção, desenha o cabeçalho da secção
+            if (item.secao && item.secao !== lastSecao) {
+              lastSecao = item.secao;
+              if (currentY > 720) { doc.addPage(); currentY = 50; }
+              currentY += 8;
+              doc.fillColor(colors.accent).fontSize(7.5).font('Helvetica-Bold').text(item.secao.toUpperCase(), 40, currentY);
+              currentY += 12;
+              doc.moveTo(40, currentY).lineTo(200, currentY).strokeColor(colors.accent).lineWidth(0.5).stroke();
+              currentY += 8;
+            }
+
             if (currentY > 750) { doc.addPage(); currentY = 50; }
 
             const isOk = item.checked === true || item.value === 'ok';
             const isNC = item.value === 'nc';
 
-            doc.fillColor(colors.text).text(item.label, 40, currentY, { width: 380 });
+            doc.fillColor(colors.text).font('Helvetica').text(item.label, 40, currentY, { width: 380 });
             doc.fillColor(colors.lightText).text(item.prio || 'C', 450, currentY);
 
             if (isOk) {

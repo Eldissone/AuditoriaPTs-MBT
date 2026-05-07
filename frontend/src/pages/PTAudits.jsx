@@ -222,20 +222,108 @@ export default function PTAudits() {
     }));
   };
 
-  const handleValidarTarefa = async (id, scheduleFollowup = false) => {
-    try {
-      const task = tarefas.find(t => t.id === id);
-      await api.patch(`/tarefas/${id}/status`, { status: 'Concluída' });
+  const renderFollowUpModal = () => {
+    if (!isFollowUpModalOpen) return null;
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-md p-4">
+        <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+          <div className="bg-[#243141] px-8 py-6 flex justify-between items-center">
+            <div>
+              <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest block mb-1">Encaminhamento Técnico</span>
+              <h3 className="text-white text-lg font-black uppercase">Agendar Seguimento de PT</h3>
+            </div>
+            <button
+              onClick={() => setIsFollowUpModalOpen(false)}
+              className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition-all"
+            >
+              <Minimize2 className="w-5 h-5" />
+            </button>
+          </div>
 
-      if (scheduleFollowup) {
-        handleOpenFollowUp(task);
-      } else {
-        alert('Tarefa validada e concluída com sucesso!');
-        setView('list'); // Refresh trigger
-      }
-    } catch (err) {
-      alert('Erro ao validar tarefa: ' + (err.response?.data?.error || err.message));
-    }
+          <form onSubmit={handleSubmitFollowUp} className="p-8 space-y-5">
+            <div>
+              <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Título da Intervenção</label>
+              <input
+                type="text"
+                required
+                className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                value={followUpData.titulo}
+                onChange={e => setFollowUpData({ ...followUpData, titulo: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Tipo</label>
+                <select
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                  value={followUpData.tipo}
+                  onChange={e => setFollowUpData({ ...followUpData, tipo: e.target.value })}
+                >
+                  <option value="Inspeção">Inspeção Técnica</option>
+                  <option value="Manutenção Preventiva">Manutenção Prev.</option>
+                  <option value="Manutenção Corretiva">Manutenção Corr.</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Prioridade</label>
+                <select
+                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                  value={followUpData.prioridade}
+                  onChange={e => setFollowUpData({ ...followUpData, prioridade: e.target.value })}
+                >
+                  <option value="Normal">Normal</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Atribuir Técnico</label>
+              <select
+                required
+                className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                value={followUpData.auditor_id}
+                onChange={e => setFollowUpData({ ...followUpData, auditor_id: e.target.value })}
+              >
+                <option value="">Escolha um técnico...</option>
+                {auditores.map(a => (
+                  <option key={a.id} value={a.id}>{a.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Data Alvo</label>
+              <input
+                type="date"
+                required
+                className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
+                value={followUpData.data}
+                onChange={e => setFollowUpData({ ...followUpData, data: e.target.value })}
+              />
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsFollowUpModalOpen(false)}
+                className="flex-1 px-6 py-4 rounded-2xl text-[10px] font-black uppercase text-[#444655] hover:bg-[#f8faff] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-[#0d3fd1] text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase shadow-xl shadow-[#0d3fd1]/20 hover:bg-[#0034cc] transition-all"
+              >
+                Agendar Agora
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   };
 
   // Se o utilizador mudar o PT manualmente e a tarefa selecionada não for desse PT, limpa a associação
@@ -675,21 +763,28 @@ export default function PTAudits() {
                         >
                           Abrir
                         </button>
+                        {/* btn pdf  */}
                         <button
                           onClick={() => handleDownloadPDF(audit.id)}
                           className="flex items-center gap-2 px-4 py-2 bg-[#eff4ff] text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#0d3fd1] hover:text-white transition-all"
                         >
                           <FileText className="w-3.5 h-3.5" />
-                          PDF
+
                         </button>
                         {user?.role === 'admin' && (
                           <>
-
+                            {/* btn de agendar Seguimento */}
+                            <button
+                              onClick={() => handleOpenFollowUp(audit)}
+                              className="flex items-center gap-2 px-4 py-2 bg-[#f8faff] border border-[#c4c5d7]/30 text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
+                            >
+                              <Wrench className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleDelete(audit.id)}
                               className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c4c5d7]/30 text-[#444655] rounded-lg text-[10px] font-black uppercase tracking-widest hover:border-red-200 hover:text-red-500 transition-all"
                             >
-                              Apagar
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </>
                         )}
@@ -746,12 +841,12 @@ export default function PTAudits() {
                             onClick={() => handleOpenFollowUp(tarefa)}
                             className="flex items-center gap-2 px-4 py-2 bg-[#f8faff] border border-[#c4c5d7]/30 text-[#0d3fd1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#eff4ff] transition-all"
                           >
-                            <Wrench className="w-3.5 h-3.5" /> Agendar Seguimento
+                            <Wrench className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {tarefa.data_fim && (
                           <span className="flex items-center text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-100 px-3 py-1 rounded-md">
-                            Checklist: {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
+                            {tarefa.checklist?.filter(c => c.checked).length || 0}/{tarefa.checklist?.length || 0}
                           </span>
                         )}
                       </div>
@@ -769,6 +864,8 @@ export default function PTAudits() {
             </table>
           </div>
         )}
+
+        {renderFollowUpModal()}
 
         {auditTarefa && (
           <QuickAuditModal
@@ -881,112 +978,14 @@ export default function PTAudits() {
             </div>
           </div>
         </div>
+        {renderFollowUpModal()}
       </div>
     );
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {isFollowUpModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f1c2c]/60 backdrop-blur-md p-4">
-          <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden border border-white/20">
-            <div className="bg-[#243141] px-8 py-6 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-black text-[#5fff9b] uppercase tracking-widest block mb-1">Encaminhamento Técnico</span>
-                <h3 className="text-white text-lg font-black uppercase">Agendar Seguimento de PT</h3>
-              </div>
-              <button
-                onClick={() => setIsFollowUpModalOpen(false)}
-                className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition-all"
-              >
-                <Minimize2 className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitFollowUp} className="p-8 space-y-5">
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Título da Intervenção</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
-                  value={followUpData.titulo}
-                  onChange={e => setFollowUpData({ ...followUpData, titulo: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Tipo</label>
-                  <select
-                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
-                    value={followUpData.tipo}
-                    onChange={e => setFollowUpData({ ...followUpData, tipo: e.target.value })}
-                  >
-                    <option value="Inspeção">Inspeção Técnica</option>
-                    <option value="Manutenção Preventiva">Manutenção Prev.</option>
-                    <option value="Manutenção Corretiva">Manutenção Corr.</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Prioridade</label>
-                  <select
-                    className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
-                    value={followUpData.prioridade}
-                    onChange={e => setFollowUpData({ ...followUpData, prioridade: e.target.value })}
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="Alta">Alta</option>
-                    <option value="Urgente">Urgente</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Atribuir Técnico</label>
-                <select
-                  required
-                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
-                  value={followUpData.auditor_id}
-                  onChange={e => setFollowUpData({ ...followUpData, auditor_id: e.target.value })}
-                >
-                  <option value="">Escolha um técnico...</option>
-                  {auditores.map(a => (
-                    <option key={a.id} value={a.id}>{a.nome}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-[#747686] uppercase tracking-widest mb-2 block">Data Alvo</label>
-                <input
-                  type="date"
-                  required
-                  className="w-full bg-[#f8faff] border border-[#c4c5d7]/30 rounded-xl px-5 py-3 text-sm font-bold text-[#0f1c2c]"
-                  value={followUpData.data}
-                  onChange={e => setFollowUpData({ ...followUpData, data: e.target.value })}
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsFollowUpModalOpen(false)}
-                  className="flex-1 px-6 py-4 rounded-2xl text-[10px] font-black uppercase text-[#444655] hover:bg-[#f8faff] transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0d3fd1] text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase shadow-xl shadow-[#0d3fd1]/20 hover:bg-[#0034cc] transition-all"
-                >
-                  Agendar Agora
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {renderFollowUpModal()}
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <button onClick={() => setView('list')} className="p-3 bg-white border border-[#c4c5d7]/20 rounded-xl hover:bg-[#eff4ff] transition-all">

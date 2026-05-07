@@ -292,20 +292,36 @@ export default function MyTasks() {
                 </h4>
                 {checklistAtual.length > 0 ? (
                   <div className="space-y-3">
-                    {checklistAtual.map((item) => (
-                      <label
-                        key={item.id}
-                        className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${item.checked ? 'border-[#00e47c] bg-[#00e47c]/5' : 'border-[#c4c5d7]/30 hover:border-[#0d3fd1]/40'}`}
-                      >
-                        <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border-2 mt-0.5 ${item.checked ? 'bg-[#00e47c] border-[#00e47c]' : 'border-[#c4c5d7]'}`}>
-                          {item.checked && <CheckCircle className="w-4 h-4 text-white" />}
-                        </div>
-                        <span className={`text-sm font-bold ${item.checked ? 'text-[#005229] line-through opacity-70' : 'text-[#444655]'}`}>
-                          {item.label}
-                        </span>
-                        <input type="checkbox" className="hidden" checked={item.checked} onChange={() => handleToggleChecklist(item.id)} />
-                      </label>
-                    ))}
+                    {(() => {
+                      let lastSecao = '';
+                      return checklistAtual.map((item) => {
+                        const showHeader = item.secao && item.secao !== lastSecao;
+                        if (showHeader) lastSecao = item.secao;
+
+                        return (
+                          <React.Fragment key={item.id}>
+                            {showHeader && (
+                              <div className="pt-3 pb-1 border-b border-[#c4c5d7]/10 mb-2 mt-2 first:mt-0">
+                                <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-[0.1em]">
+                                  {item.secao}
+                                </h5>
+                              </div>
+                            )}
+                            <label
+                              className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${item.checked ? 'border-[#00e47c] bg-[#00e47c]/5' : 'border-[#c4c5d7]/30 hover:border-[#0d3fd1]/40'}`}
+                            >
+                              <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border-2 mt-0.5 ${item.checked ? 'bg-[#00e47c] border-[#00e47c]' : 'border-[#c4c5d7]'}`}>
+                                {item.checked && <CheckCircle className="w-4 h-4 text-white" />}
+                              </div>
+                              <span className={`text-sm font-bold ${item.checked ? 'text-[#005229] line-through opacity-70' : 'text-[#444655]'}`}>
+                                {item.label}
+                              </span>
+                              <input type="checkbox" className="hidden" checked={item.checked} onChange={() => handleToggleChecklist(item.id)} />
+                            </label>
+                          </React.Fragment>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="p-4 bg-white rounded-xl border border-dashed border-[#c4c5d7] text-center">
@@ -382,14 +398,31 @@ export default function MyTasks() {
                     Checklist — {detailTarefa.checklist.filter(i => i.checked).length}/{detailTarefa.checklist.length} marcados
                   </h4>
                   <div className="space-y-2">
-                    {detailTarefa.checklist.map((item) => (
-                      <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${item.checked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-                        <span className="text-sm font-bold text-[#444655]">{item.label}</span>
-                        <span className={`text-[10px] font-black uppercase ${item.checked ? 'text-emerald-700' : 'text-red-600'}`}>
-                          {item.checked ? <CheckCircle className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                        </span>
-                      </div>
-                    ))}
+                    {(() => {
+                      let lastSecao = '';
+                      return detailTarefa.checklist.map((item) => {
+                        const showHeader = item.secao && item.secao !== lastSecao;
+                        if (showHeader) lastSecao = item.secao;
+
+                        return (
+                          <React.Fragment key={item.id}>
+                            {showHeader && (
+                              <div className="pt-3 pb-1 border-b border-[#c4c5d7]/10 mb-2 mt-2 first:mt-0">
+                                <h5 className="text-[10px] font-black text-[#0d3fd1] uppercase tracking-[0.1em]">
+                                  {item.secao}
+                                </h5>
+                              </div>
+                            )}
+                            <div className={`flex items-center justify-between p-3 rounded-lg border ${item.checked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                              <span className="text-sm font-bold text-[#444655]">{item.label}</span>
+                              <span className={`text-[10px] font-black uppercase ${item.checked ? 'text-emerald-700' : 'text-red-600'}`}>
+                                {item.checked ? <CheckCircle className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                              </span>
+                            </div>
+                          </React.Fragment>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}
